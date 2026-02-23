@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Search, ShoppingCart, X } from "lucide-react";
 import { getProducts } from "../../services/database";
 import { createTransaction } from "../../services/transactions";
@@ -6,34 +6,95 @@ import CartItem from "./CartItem";
 import PaymentModal from "./PaymentModal";
 
 function Cashier() {
-  const [products, setProducts] = useState([]);
-  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [allProducts, setAllProducts] = useState([]); // Semua produk
+  const [displayedProducts, setDisplayedProducts] = useState([]); // Produk yang ditampilkan (untuk infinite scroll)
   const [searchTerm, setSearchTerm] = useState("");
   const [cart, setCart] = useState([]);
   const [showPayment, setShowPayment] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
+  const ITEMS_PER_PAGE = 30; // Jumlah produk per load
+
+  const observer = useRef();
+  const lastProductRef = useCallback(
+    (node) => {
+      if (loadingMore) return;
+      if (observer.current) observer.current.disconnect();
+
+      observer.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          loadMoreProducts();
+        }
+      });
+
+      if (node) observer.current.observe(node);
+    },
+    [loadingMore, hasMore],
+  );
 
   useEffect(() => {
     loadProducts();
   }, []);
 
   useEffect(() => {
+    // Reset infinite scroll saat search berubah
     if (searchTerm.trim() === "") {
-      setFilteredProducts([]);
+      // Jika search kosong, tampilkan semua produk dengan infinite scroll
+      const filtered = allProducts;
+      setDisplayedProducts(filtered.slice(0, ITEMS_PER_PAGE));
+      setHasMore(filtered.length > ITEMS_PER_PAGE);
+      setPage(1);
     } else {
-      const filtered = products.filter((p) =>
+      // Jika ada search, filter dan tampilkan semua hasil (tanpa infinite scroll)
+      const filtered = allProducts.filter((p) =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase()),
       );
-      setFilteredProducts(filtered.slice(0, 5)); // Max 5 hasil
+      setDisplayedProducts(filtered);
+      setHasMore(false); // Nonaktifkan infinite scroll saat search
     }
-  }, [searchTerm, products]);
+  }, [searchTerm, allProducts]);
 
   const loadProducts = async () => {
+    setLoading(true);
+    console.log("Loading all products...");
     const data = await getProducts();
-    setProducts(data);
+    console.log("Products loaded:", data.length);
+    setAllProducts(data);
+    setDisplayedProducts(data.slice(0, ITEMS_PER_PAGE));
+    setHasMore(data.length > ITEMS_PER_PAGE);
+    setLoading(false);
+  };
+
+  const loadMoreProducts = () => {
+    if (loadingMore || !hasMore || searchTerm !== "") return;
+
+    setLoadingMore(true);
+
+    // Simulasi load more (sebenarnya data sudah ada, kita hanya perlu menampilkan lebih banyak)
+    setTimeout(() => {
+      const nextPage = page + 1;
+      const start = page * ITEMS_PER_PAGE;
+      const end = nextPage * ITEMS_PER_PAGE;
+
+      const newProducts = allProducts.slice(0, end);
+
+      setDisplayedProducts(newProducts);
+      setPage(nextPage);
+      setHasMore(allProducts.length > end);
+      setLoadingMore(false);
+    }, 300); // Sedikit delay biar keliatan smooth
   };
 
   const addToCart = (product, unit) => {
+    console.log("addToCart dipanggil dengan:", { product, unit });
+    console.log("Harga tersedia:", {
+      pcs: product.price_pcs,
+      pack: product.price_pack,
+      kg: product.price_kg,
+    });
+
     // Tentukan harga berdasarkan unit
     let price = 0;
     switch (unit) {
@@ -50,6 +111,8 @@ function Cashier() {
         return;
     }
 
+    console.log("Harga yang dipilih:", price);
+
     if (price <= 0) {
       alert(`Produk ini tidak memiliki harga untuk satuan ${unit}`);
       return;
@@ -59,6 +122,7 @@ function Cashier() {
     const existingItem = cart.find(
       (item) => item.product_id === product.id && item.unit === unit,
     );
+    console.log("Existing item:", existingItem);
 
     if (existingItem) {
       // Update quantity
@@ -73,20 +137,21 @@ function Cashier() {
             : item,
         ),
       );
+      console.log("Cart setelah update:", cart);
     } else {
       // Tambah item baru
-      setCart([
-        ...cart,
-        {
-          id: Date.now(), // temporary ID
-          product_id: product.id,
-          name: product.name,
-          unit: unit,
-          price: price,
-          quantity: 1,
-          subtotal: price,
-        },
-      ]);
+      const newItem = {
+        id: Date.now() + Math.random(),
+        product_id: product.id,
+        name: product.name,
+        unit: unit,
+        price: price,
+        quantity: 1,
+        subtotal: price,
+      };
+      console.log("Item baru:", newItem);
+      setCart([...cart, newItem]);
+      console.log("Cart setelah tambah:", [...cart, newItem]);
     }
 
     setSearchTerm("");
@@ -147,14 +212,27 @@ function Cashier() {
   };
 
   const formatPrice = (price) => {
+    if (!price) return "Rp 0";
     return `Rp ${price.toLocaleString()}`;
   };
 
+  const clearSearch = () => {
+    setSearchTerm("");
+  };
+
+  if (loading && allProducts.length === 0) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-[calc(100vh-120px)] gap-4">
-      {/* Left Panel - Product Search */}
+      {/* Left Panel - Product List with Infinite Scroll */}
       <div className="w-1/2 bg-white rounded-lg shadow p-4 flex flex-col">
-        <h2 className="text-xl font-semibold mb-4">🛒 Pilih Produk</h2>
+        <h2 className="text-xl font-semibold mb-4">🛒 Daftar Produk</h2>
 
         {/* Search Input */}
         <div className="relative mb-4">
@@ -166,55 +244,79 @@ function Cashier() {
             className="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <Search className="absolute left-3 top-3.5 text-gray-400" size={18} />
+          {searchTerm && (
+            <button
+              onClick={clearSearch}
+              className="absolute right-3 top-3.5 text-gray-400 hover:text-gray-600"
+            >
+              <X size={18} />
+            </button>
+          )}
         </div>
 
-        {/* Search Results */}
-        {filteredProducts.length > 0 && (
-          <div className="border rounded-lg divide-y max-h-96 overflow-y-auto">
-            {filteredProducts.map((product) => (
-              <div key={product.id} className="p-3 hover:bg-gray-50">
-                <div className="font-medium">{product.name}</div>
-                <div className="text-sm text-gray-500 mb-2">
-                  Stok: {product.stock}
-                </div>
-                <div className="flex gap-2">
-                  {product.sell_per_unit === "all" ||
-                  product.sell_per_unit === "pcs" ? (
-                    <button
-                      onClick={() => addToCart(product, "pcs")}
-                      className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200 transition"
-                      disabled={product.price_pcs <= 0}
-                    >
-                      Pcs {formatPrice(product.price_pcs)}
-                    </button>
-                  ) : null}
+        {/* Info jumlah produk */}
+        <div className="mb-2 text-sm text-gray-500">
+          Menampilkan {displayedProducts.length} dari {allProducts.length}{" "}
+          produk
+          {searchTerm && ` (hasil pencarian: "${searchTerm}")`}
+        </div>
 
-                  {product.sell_per_unit === "all" ||
-                  product.sell_per_unit === "pack" ? (
-                    <button
-                      onClick={() => addToCart(product, "pack")}
-                      className="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-sm hover:bg-green-200 transition"
-                      disabled={product.price_pack <= 0}
+        {/* Product List with Infinite Scroll */}
+        <div className="flex-1 overflow-y-auto border rounded-lg">
+          {displayedProducts.length > 0 ? (
+            <div className="divide-y">
+              {displayedProducts.map((product, index) => {
+                // Tambahkan ref ke produk terakhir untuk infinite scroll
+                if (displayedProducts.length === index + 1 && !searchTerm) {
+                  return (
+                    <div
+                      ref={lastProductRef}
+                      key={product.id}
+                      className="p-3 hover:bg-gray-50"
                     >
-                      Pack {formatPrice(product.price_pack)}
-                    </button>
-                  ) : null}
+                      <ProductItem
+                        product={product}
+                        addToCart={addToCart}
+                        formatPrice={formatPrice}
+                      />
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div key={product.id} className="p-3 hover:bg-gray-50">
+                      <ProductItem
+                        product={product}
+                        addToCart={addToCart}
+                        formatPrice={formatPrice}
+                      />
+                    </div>
+                  );
+                }
+              })}
 
-                  {product.sell_per_unit === "all" ||
-                  product.sell_per_unit === "kg" ? (
-                    <button
-                      onClick={() => addToCart(product, "kg")}
-                      className="px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm hover:bg-purple-200 transition"
-                      disabled={product.price_kg <= 0}
-                    >
-                      Kg {formatPrice(product.price_kg)}
-                    </button>
-                  ) : null}
+              {/* Loading indicator untuk infinite scroll */}
+              {loadingMore && !searchTerm && (
+                <div className="p-4 text-center text-gray-500">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="text-sm mt-2">Memuat lebih banyak...</p>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              )}
+
+              {/* End of list */}
+              {!hasMore && !searchTerm && displayedProducts.length > 0 && (
+                <div className="p-4 text-center text-gray-500 text-sm">
+                  ── Akhir dari daftar produk ──
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              {searchTerm
+                ? `Tidak ada produk dengan nama "${searchTerm}"`
+                : "Tidak ada produk"}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Right Panel - Cart */}
@@ -274,6 +376,113 @@ function Cashier() {
           onConfirm={handlePayment}
         />
       )}
+    </div>
+  );
+}
+
+// Komponen terpisah untuk Product Item - VERSI FIX DENGAN TOMBOL SELALU MUNCUL
+function ProductItem({ product, addToCart, formatPrice }) {
+  // Debug: lihat data produk di console
+  console.log(
+    "Product:",
+    product.name,
+    "sell_per_unit:",
+    product.sell_per_unit,
+    "harga:",
+    {
+      pcs: product.price_pcs,
+      pack: product.price_pack,
+      kg: product.price_kg,
+    },
+  );
+
+  return (
+    <div className="border-b border-gray-100 last:border-0 pb-2">
+      <div className="font-medium text-gray-900">{product.name}</div>
+      <div className="text-sm text-gray-500 mb-2 flex items-center gap-2">
+        <span>Stok: {product.stock || 0}</span>
+        <span className="px-2 py-0.5 bg-gray-100 rounded-full text-xs">
+          {product.sell_per_unit || "all"}
+        </span>
+      </div>
+
+      {/* Container tombol dengan flex wrap */}
+      <div className="flex gap-2 flex-wrap">
+        {/* Tombol Pcs - TAMPIL SELALU jika sell_per_unit mengizinkan */}
+        {(product.sell_per_unit === "all" ||
+          product.sell_per_unit === "pcs") && (
+          <button
+            onClick={() => addToCart(product, "pcs")}
+            disabled={!product.price_pcs || product.price_pcs <= 0}
+            className={`px-3 py-1 rounded-lg text-sm font-medium transition ${
+              product.price_pcs > 0
+                ? "bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer"
+                : "bg-gray-100 text-gray-400 cursor-not-allowed"
+            }`}
+            title={
+              product.price_pcs > 0
+                ? `Harga: ${formatPrice(product.price_pcs)}`
+                : "Harga belum tersedia"
+            }
+          >
+            Pcs{" "}
+            {product.price_pcs > 0 ? formatPrice(product.price_pcs) : "(Rp 0)"}
+          </button>
+        )}
+
+        {/* Tombol Pack - TAMPIL SELALU jika sell_per_unit mengizinkan */}
+        {(product.sell_per_unit === "all" ||
+          product.sell_per_unit === "pack") && (
+          <button
+            onClick={() => addToCart(product, "pack")}
+            disabled={!product.price_pack || product.price_pack <= 0}
+            className={`px-3 py-1 rounded-lg text-sm font-medium transition ${
+              product.price_pack > 0
+                ? "bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer"
+                : "bg-gray-100 text-gray-400 cursor-not-allowed"
+            }`}
+            title={
+              product.price_pack > 0
+                ? `Harga: ${formatPrice(product.price_pack)}`
+                : "Harga belum tersedia"
+            }
+          >
+            Pack{" "}
+            {product.price_pack > 0
+              ? formatPrice(product.price_pack)
+              : "(Rp 0)"}
+          </button>
+        )}
+
+        {/* Tombol Kg - TAMPIL SELALU jika sell_per_unit mengizinkan */}
+        {(product.sell_per_unit === "all" ||
+          product.sell_per_unit === "kg") && (
+          <button
+            onClick={() => addToCart(product, "kg")}
+            disabled={!product.price_kg || product.price_kg <= 0}
+            className={`px-3 py-1 rounded-lg text-sm font-medium transition ${
+              product.price_kg > 0
+                ? "bg-purple-100 text-purple-700 hover:bg-purple-200 cursor-pointer"
+                : "bg-gray-100 text-gray-400 cursor-not-allowed"
+            }`}
+            title={
+              product.price_kg > 0
+                ? `Harga: ${formatPrice(product.price_kg)}`
+                : "Harga belum tersedia"
+            }
+          >
+            Kg {product.price_kg > 0 ? formatPrice(product.price_kg) : "(Rp 0)"}
+          </button>
+        )}
+
+        {/* Jika tidak ada tombol yang muncul, tampilkan pesan */}
+        {product.sell_per_unit !== "all" &&
+          product.sell_per_unit !== "pcs" &&
+          product.sell_per_unit !== "pack" &&
+          product.sell_per_unit !== "kg" && (
+            <span className="text-xs text-red-500">Satuan tidak valid</span>
+          )}
+      </div>
     </div>
   );
 }

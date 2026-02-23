@@ -1,0 +1,3 @@
+Nama Barang,Kategori,Sell Per Unit,Harga Pcs,Harga Pack,Harga Kg,Stok,Min Stok,Keterangan
+"Test Product 1","Bahan Kue","pcs",10000,0,0,10,5,"Test import"
+"Test Product 2","Rempah-rempah","kg",0,0,50000,20,2,"Test import"

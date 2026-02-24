@@ -10,7 +10,8 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "echo \"No linting configured\""
+    "lint": "echo \"No linting configured\"",
+    "rebuild": "electron-rebuild -f -w sqlite3"
   },
   "keywords": [],
   "author": {
@@ -31,6 +32,7 @@
     "@electron-forge/plugin-fuses": "^7.11.1",
     "@electron-forge/plugin-webpack": "^7.11.1",
     "@electron/fuses": "^1.8.0",
+    "@electron/rebuild": "^3.7.2",
     "@vercel/webpack-asset-relocator-loader": "^1.7.3",
     "autoprefixer": "^10.4.24",
     "babel-loader": "^10.0.0",
@@ -43,10 +45,12 @@
     "tailwindcss": "^3.4.17"
   },
   "dependencies": {
+    "date-fns": "^4.1.0",
     "electron-squirrel-startup": "^1.0.1",
     "lucide-react": "^0.575.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "recharts": "^3.7.0",
     "sqlite3": "^5.1.7",
     "xlsx": "^0.18.5"
   }

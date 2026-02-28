@@ -3,41 +3,22 @@ import {
   AreaChart, Area, BarChart, Bar, PieChart as RePieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-
-// ─── MOCK DATA ────────────────────────────────────────────────────────────────
-const mockData = {
-  totalProducts: 248,
-  totalCategories: 12,
-  todaySales: 4850000,
-  todayTransactions: 34,
-  monthSales: 128750000,
-  dailySales: [
-    { date: '2024-01-20', total: 3200000 },
-    { date: '2024-01-21', total: 5100000 },
-    { date: '2024-01-22', total: 2800000 },
-    { date: '2024-01-23', total: 6700000 },
-    { date: '2024-01-24', total: 4300000 },
-    { date: '2024-01-25', total: 7200000 },
-    { date: '2024-01-26', total: 4850000 },
-  ],
-  topProducts: [
-    { product_name: 'Kopi Arabica Premium', total_terjual: 142, total_omzet: 8520000 },
-    { product_name: 'Teh Hijau Organik', total_terjual: 118, total_omzet: 5900000 },
-    { product_name: 'Susu Almond', total_terjual: 95, total_omzet: 7125000 },
-    { product_name: 'Granola Sehat', total_terjual: 87, total_omzet: 4350000 },
-    { product_name: 'Madu Hutan', total_terjual: 73, total_omzet: 6570000 },
-  ],
-  lowStock: [
-    { id: 1, name: 'Kopi Arabica Premium', stock: 3, min_stock: 10 },
-    { id: 2, name: 'Madu Hutan', stock: 0, min_stock: 5 },
-    { id: 3, name: 'Teh Hijau Organik', stock: 7, min_stock: 15 },
-  ],
-};
+import { getDashboardData } from '../../services/dashboard';
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
-const fmt = (n) => `Rp ${Number(n).toLocaleString('id-ID')}`;
-const fmtShort = (n) => n >= 1000000 ? `${(n/1000000).toFixed(1)}M` : `${(n/1000).toFixed(0)}K`;
-const fmtDate = (s) => new Date(s).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+const fmt = (n) => `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
+const fmtShort = (n) => {
+  const num = Number(n || 0);
+  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
+  if (num >= 1_000) return `${(num / 1_000).toFixed(0)}K`;
+  return String(num);
+};
+const fmtDate = (s) => {
+  if (!s) return '-';
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return s;
+  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+};
 
 // ─── STYLE TOKENS ─────────────────────────────────────────────────────────────
 const T = {
@@ -172,13 +153,67 @@ function SectionTitle({ children, icon }) {
 
 // ─── MAIN DASHBOARD ───────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const [data] = useState(mockData);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [tab, setTab] = useState('week');
 
-  const totalSold = data.topProducts.reduce((s, p) => s + p.total_terjual, 0);
+  useEffect(() => {
+    loadDashboard();
+  }, []);
+
+  const loadDashboard = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await getDashboardData();
+      setData(result);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 320 }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: 36, height: 36,
+            border: `2px solid ${T.border2}`,
+            borderTopColor: T.accent,
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite',
+            margin: '0 auto 12px',
+          }} />
+          <p style={{ fontSize: 11, color: T.muted, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            Memuat dashboard…
+          </p>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 320, flexDirection: 'column', gap: 12 }}>
+        <p style={{ fontSize: 14, fontWeight: 700, color: T.red }}>Gagal memuat data</p>
+        <p style={{ fontSize: 12, color: T.muted }}>{error}</p>
+        <button onClick={loadDashboard} style={{
+          padding: '8px 18px', borderRadius: 10,
+          border: `1px solid ${T.accent}40`, background: T.accent + '14',
+          color: T.accent, fontFamily: 'Syne, sans-serif', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+        }}>Coba Lagi</button>
+      </div>
+    );
+  }
+
+  const totalSold = (data.topProducts || []).reduce((s, p) => s + (p.total_terjual || 0), 0);
   const avgTx = data.todayTransactions > 0 ? data.todaySales / data.todayTransactions : 0;
 
-  const pieData = data.topProducts.map((p) => ({
+  const pieData = (data.topProducts || []).map((p) => ({
     name: p.product_name.length > 12 ? p.product_name.slice(0, 12) + '…' : p.product_name,
     value: p.total_terjual,
   }));
@@ -186,8 +221,6 @@ export default function Dashboard() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body { background: ${T.bg}; color: ${T.text}; font-family: 'Syne', sans-serif; min-height: 100vh; }
@@ -196,6 +229,7 @@ export default function Dashboard() {
           from { opacity: 0; transform: translateY(16px); }
           to   { opacity: 1; transform: translateY(0); }
         }
+        @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes pulse-ring {
           0%   { transform: scale(1);   opacity: 0.6; }
           100% { transform: scale(1.5); opacity: 0; }
@@ -259,6 +293,19 @@ export default function Dashboard() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {/* Refresh */}
+            <button onClick={loadDashboard} style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '6px 12px', borderRadius: 100,
+              background: T.border, border: `1px solid ${T.border2}`,
+              color: T.sub, fontFamily: 'Syne, sans-serif', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+            }}>
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+                <path d="M1.5 5.5A4 4 0 115 1.7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                <path d="M1.5 2.5v3h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Refresh
+            </button>
             {/* Live indicator */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 100, background: T.green + '15', border: `1px solid ${T.green}30` }}>
               <div style={{ position: 'relative', width: 7, height: 7 }}>
@@ -274,18 +321,18 @@ export default function Dashboard() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 24 }}>
           <StatCard
             index={0} label="Total Produk" accent={T.blue}
-            value={data.totalProducts}
-            sub={<Chip color={T.blue}>{data.totalCategories} Kategori</Chip>}
+            value={data.totalProducts || 0}
+            sub={<Chip color={T.blue}>{data.totalCategories || 0} Kategori</Chip>}
           />
           <StatCard
             index={1} label="Penjualan Hari Ini" accent={T.accent}
-            value={data.todaySales}
-            sub={<Chip color={T.accent}>{data.todayTransactions} Transaksi</Chip>}
+            value={data.todaySales || 0}
+            sub={<Chip color={T.accent}>{data.todayTransactions || 0} Transaksi</Chip>}
           />
           <StatCard
             index={2} label="Penjualan Bulan Ini" accent={T.green}
-            value={data.monthSales}
-            sub={<span style={{ fontSize: 12, color: T.sub }}>Target: {fmtShort(data.monthSales * 1.2)}</span>}
+            value={data.monthSales || 0}
+            sub={<span style={{ fontSize: 12, color: T.sub }}>Target: {fmtShort((data.monthSales || 0) * 1.2)}</span>}
           />
           <StatCard
             index={3} label="Rata-rata Transaksi" accent={T.purple}
@@ -303,7 +350,7 @@ export default function Dashboard() {
               <div>
                 <SectionTitle icon="〰">Tren Penjualan</SectionTitle>
                 <p style={{ fontSize: 28, fontWeight: 800, color: T.text, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
-                  Rp {fmtShort(data.dailySales.reduce((s, d) => s + d.total, 0))}
+                  Rp {fmtShort((data.dailySales || []).reduce((s, d) => s + (d.total || 0), 0))}
                 </p>
                 <p style={{ fontSize: 12, color: T.sub, marginTop: 4 }}>Total 7 hari terakhir</p>
               </div>
@@ -316,52 +363,66 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={data.dailySales} margin={{ top: 8, right: 4, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="gSales" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={T.accent} stopOpacity={0.3} />
-                    <stop offset="100%" stopColor={T.accent} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="2 6" stroke={T.border} vertical={false} />
-                <XAxis dataKey="date" tickFormatter={fmtDate} tick={{ fill: T.muted, fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }} axisLine={false} tickLine={false} />
-                <YAxis tickFormatter={(v) => `${(v/1000000).toFixed(1)}M`} tick={{ fill: T.muted, fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }} axisLine={false} tickLine={false} />
-                <Tooltip content={<CustomTooltip />} cursor={{ stroke: T.accent, strokeWidth: 1, strokeDasharray: '4 4' }} />
-                <Area type="monotone" dataKey="total" stroke={T.accent} strokeWidth={2.5} fill="url(#gSales)" dot={false} activeDot={{ r: 5, fill: T.accent, stroke: T.bg, strokeWidth: 2 }} />
-              </AreaChart>
-            </ResponsiveContainer>
+            {(data.dailySales || []).length === 0 ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 220, color: T.muted, fontSize: 13 }}>
+                Belum ada data penjualan
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <AreaChart data={data.dailySales} margin={{ top: 8, right: 4, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gSales" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={T.accent} stopOpacity={0.3} />
+                      <stop offset="100%" stopColor={T.accent} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="2 6" stroke={T.border} vertical={false} />
+                  <XAxis dataKey="date" tickFormatter={fmtDate} tick={{ fill: T.muted, fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }} axisLine={false} tickLine={false} />
+                  <YAxis tickFormatter={(v) => `${(v/1000000).toFixed(1)}M`} tick={{ fill: T.muted, fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ stroke: T.accent, strokeWidth: 1, strokeDasharray: '4 4' }} />
+                  <Area type="monotone" dataKey="total" stroke={T.accent} strokeWidth={2.5} fill="url(#gSales)" dot={false} activeDot={{ r: 5, fill: T.accent, stroke: T.bg, strokeWidth: 2 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </div>
 
           {/* Donut Chart */}
           <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: '24px', animation: 'fadeUp 0.5s ease 0.4s both' }}>
             <SectionTitle icon="◎">Distribusi</SectionTitle>
 
-            <ResponsiveContainer width="100%" height={160}>
-              <RePieChart>
-                <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={72} dataKey="value" paddingAngle={3} startAngle={90} endAngle={-270}>
-                  {pieData.map((_, i) => (
-                    <Cell key={i} fill={PALETTE[i % PALETTE.length]} stroke="transparent" />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(v, n) => [`${v} item`, n]}
-                  contentStyle={{ background: T.surface, border: `1px solid ${T.border2}`, borderRadius: 10, fontFamily: 'inherit', fontSize: 12 }}
-                  labelStyle={{ color: T.sub }}
-                  itemStyle={{ color: T.text }}
-                />
-              </RePieChart>
-            </ResponsiveContainer>
+            {pieData.length === 0 ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, color: T.muted, fontSize: 12 }}>
+                Belum ada data
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={160}>
+                  <RePieChart>
+                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={72} dataKey="value" paddingAngle={3} startAngle={90} endAngle={-270}>
+                      {pieData.map((_, i) => (
+                        <Cell key={i} fill={PALETTE[i % PALETTE.length]} stroke="transparent" />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(v, n) => [`${v} item`, n]}
+                      contentStyle={{ background: T.surface, border: `1px solid ${T.border2}`, borderRadius: 10, fontFamily: 'inherit', fontSize: 12 }}
+                      labelStyle={{ color: T.sub }}
+                      itemStyle={{ color: T.text }}
+                    />
+                  </RePieChart>
+                </ResponsiveContainer>
 
-            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {pieData.slice(0, 4).map((item, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: 2, background: PALETTE[i % PALETTE.length], flexShrink: 0 }} />
-                  <span style={{ fontSize: 11, color: T.sub, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</span>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: T.text, fontFamily: 'JetBrains Mono, monospace' }}>{item.value}</span>
+                <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {pieData.slice(0, 4).map((item, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: 2, background: PALETTE[i % PALETTE.length], flexShrink: 0 }} />
+                      <span style={{ fontSize: 11, color: T.sub, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: T.text, fontFamily: 'JetBrains Mono, monospace' }}>{item.value}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -371,40 +432,46 @@ export default function Dashboard() {
           {/* Top Products horizontal bars */}
           <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: '24px', animation: 'fadeUp 0.5s ease 0.5s both' }}>
             <SectionTitle icon="▲">5 Produk Terlaris</SectionTitle>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {data.topProducts.map((p, i) => {
-                const pct = Math.round((p.total_terjual / data.topProducts[0].total_terjual) * 100);
-                return (
-                  <div key={i}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{
-                          width: 22, height: 22, borderRadius: 6, background: PALETTE[i % PALETTE.length] + '20',
-                          border: `1px solid ${PALETTE[i % PALETTE.length]}40`,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 10, fontWeight: 800, color: PALETTE[i % PALETTE.length], fontFamily: 'JetBrains Mono, monospace',
-                          flexShrink: 0,
-                        }}>{i + 1}</span>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{p.product_name}</span>
+            {(data.topProducts || []).length === 0 ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 120, color: T.muted, fontSize: 13 }}>
+                Belum ada data penjualan bulan ini
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {data.topProducts.map((p, i) => {
+                  const pct = Math.round((p.total_terjual / (data.topProducts[0].total_terjual || 1)) * 100);
+                  return (
+                    <div key={i}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <span style={{
+                            width: 22, height: 22, borderRadius: 6, background: PALETTE[i % PALETTE.length] + '20',
+                            border: `1px solid ${PALETTE[i % PALETTE.length]}40`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 10, fontWeight: 800, color: PALETTE[i % PALETTE.length], fontFamily: 'JetBrains Mono, monospace',
+                            flexShrink: 0,
+                          }}>{i + 1}</span>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{p.product_name}</span>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: T.text, fontFamily: 'JetBrains Mono, monospace' }}>{p.total_terjual}</span>
+                          <span style={{ fontSize: 10, color: T.muted, marginLeft: 4 }}>item</span>
+                        </div>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <span style={{ fontSize: 13, fontWeight: 800, color: T.text, fontFamily: 'JetBrains Mono, monospace' }}>{p.total_terjual}</span>
-                        <span style={{ fontSize: 10, color: T.muted, marginLeft: 4 }}>item</span>
+                      <div className="bar-fill">
+                        <div
+                          className="bar-fill-inner"
+                          style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${PALETTE[i % PALETTE.length]}, ${PALETTE[i % PALETTE.length]}80)` }}
+                        />
+                      </div>
+                      <div style={{ fontSize: 10, color: T.muted, marginTop: 4, fontFamily: 'JetBrains Mono, monospace' }}>
+                        {fmt(p.total_omzet)}
                       </div>
                     </div>
-                    <div className="bar-fill">
-                      <div
-                        className="bar-fill-inner"
-                        style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${PALETTE[i % PALETTE.length]}, ${PALETTE[i % PALETTE.length]}80)` }}
-                      />
-                    </div>
-                    <div style={{ fontSize: 10, color: T.muted, marginTop: 4, fontFamily: 'JetBrains Mono, monospace' }}>
-                      {fmt(p.total_omzet)}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Right column */}
@@ -413,27 +480,31 @@ export default function Dashboard() {
             {/* Low Stock */}
             <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: '24px', animation: 'fadeUp 0.5s ease 0.6s both' }}>
               <SectionTitle icon="⚠">Stok Menipis</SectionTitle>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {data.lowStock.map((p) => (
-                  <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 10, background: T.bg, border: `1px solid ${T.border}` }}>
-                    <div>
-                      <p style={{ fontSize: 12, fontWeight: 600, color: T.text, marginBottom: 2 }}>{p.name}</p>
-                      <p style={{ fontSize: 11, color: T.muted, fontFamily: 'JetBrains Mono, monospace' }}>min {p.min_stock} unit</p>
+              {(data.lowStock || []).length === 0 ? (
+                <p style={{ fontSize: 12, color: T.muted, textAlign: 'center', padding: '20px 0' }}>Semua stok aman ✓</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {data.lowStock.map((p) => (
+                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 10, background: T.bg, border: `1px solid ${T.border}` }}>
+                      <div>
+                        <p style={{ fontSize: 12, fontWeight: 600, color: T.text, marginBottom: 2 }}>{p.name}</p>
+                        <p style={{ fontSize: 11, color: T.muted, fontFamily: 'JetBrains Mono, monospace' }}>min {p.min_stock} unit</p>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{
+                          display: 'block',
+                          fontSize: 20, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace',
+                          color: p.stock === 0 ? T.red : T.accent,
+                          lineHeight: 1,
+                        }}>{p.stock}</span>
+                        <Chip color={p.stock === 0 ? T.red : T.accent}>
+                          {p.stock === 0 ? 'Habis' : 'Menipis'}
+                        </Chip>
+                      </div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{
-                        display: 'block',
-                        fontSize: 20, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace',
-                        color: p.stock === 0 ? T.red : T.accent,
-                        lineHeight: 1,
-                      }}>{p.stock}</span>
-                      <Chip color={p.stock === 0 ? T.red : T.accent}>
-                        {p.stock === 0 ? 'Habis' : 'Menipis'}
-                      </Chip>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Quick Summary */}
@@ -441,34 +512,15 @@ export default function Dashboard() {
               <SectionTitle icon="◆">Ringkasan</SectionTitle>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 {[
-                  { label: 'Omzet Bulan Ini', val: `Rp ${fmtShort(data.monthSales)}`, color: T.accent },
+                  { label: 'Omzet Bulan Ini', val: `Rp ${fmtShort(data.monthSales || 0)}`, color: T.accent },
                   { label: 'Item Terjual', val: totalSold, color: T.green },
-                  { label: 'Rata-rata/Item', val: `Rp ${fmtShort(data.monthSales / (totalSold || 1))}`, color: T.purple },
-                  { label: 'Tx per Hari', val: Math.round(data.todayTransactions / (new Date().getDate() || 1)), color: T.blue },
+                  { label: 'Rata-rata/Tx', val: `Rp ${fmtShort(avgTx)}`, color: T.purple },
+                  { label: 'Tx Hari Ini', val: data.todayTransactions || 0, color: T.blue },
                 ].map((s, i) => (
                   <div key={i} style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 10, padding: '12px' }}>
                     <p style={{ fontSize: 10, color: T.muted, marginBottom: 6, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{s.label}</p>
                     <p style={{ fontSize: 18, fontWeight: 800, color: s.color, fontFamily: 'JetBrains Mono, monospace' }}>{s.val}</p>
                   </div>
-                ))}
-              </div>
-
-              <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                {[
-                  { label: '+ Tambah Stok', color: T.green },
-                  { label: '↗ Laporan', color: T.accent },
-                ].map((btn, i) => (
-                  <button key={i} style={{
-                    padding: '9px 0', borderRadius: 10,
-                    background: btn.color + '12', border: `1px solid ${btn.color}30`,
-                    color: btn.color, fontFamily: 'Syne, sans-serif', fontSize: 12, fontWeight: 700,
-                    letterSpacing: '0.04em', cursor: 'pointer', transition: 'all 0.2s',
-                  }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = btn.color + '22'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = btn.color + '12'; }}
-                  >
-                    {btn.label}
-                  </button>
                 ))}
               </div>
             </div>

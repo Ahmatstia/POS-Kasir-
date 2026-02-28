@@ -29,7 +29,7 @@ export async function getSalesReport(startDate, endDate) {
     // Query untuk metode pembayaran
     const paymentMethods = await window.electronAPI.query(`
       SELECT 
-        payment_method,
+        payment_method AS name,
         COUNT(*) as count,
         COALESCE(SUM(total_amount), 0) as total
       FROM transactions 

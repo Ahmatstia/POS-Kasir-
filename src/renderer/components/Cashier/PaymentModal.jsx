@@ -95,7 +95,7 @@ function PaymentModal({ total, onClose, onConfirm }) {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
 
         @keyframes modalIn {
           from { opacity: 0; transform: scale(0.96) translateY(10px); }

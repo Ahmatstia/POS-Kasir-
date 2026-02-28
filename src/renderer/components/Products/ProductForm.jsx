@@ -315,7 +315,7 @@ export function FormActions({ onClose, loading, submitLabel = 'Simpan', loadingL
 
 // ─── SHARED CSS ───────────────────────────────────────────────────────────────
 export const MODAL_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
 
   @keyframes fadeOverlay { from { opacity:0; } to { opacity:1; } }
   @keyframes modalIn { from { opacity:0; transform: scale(0.96) translateY(10px); } to { opacity:1; transform: scale(1) translateY(0); } }

@@ -1,15 +1,140 @@
-import React, { useState, useEffect } from 'react';
-import { getTransactions, getTransactionDetail } from '../../services/transactions';
-import { format } from 'date-fns';
-import { id } from 'date-fns/locale';
-import { Receipt, Search, Eye, Printer } from 'lucide-react';
-import { printReceipt, printThermalReceipt } from '../../utils/PrintUtility';
+import React, { useState, useEffect } from "react";
+import {
+  getTransactions,
+  getTransactionDetail,
+} from "../../services/transactions";
+import { format } from "date-fns";
+import { id } from "date-fns/locale";
+import { printReceipt, printThermalReceipt } from "../../utils/PrintUtility";
+
+// ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
+const T = {
+  bg: "#0E0F11",
+  surface: "#161719",
+  card: "#1A1B1E",
+  border: "#1F2023",
+  border2: "#2A2B2F",
+  text: "#F0EDE6",
+  muted: "#5C5C66",
+  sub: "#9998A3",
+  accent: "#F5A623",
+  green: "#34C98B",
+  red: "#E85858",
+  blue: "#5B8AF5",
+  purple: "#A78BFA",
+};
+
+const fmt = (n) => `Rp ${Number(n || 0).toLocaleString("id-ID")}`;
+const fmtDt = (str) => {
+  if (!str) return '-';
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return String(str);
+  return format(d, 'dd MMM yyyy · HH:mm', { locale: id });
+};
+
+// ─── PAYMENT METHOD ───────────────────────────────────────────────────────────
+const METHOD = {
+  cash: {
+    label: "Tunai",
+    color: T.accent,
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+        <rect
+          x="1"
+          y="3"
+          width="11"
+          height="7"
+          rx="1.5"
+          stroke="currentColor"
+          strokeWidth="1.3"
+        />
+        <circle
+          cx="6.5"
+          cy="6.5"
+          r="1.5"
+          stroke="currentColor"
+          strokeWidth="1.3"
+        />
+      </svg>
+    ),
+  },
+  debit: {
+    label: "Debit",
+    color: T.blue,
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+        <rect
+          x="1"
+          y="2.5"
+          width="11"
+          height="8"
+          rx="1.5"
+          stroke="currentColor"
+          strokeWidth="1.3"
+        />
+        <path d="M1 5.5h11" stroke="currentColor" strokeWidth="1.3" />
+        <rect
+          x="2.5"
+          y="7.5"
+          width="3"
+          height="1.5"
+          rx="0.5"
+          fill="currentColor"
+          opacity="0.6"
+        />
+      </svg>
+    ),
+  },
+  qris: {
+    label: "QRIS",
+    color: T.purple,
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+        <rect
+          x="1"
+          y="1"
+          width="4.5"
+          height="4.5"
+          rx="0.8"
+          stroke="currentColor"
+          strokeWidth="1.3"
+        />
+        <rect
+          x="7.5"
+          y="1"
+          width="4.5"
+          height="4.5"
+          rx="0.8"
+          stroke="currentColor"
+          strokeWidth="1.3"
+        />
+        <rect
+          x="1"
+          y="7.5"
+          width="4.5"
+          height="4.5"
+          rx="0.8"
+          stroke="currentColor"
+          strokeWidth="1.3"
+        />
+        <rect x="8" y="8" width="1.5" height="1.5" fill="currentColor" />
+        <rect x="10.5" y="8" width="1.5" height="1.5" fill="currentColor" />
+        <rect x="8" y="10.5" width="1.5" height="1.5" fill="currentColor" />
+        <rect x="10.5" y="10.5" width="1.5" height="1.5" fill="currentColor" />
+      </svg>
+    ),
+  },
+};
+const getMethod = (m) => METHOD[m] || METHOD.cash;
+
+// ─── UNIT COLORS ──────────────────────────────────────────────────────────────
+const UNIT_COLOR = { pcs: T.blue, pack: T.green, kg: T.purple };
 
 function Transactions() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selected, setSelected] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
@@ -18,239 +143,954 @@ function Transactions() {
 
   const loadTransactions = async () => {
     setLoading(true);
-    const data = await getTransactions(100);
-    setTransactions(data);
+    setTransactions(await getTransactions(100));
     setLoading(false);
   };
 
   const viewDetail = async (id) => {
     setDetailLoading(true);
-    const detail = await getTransactionDetail(id);
-    setSelectedTransaction(detail);
+    setSelected(await getTransactionDetail(id));
     setDetailLoading(false);
   };
 
-  const formatPrice = (price) => {
-    return `Rp ${price.toLocaleString()}`;
+  const handlePrint = (type = "normal") => {
+    if (!selected) return;
+    type === "thermal"
+      ? printThermalReceipt(selected.transaction, selected.items)
+      : printReceipt(selected.transaction, selected.items);
   };
 
-  const formatDate = (dateStr) => {
-    const date = new Date(dateStr);
-    return format(date, 'dd MMM yyyy HH:mm', { locale: id });
-  };
-
-  const getMethodIcon = (method) => {
-    switch(method) {
-      case 'cash': return '💵';
-      case 'debit': return '💳';
-      case 'qris': return '📱';
-      default: return '💵';
-    }
-  };
-
- const handlePrint = (type = 'normal') => {
-  if (!selectedTransaction) return;
-  
-  if (type === 'thermal') {
-    printThermalReceipt(selectedTransaction.transaction, selectedTransaction.items);
-  } else {
-    printReceipt(selectedTransaction.transaction, selectedTransaction.items);
-  }
-};
-
-  const filteredTransactions = transactions.filter(t => 
-    t.invoice_no.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (t.customer_name && t.customer_name.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filtered = transactions.filter(
+    (t) =>
+      t.invoice_no.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (t.customer_name &&
+        t.customer_name.toLowerCase().includes(searchTerm.toLowerCase())),
   );
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: 280,
+        }}
+      >
+        <div style={{ textAlign: "center" }}>
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              border: `2px solid ${T.border2}`,
+              borderTopColor: T.accent,
+              borderRadius: "50%",
+              animation: "spin 0.8s linear infinite",
+              margin: "0 auto 12px",
+            }}
+          />
+          <p
+            style={{
+              fontSize: 11,
+              color: T.muted,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              fontFamily: "Syne, sans-serif",
+            }}
+          >
+            Memuat transaksi…
+          </p>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-120px)]">
-      {/* Left Panel - List Transaksi */}
-      <div className="w-1/2 bg-white rounded-lg shadow p-4 flex flex-col">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Receipt size={20} /> Riwayat Transaksi
-          </h2>
-          <button
-            onClick={loadTransactions}
-            className="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded"
+    <>
+      <style>{`
+        @keyframes spin    { to { transform: rotate(360deg); } }
+        @keyframes fadeUp  { from { opacity:0; transform:translateY(10px);} to {opacity:1;transform:translateY(0);} }
+        @keyframes fadeIn  { from { opacity:0; } to { opacity:1; } }
+
+        .tx-item { transition: background 0.12s, border-color 0.12s; cursor: pointer; }
+        .tx-item:hover { background: ${T.border}40 !important; }
+        .tx-item.active { background: ${T.accent}08 !important; border-color: ${T.accent}35 !important; }
+
+        .print-btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+
+        .scroll-pane::-webkit-scrollbar { width: 3px; }
+        .scroll-pane::-webkit-scrollbar-thumb { background: ${T.border2}; border-radius: 3px; }
+
+        .search-input:focus {
+          border-color: ${T.accent}60 !important;
+          box-shadow: 0 0 0 2px ${T.accent}10;
+        }
+        .search-input::placeholder { color: ${T.muted}; }
+      `}</style>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 420px",
+          gap: 16,
+          height: "calc(100vh - 140px)",
+          fontFamily: "Syne, sans-serif",
+          animation: "fadeUp 0.4s ease both",
+        }}
+      >
+        {/* ── LEFT: TRANSACTION LIST ── */}
+        <div
+          style={{
+            background: T.surface,
+            border: `1px solid ${T.border}`,
+            borderRadius: 16,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+          }}
+        >
+          {/* Header */}
+          <div
+            style={{
+              padding: "18px 20px 14px",
+              borderBottom: `1px solid ${T.border}`,
+            }}
           >
-            ↻ Refresh
-          </button>
-        </div>
-
-        {/* Search */}
-        <div className="relative mb-4">
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Cari invoice atau customer..."
-            className="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2"
-          />
-          <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
-        </div>
-
-        {/* List */}
-        <div className="flex-1 overflow-y-auto">
-          {filteredTransactions.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              Tidak ada transaksi
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {filteredTransactions.map((t) => (
-                <div
-                  key={t.id}
-                  onClick={() => viewDetail(t.id)}
-                  className={`p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition ${
-                    selectedTransaction?.transaction?.id === t.id ? 'bg-blue-50 border-blue-300' : ''
-                  }`}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 14,
+              }}
+            >
+              <div>
+                <p
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    color: T.muted,
+                    marginBottom: 2,
+                  }}
                 >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="font-medium">{t.invoice_no}</div>
-                      <div className="text-sm text-gray-500">
-                        {formatDate(t.created_at)}
+                  Riwayat
+                </p>
+                <p style={{ fontSize: 14, fontWeight: 800, color: T.text }}>
+                  Transaksi
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: T.muted,
+                      marginLeft: 8,
+                      fontFamily: "JetBrains Mono, monospace",
+                    }}
+                  >
+                    ({filtered.length})
+                  </span>
+                </p>
+              </div>
+              <button
+                onClick={loadTransactions}
+                style={{
+                  padding: "5px 12px",
+                  borderRadius: 9,
+                  border: `1px solid ${T.border2}`,
+                  background: "transparent",
+                  color: T.sub,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 5,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = T.border;
+                  e.currentTarget.style.color = T.text;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.color = T.sub;
+                }}
+              >
+                <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+                  <path
+                    d="M1.5 5.5A4 4 0 115 1.7"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M1.5 2.5v3h3"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                Refresh
+              </button>
+            </div>
+
+            {/* Search */}
+            <div style={{ position: "relative" }}>
+              <svg
+                style={{
+                  position: "absolute",
+                  left: 11,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  opacity: 0.4,
+                  pointerEvents: "none",
+                }}
+                width="13"
+                height="13"
+                viewBox="0 0 13 13"
+                fill="none"
+              >
+                <circle
+                  cx="5.5"
+                  cy="5.5"
+                  r="4"
+                  stroke={T.sub}
+                  strokeWidth="1.4"
+                />
+                <path
+                  d="M8.5 8.5L11 11"
+                  stroke={T.sub}
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Cari invoice atau customer…"
+                className="search-input"
+                style={{
+                  width: "100%",
+                  padding: "9px 12px 9px 32px",
+                  borderRadius: 10,
+                  border: `1px solid ${T.border2}`,
+                  background: T.bg,
+                  color: T.text,
+                  fontFamily: "Syne, sans-serif",
+                  fontSize: 12,
+                  outline: "none",
+                  transition: "border-color 0.15s",
+                }}
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  style={{
+                    position: "absolute",
+                    right: 10,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: T.muted,
+                    fontSize: 16,
+                    lineHeight: 1,
+                  }}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* List */}
+          <div className="scroll-pane" style={{ flex: 1, overflowY: "auto" }}>
+            {filtered.length === 0 ? (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  height: 200,
+                  gap: 8,
+                }}
+              >
+                <svg
+                  width="40"
+                  height="40"
+                  viewBox="0 0 40 40"
+                  fill="none"
+                  opacity="0.2"
+                >
+                  <rect
+                    x="6"
+                    y="4"
+                    width="28"
+                    height="32"
+                    rx="3"
+                    stroke={T.sub}
+                    strokeWidth="2"
+                  />
+                  <path
+                    d="M13 14h14M13 20h10M13 26h8"
+                    stroke={T.sub}
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <p style={{ fontSize: 12, color: T.muted }}>
+                  Tidak ada transaksi
+                </p>
+              </div>
+            ) : (
+              filtered.map((t) => {
+                const m = getMethod(t.payment_method);
+                const isActive = selected?.transaction?.id === t.id;
+                return (
+                  <div
+                    key={t.id}
+                    className={`tx-item ${isActive ? "active" : ""}`}
+                    onClick={() => viewDetail(t.id)}
+                    style={{
+                      padding: "13px 18px",
+                      borderBottom: `1px solid ${T.border}`,
+                      border: isActive ? `1px solid ${T.accent}35` : undefined,
+                      background: isActive ? T.accent + "08" : "transparent",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        marginBottom: 6,
+                      }}
+                    >
+                      {/* Invoice + date */}
+                      <div>
+                        <p
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 800,
+                            color: isActive ? T.accent : T.text,
+                            fontFamily: "JetBrains Mono, monospace",
+                            marginBottom: 3,
+                          }}
+                        >
+                          {t.invoice_no}
+                        </p>
+                        <p style={{ fontSize: 10, color: T.muted }}>
+                          {fmtDt(t.created_at)}
+                        </p>
+                      </div>
+                      {/* Amount + method */}
+                      <div style={{ textAlign: "right" }}>
+                        <p
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 800,
+                            color: T.text,
+                            fontFamily: "JetBrains Mono, monospace",
+                            marginBottom: 4,
+                          }}
+                        >
+                          {fmt(t.total_amount)}
+                        </p>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                            padding: "2px 8px",
+                            borderRadius: 100,
+                            fontSize: 9,
+                            fontWeight: 700,
+                            letterSpacing: "0.06em",
+                            textTransform: "uppercase",
+                            background: m.color + "12",
+                            border: `1px solid ${m.color}30`,
+                            color: m.color,
+                          }}
+                        >
+                          {m.icon}
+                          {m.label}
+                        </span>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-bold text-blue-600">
-                        {formatPrice(t.total_amount)}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {getMethodIcon(t.payment_method)} {t.payment_method}
-                      </div>
-                    </div>
+                    {t.customer_name && (
+                      <p style={{ fontSize: 10, color: T.muted }}>
+                        <span style={{ color: T.muted + "80" }}>
+                          Customer:{" "}
+                        </span>
+                        {t.customer_name}
+                      </p>
+                    )}
                   </div>
-                  {t.customer_name && (
-                    <div className="text-xs text-gray-400 mt-1">
-                      Customer: {t.customer_name}
-                    </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* ── RIGHT: DETAIL ── */}
+        <div
+          style={{
+            background: T.surface,
+            border: `1px solid ${T.border}`,
+            borderRadius: 16,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+          }}
+        >
+          {/* Header */}
+          <div
+            style={{
+              padding: "18px 20px 14px",
+              borderBottom: `1px solid ${T.border}`,
+            }}
+          >
+            <p
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                color: T.muted,
+                marginBottom: 2,
+              }}
+            >
+              Detail
+            </p>
+            <p style={{ fontSize: 14, fontWeight: 800, color: T.text }}>
+              Transaksi
+            </p>
+          </div>
+
+          {detailLoading ? (
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  border: `2px solid ${T.border2}`,
+                  borderTopColor: T.accent,
+                  borderRadius: "50%",
+                  animation: "spin 0.8s linear infinite",
+                }}
+              />
+            </div>
+          ) : selected ? (
+            <div
+              className="scroll-pane"
+              style={{ flex: 1, overflowY: "auto", padding: "16px 18px" }}
+            >
+              {/* Invoice meta */}
+              <div
+                style={{
+                  background: T.bg,
+                  border: `1px solid ${T.border2}`,
+                  borderRadius: 12,
+                  padding: "14px 16px",
+                  marginBottom: 14,
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+              >
+                {/* Accent stripe */}
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: 2,
+                    background: `linear-gradient(90deg, ${T.accent}, transparent)`,
+                  }}
+                />
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: 12,
+                  }}
+                >
+                  <div>
+                    <p
+                      style={{
+                        fontSize: 9,
+                        fontWeight: 700,
+                        letterSpacing: "0.1em",
+                        textTransform: "uppercase",
+                        color: T.muted,
+                        marginBottom: 4,
+                      }}
+                    >
+                      Invoice
+                    </p>
+                    <p
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 800,
+                        color: T.accent,
+                        fontFamily: "JetBrains Mono, monospace",
+                      }}
+                    >
+                      {selected.transaction.invoice_no}
+                    </p>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <p
+                      style={{
+                        fontSize: 9,
+                        fontWeight: 700,
+                        letterSpacing: "0.1em",
+                        textTransform: "uppercase",
+                        color: T.muted,
+                        marginBottom: 4,
+                      }}
+                    >
+                      Tanggal
+                    </p>
+                    <p
+                      style={{
+                        fontSize: 11,
+                        color: T.sub,
+                        fontFamily: "JetBrains Mono, monospace",
+                      }}
+                    >
+                      {fmtDt(selected.transaction.created_at)}
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: 10 }}>
+                  {/* Method */}
+                  {(() => {
+                    const m = getMethod(selected.transaction.payment_method);
+                    return (
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 5,
+                          padding: "4px 10px",
+                          borderRadius: 100,
+                          fontSize: 10,
+                          fontWeight: 700,
+                          background: m.color + "12",
+                          border: `1px solid ${m.color}30`,
+                          color: m.color,
+                        }}
+                      >
+                        {m.icon} {m.label}
+                      </span>
+                    );
+                  })()}
+                  {/* Customer */}
+                  {selected.transaction.customer_name && (
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 5,
+                        padding: "4px 10px",
+                        borderRadius: 100,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        background: T.border,
+                        border: `1px solid ${T.border2}`,
+                        color: T.sub,
+                      }}
+                    >
+                      {selected.transaction.customer_name}
+                    </span>
                   )}
                 </div>
-              ))}
+              </div>
+
+              {/* Items */}
+              <div style={{ marginBottom: 14 }}>
+                <p
+                  style={{
+                    fontSize: 9,
+                    fontWeight: 700,
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    color: T.muted,
+                    marginBottom: 10,
+                  }}
+                >
+                  Item Belanja{" "}
+                  <span style={{ fontWeight: 400 }}>
+                    ({selected.items.length})
+                  </span>
+                </p>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 6 }}
+                >
+                  {selected.items.map((item) => {
+                    const uc = UNIT_COLOR[item.unit] || T.sub;
+                    return (
+                      <div
+                        key={item.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          padding: "10px 12px",
+                          borderRadius: 10,
+                          background: T.bg,
+                          border: `1px solid ${T.border}`,
+                        }}
+                      >
+                        {/* Unit badge */}
+                        <div
+                          style={{
+                            width: 30,
+                            height: 30,
+                            borderRadius: 8,
+                            flexShrink: 0,
+                            background: uc + "14",
+                            border: `1px solid ${uc}30`,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: 8,
+                            fontWeight: 800,
+                            color: uc,
+                            letterSpacing: "0.05em",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          {item.unit}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 700,
+                              color: T.text,
+                              marginBottom: 2,
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {item.product_name}
+                          </p>
+                          <p
+                            style={{
+                              fontSize: 10,
+                              color: T.sub,
+                              fontFamily: "JetBrains Mono, monospace",
+                            }}
+                          >
+                            {item.quantity} × {fmt(item.price_per_unit)}
+                          </p>
+                        </div>
+                        <p
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 800,
+                            color: T.text,
+                            fontFamily: "JetBrains Mono, monospace",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {fmt(item.subtotal)}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Totals */}
+              <div
+                style={{
+                  background: T.bg,
+                  border: `1px solid ${T.border2}`,
+                  borderRadius: 12,
+                  padding: "14px 16px",
+                  marginBottom: 16,
+                }}
+              >
+                {[
+                  {
+                    label: "Subtotal",
+                    val: selected.transaction.subtotal,
+                    color: T.sub,
+                  },
+                  {
+                    label: "Diskon",
+                    val: selected.transaction.discount,
+                    color:
+                      selected.transaction.discount > 0 ? T.green : T.muted,
+                  },
+                ].map(({ label, val, color }) => (
+                  <div
+                    key={label}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginBottom: 8,
+                    }}
+                  >
+                    <span style={{ fontSize: 11, color: T.sub }}>{label}</span>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        color,
+                        fontFamily: "JetBrains Mono, monospace",
+                      }}
+                    >
+                      {fmt(val)}
+                    </span>
+                  </div>
+                ))}
+
+                <div
+                  style={{ height: 1, background: T.border2, margin: "10px 0" }}
+                />
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: 10,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 800,
+                      color: T.sub,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                    }}
+                  >
+                    Total
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 18,
+                      fontWeight: 800,
+                      color: T.text,
+                      fontFamily: "JetBrains Mono, monospace",
+                      letterSpacing: "-0.01em",
+                    }}
+                  >
+                    {fmt(selected.transaction.total_amount)}
+                  </span>
+                </div>
+
+                {[
+                  {
+                    label: "Dibayar",
+                    val: selected.transaction.payment_amount,
+                    color: T.sub,
+                  },
+                  {
+                    label: "Kembalian",
+                    val: selected.transaction.change_amount,
+                    color: T.green,
+                  },
+                ].map(({ label, val, color }) => (
+                  <div
+                    key={label}
+                    style={{ display: "flex", justifyContent: "space-between" }}
+                  >
+                    <span style={{ fontSize: 11, color: T.muted }}>
+                      {label}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color,
+                        fontFamily: "JetBrains Mono, monospace",
+                      }}
+                    >
+                      {fmt(val)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Print actions */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 10,
+                }}
+              >
+                {[
+                  {
+                    type: "normal",
+                    label: "Cetak Struk",
+                    color: T.blue,
+                    icon: (
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 14 14"
+                        fill="none"
+                      >
+                        <path
+                          d="M4 1h6v4H4V1z"
+                          stroke="currentColor"
+                          strokeWidth="1.3"
+                          strokeLinejoin="round"
+                        />
+                        <rect
+                          x="1"
+                          y="5"
+                          width="12"
+                          height="6"
+                          rx="1.5"
+                          stroke="currentColor"
+                          strokeWidth="1.3"
+                        />
+                        <path
+                          d="M4 10v3h6v-3"
+                          stroke="currentColor"
+                          strokeWidth="1.3"
+                          strokeLinejoin="round"
+                        />
+                        <circle
+                          cx="10.5"
+                          cy="7.5"
+                          r="0.75"
+                          fill="currentColor"
+                        />
+                      </svg>
+                    ),
+                  },
+                  {
+                    type: "thermal",
+                    label: "Thermal 58mm",
+                    color: T.green,
+                    icon: (
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 14 14"
+                        fill="none"
+                      >
+                        <path
+                          d="M5 1h4v4H5V1z"
+                          stroke="currentColor"
+                          strokeWidth="1.3"
+                          strokeLinejoin="round"
+                        />
+                        <rect
+                          x="2"
+                          y="5"
+                          width="10"
+                          height="6"
+                          rx="1.5"
+                          stroke="currentColor"
+                          strokeWidth="1.3"
+                        />
+                        <path
+                          d="M5 11v2h4v-2"
+                          stroke="currentColor"
+                          strokeWidth="1.3"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    ),
+                  },
+                ].map(({ type, label, color, icon }) => (
+                  <button
+                    key={type}
+                    className="print-btn"
+                    onClick={() => handlePrint(type)}
+                    style={{
+                      padding: "11px 10px",
+                      borderRadius: 12,
+                      cursor: "pointer",
+                      border: `1px solid ${color}40`,
+                      background: color + "14",
+                      color,
+                      fontFamily: "Syne, sans-serif",
+                      fontSize: 11,
+                      fontWeight: 800,
+                      letterSpacing: "0.03em",
+                      transition: "all 0.15s",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 7,
+                    }}
+                  >
+                    {icon}
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+              }}
+            >
+              <svg
+                width="52"
+                height="52"
+                viewBox="0 0 52 52"
+                fill="none"
+                opacity="0.18"
+              >
+                <rect
+                  x="10"
+                  y="6"
+                  width="32"
+                  height="40"
+                  rx="3"
+                  stroke={T.sub}
+                  strokeWidth="2"
+                />
+                <path
+                  d="M18 18h16M18 26h12M18 34h8"
+                  stroke={T.sub}
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <p style={{ fontSize: 13, fontWeight: 700, color: T.muted }}>
+                Pilih transaksi
+              </p>
+              <p style={{ fontSize: 11, color: T.muted + "80" }}>
+                Klik item di sebelah kiri untuk melihat detail
+              </p>
             </div>
           )}
         </div>
       </div>
-
-      {/* Right Panel - Detail Transaksi */}
-      <div className="w-1/2 bg-white rounded-lg shadow p-4 flex flex-col">
-        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-          <Eye size={20} /> Detail Transaksi
-        </h2>
-
-        {detailLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          </div>
-        ) : selectedTransaction ? (
-          <div className="flex-1 overflow-y-auto">
-            {/* Header */}
-            <div className="bg-gray-50 p-4 rounded-lg mb-4">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <div className="text-sm text-gray-500">Invoice</div>
-                  <div className="font-bold text-lg">{selectedTransaction.transaction.invoice_no}</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm text-gray-500">Tanggal</div>
-                  <div>{formatDate(selectedTransaction.transaction.created_at)}</div>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4 mt-2">
-                <div>
-                  <div className="text-sm text-gray-500">Metode Bayar</div>
-                  <div>{getMethodIcon(selectedTransaction.transaction.payment_method)} {selectedTransaction.transaction.payment_method}</div>
-                </div>
-                {selectedTransaction.transaction.customer_name && (
-                  <div>
-                    <div className="text-sm text-gray-500">Customer</div>
-                    <div>{selectedTransaction.transaction.customer_name}</div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Items */}
-            <div className="mb-4">
-              <h3 className="font-medium mb-2">Item Belanja</h3>
-              <div className="space-y-2">
-                {selectedTransaction.items.map((item) => (
-                  <div key={item.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                    <div className="flex-1">
-                      <div className="font-medium">{item.product_name}</div>
-                      <div className="text-sm text-gray-500">
-                        {item.quantity} {item.unit} x {formatPrice(item.price_per_unit)}
-                      </div>
-                    </div>
-                    <div className="font-bold">
-                      {formatPrice(item.subtotal)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Total */}
-            <div className="border-t pt-4">
-              <div className="flex justify-between mb-2">
-                <span>Subtotal</span>
-                <span>{formatPrice(selectedTransaction.transaction.subtotal)}</span>
-              </div>
-              <div className="flex justify-between mb-2">
-                <span>Diskon</span>
-                <span>{formatPrice(selectedTransaction.transaction.discount)}</span>
-              </div>
-              <div className="flex justify-between font-bold text-lg">
-                <span>Total</span>
-                <span className="text-blue-600">{formatPrice(selectedTransaction.transaction.total_amount)}</span>
-              </div>
-              <div className="flex justify-between text-sm text-gray-500 mt-2">
-                <span>Bayar</span>
-                <span>{formatPrice(selectedTransaction.transaction.payment_amount)}</span>
-              </div>
-              <div className="flex justify-between text-sm text-gray-500">
-                <span>Kembali</span>
-                <span className="text-green-600">{formatPrice(selectedTransaction.transaction.change_amount)}</span>
-              </div>
-            </div>
-
-            {/* Actions */}
-                <div className="flex gap-2 mt-6">
-                <button
-                    onClick={() => handlePrint('normal')}
-                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg flex items-center justify-center gap-2"
-                >
-                    <Printer size={18} /> Cetak Struk
-                </button>
-                <button
-                    onClick={() => handlePrint('thermal')}
-                    className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg flex items-center justify-center gap-2 text-sm"
-                >
-                    <Printer size={18} /> Thermal 58mm
-                </button>
-                </div>
-          </div>
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-500">
-            <div className="text-center">
-              <Receipt size={48} className="mx-auto mb-2 opacity-50" />
-              <p>Pilih transaksi untuk melihat detail</p>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+    </>
   );
 }
 

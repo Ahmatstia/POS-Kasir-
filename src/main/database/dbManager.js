@@ -80,6 +80,18 @@ class DatabaseManager {
         FOREIGN KEY (transaction_id) REFERENCES transactions(id),
         FOREIGN KEY (product_id) REFERENCES products(id)
       );
+
+      CREATE TABLE IF NOT EXISTS stock_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER,
+        type TEXT CHECK(type IN ('sale', 'restock', 'adjustment', 'return')),
+        quantity REAL,
+        unit TEXT,
+        reference_id TEXT,
+        notes TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_id) REFERENCES products(id)
+      );
     `;
 
     this.db.exec(queries, (err) => {

@@ -118,6 +118,16 @@ function Cashier() {
       return;
     }
 
+    // Cek ketersediaan stok
+    const currentQtyInCart = cart
+      .filter((item) => item.product_id === product.id)
+      .reduce((sum, item) => sum + item.quantity, 0);
+
+    if (currentQtyInCart + 1 > (product.stock || 0)) {
+      alert(`Stok tidak mencukupi! Tersisa: ${product.stock || 0}`);
+      return;
+    }
+
     // Cek apakah produk sudah ada di cart dengan unit yang sama
     const existingItem = cart.find(
       (item) => item.product_id === product.id && item.unit === unit,
@@ -399,9 +409,21 @@ function ProductItem({ product, addToCart, formatPrice }) {
   return (
     <div className="border-b border-gray-100 last:border-0 pb-2">
       <div className="font-medium text-gray-900">{product.name}</div>
-      <div className="text-sm text-gray-500 mb-2 flex items-center gap-2">
-        <span>Stok: {product.stock || 0}</span>
-        <span className="px-2 py-0.5 bg-gray-100 rounded-full text-xs">
+      <div className="text-sm mb-2 flex items-center gap-2">
+        <span
+          className={`font-semibold ${
+            (product.stock || 0) <= (product.min_stock || 0)
+              ? "text-red-500"
+              : "text-gray-500"
+          }`}
+        >
+          Stok: {product.stock || 0}
+          {(product.stock || 0) <= (product.min_stock || 0) &&
+            (product.stock || 0) > 0 &&
+            " (Menipis!)"}
+          {(product.stock || 0) <= 0 && " (Habis!)"}
+        </span>
+        <span className="px-2 py-0.5 bg-gray-100 rounded-full text-xs text-gray-500">
           {product.sell_per_unit || "all"}
         </span>
       </div>
@@ -413,14 +435,20 @@ function ProductItem({ product, addToCart, formatPrice }) {
           product.sell_per_unit === "pcs") && (
           <button
             onClick={() => addToCart(product, "pcs")}
-            disabled={!product.price_pcs || product.price_pcs <= 0}
+            disabled={
+              !product.price_pcs ||
+              product.price_pcs <= 0 ||
+              (product.stock || 0) <= 0
+            }
             className={`px-3 py-1 rounded-lg text-sm font-medium transition ${
-              product.price_pcs > 0
+              product.price_pcs > 0 && (product.stock || 0) > 0
                 ? "bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer"
                 : "bg-gray-100 text-gray-400 cursor-not-allowed"
             }`}
             title={
-              product.price_pcs > 0
+              (product.stock || 0) <= 0
+                ? "Stok habis"
+                : product.price_pcs > 0
                 ? `Harga: ${formatPrice(product.price_pcs)}`
                 : "Harga belum tersedia"
             }
@@ -435,14 +463,20 @@ function ProductItem({ product, addToCart, formatPrice }) {
           product.sell_per_unit === "pack") && (
           <button
             onClick={() => addToCart(product, "pack")}
-            disabled={!product.price_pack || product.price_pack <= 0}
+            disabled={
+              !product.price_pack ||
+              product.price_pack <= 0 ||
+              (product.stock || 0) <= 0
+            }
             className={`px-3 py-1 rounded-lg text-sm font-medium transition ${
-              product.price_pack > 0
+              product.price_pack > 0 && (product.stock || 0) > 0
                 ? "bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer"
                 : "bg-gray-100 text-gray-400 cursor-not-allowed"
             }`}
             title={
-              product.price_pack > 0
+              (product.stock || 0) <= 0
+                ? "Stok habis"
+                : product.price_pack > 0
                 ? `Harga: ${formatPrice(product.price_pack)}`
                 : "Harga belum tersedia"
             }
@@ -459,14 +493,20 @@ function ProductItem({ product, addToCart, formatPrice }) {
           product.sell_per_unit === "kg") && (
           <button
             onClick={() => addToCart(product, "kg")}
-            disabled={!product.price_kg || product.price_kg <= 0}
+            disabled={
+              !product.price_kg ||
+              product.price_kg <= 0 ||
+              (product.stock || 0) <= 0
+            }
             className={`px-3 py-1 rounded-lg text-sm font-medium transition ${
-              product.price_kg > 0
+              product.price_kg > 0 && (product.stock || 0) > 0
                 ? "bg-purple-100 text-purple-700 hover:bg-purple-200 cursor-pointer"
                 : "bg-gray-100 text-gray-400 cursor-not-allowed"
             }`}
             title={
-              product.price_kg > 0
+              (product.stock || 0) <= 0
+                ? "Stok habis"
+                : product.price_kg > 0
                 ? `Harga: ${formatPrice(product.price_kg)}`
                 : "Harga belum tersedia"
             }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Search, ShoppingCart, X } from "lucide-react";
+import { Search, ShoppingCart, X, Plus } from "lucide-react";
 import { getProducts } from "../../services/database";
 import { createTransaction } from "../../services/transactions";
 import CartItem from "./CartItem";
@@ -167,6 +167,33 @@ function Cashier() {
     setSearchTerm("");
   };
 
+  const addManualToCart = (product, manualData) => {
+    const { price, quantity, unit } = manualData;
+
+    // Cek ketersediaan stok
+    const currentQtyInCart = cart
+      .filter((item) => item.product_id === product.id)
+      .reduce((sum, item) => sum + item.quantity, 0);
+
+    if (currentQtyInCart + quantity > (product.stock || 0)) {
+      alert(`Stok tidak mencukupi! Tersisa: ${product.stock || 0}`);
+      return;
+    }
+
+    const newItem = {
+      id: "manual-" + Date.now() + Math.random(),
+      product_id: product.id,
+      name: `${product.name} (Manual)`,
+      unit: unit,
+      price: price,
+      quantity: quantity,
+      subtotal: price * quantity,
+    };
+
+    setCart([...cart, newItem]);
+    setSearchTerm("");
+  };
+
   const updateQuantity = (itemId, newQuantity, unit) => {
     if (newQuantity < 1) return;
 
@@ -287,6 +314,7 @@ function Cashier() {
                       <ProductItem
                         product={product}
                         addToCart={addToCart}
+                        addManualToCart={addManualToCart}
                         formatPrice={formatPrice}
                       />
                     </div>
@@ -297,6 +325,7 @@ function Cashier() {
                       <ProductItem
                         product={product}
                         addToCart={addToCart}
+                        addManualToCart={addManualToCart}
                         formatPrice={formatPrice}
                       />
                     </div>
@@ -390,139 +419,170 @@ function Cashier() {
   );
 }
 
-// Komponen terpisah untuk Product Item - VERSI FIX DENGAN TOMBOL SELALU MUNCUL
-function ProductItem({ product, addToCart, formatPrice }) {
-  // Debug: lihat data produk di console
-  console.log(
-    "Product:",
-    product.name,
-    "sell_per_unit:",
-    product.sell_per_unit,
-    "harga:",
-    {
-      pcs: product.price_pcs,
-      pack: product.price_pack,
-      kg: product.price_kg,
-    },
-  );
+// Komponen terpisah untuk Product Item
+function ProductItem({ product, addToCart, addManualToCart, formatPrice }) {
+  const [showManual, setShowManual] = useState(false);
+  const [manualPrice, setManualPrice] = useState("");
+  const [manualQty, setManualQty] = useState(1);
+  const [manualUnit, setManualUnit] = useState("pcs");
+
+  const handleManualAdd = () => {
+    const price = parseFloat(manualPrice);
+    const qty = parseFloat(manualQty);
+
+    if (isNaN(price) || price <= 0 || isNaN(qty) || qty <= 0) {
+      alert("Masukkan harga dan jumlah yang valid");
+      return;
+    }
+
+    addManualToCart(product, {
+      price,
+      quantity: qty,
+      unit: manualUnit,
+    });
+
+    setShowManual(false);
+    setManualPrice("");
+    setManualQty(1);
+  };
 
   return (
     <div className="border-b border-gray-100 last:border-0 pb-2">
-      <div className="font-medium text-gray-900">{product.name}</div>
-      <div className="text-sm mb-2 flex items-center gap-2">
-        <span
-          className={`font-semibold ${
-            (product.stock || 0) <= (product.min_stock || 0)
-              ? "text-red-500"
-              : "text-gray-500"
+      <div className="flex justify-between items-start">
+        <div className="flex-1">
+          <div className="font-medium text-gray-900">{product.name}</div>
+          <div className="text-sm mb-2 flex items-center gap-2">
+            <span
+              className={`font-semibold ${
+                (product.stock || 0) <= (product.min_stock || 0)
+                  ? "text-red-500"
+                  : "text-gray-500"
+              }`}
+            >
+              Stok: {product.stock || 0}
+            </span>
+            <span className="px-2 py-0.5 bg-gray-100 rounded-full text-xs text-gray-500">
+              {product.sell_per_unit || "all"}
+            </span>
+          </div>
+        </div>
+        <button
+          onClick={() => setShowManual(!showManual)}
+          className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition ${
+            showManual
+              ? "bg-red-50 text-red-600 border border-red-200"
+              : "bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100"
           }`}
         >
-          Stok: {product.stock || 0}
-          {(product.stock || 0) <= (product.min_stock || 0) &&
-            (product.stock || 0) > 0 &&
-            " (Menipis!)"}
-          {(product.stock || 0) <= 0 && " (Habis!)"}
-        </span>
-        <span className="px-2 py-0.5 bg-gray-100 rounded-full text-xs text-gray-500">
-          {product.sell_per_unit || "all"}
-        </span>
+          {showManual ? "Batal" : "Manual"}
+        </button>
       </div>
 
-      {/* Container tombol dengan flex wrap */}
-      <div className="flex gap-2 flex-wrap">
-        {/* Tombol Pcs - TAMPIL SELALU jika sell_per_unit mengizinkan */}
-        {(product.sell_per_unit === "all" ||
-          product.sell_per_unit === "pcs") && (
-          <button
-            onClick={() => addToCart(product, "pcs")}
-            disabled={
-              !product.price_pcs ||
-              product.price_pcs <= 0 ||
-              (product.stock || 0) <= 0
-            }
-            className={`px-3 py-1 rounded-lg text-sm font-medium transition ${
-              product.price_pcs > 0 && (product.stock || 0) > 0
-                ? "bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer"
-                : "bg-gray-100 text-gray-400 cursor-not-allowed"
-            }`}
-            title={
-              (product.stock || 0) <= 0
-                ? "Stok habis"
-                : product.price_pcs > 0
-                ? `Harga: ${formatPrice(product.price_pcs)}`
-                : "Harga belum tersedia"
-            }
-          >
-            Pcs{" "}
-            {product.price_pcs > 0 ? formatPrice(product.price_pcs) : "(Rp 0)"}
-          </button>
-        )}
-
-        {/* Tombol Pack - TAMPIL SELALU jika sell_per_unit mengizinkan */}
-        {(product.sell_per_unit === "all" ||
-          product.sell_per_unit === "pack") && (
-          <button
-            onClick={() => addToCart(product, "pack")}
-            disabled={
-              !product.price_pack ||
-              product.price_pack <= 0 ||
-              (product.stock || 0) <= 0
-            }
-            className={`px-3 py-1 rounded-lg text-sm font-medium transition ${
-              product.price_pack > 0 && (product.stock || 0) > 0
-                ? "bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer"
-                : "bg-gray-100 text-gray-400 cursor-not-allowed"
-            }`}
-            title={
-              (product.stock || 0) <= 0
-                ? "Stok habis"
-                : product.price_pack > 0
-                ? `Harga: ${formatPrice(product.price_pack)}`
-                : "Harga belum tersedia"
-            }
-          >
-            Pack{" "}
-            {product.price_pack > 0
-              ? formatPrice(product.price_pack)
-              : "(Rp 0)"}
-          </button>
-        )}
-
-        {/* Tombol Kg - TAMPIL SELALU jika sell_per_unit mengizinkan */}
-        {(product.sell_per_unit === "all" ||
-          product.sell_per_unit === "kg") && (
-          <button
-            onClick={() => addToCart(product, "kg")}
-            disabled={
-              !product.price_kg ||
-              product.price_kg <= 0 ||
-              (product.stock || 0) <= 0
-            }
-            className={`px-3 py-1 rounded-lg text-sm font-medium transition ${
-              product.price_kg > 0 && (product.stock || 0) > 0
-                ? "bg-purple-100 text-purple-700 hover:bg-purple-200 cursor-pointer"
-                : "bg-gray-100 text-gray-400 cursor-not-allowed"
-            }`}
-            title={
-              (product.stock || 0) <= 0
-                ? "Stok habis"
-                : product.price_kg > 0
-                ? `Harga: ${formatPrice(product.price_kg)}`
-                : "Harga belum tersedia"
-            }
-          >
-            Kg {product.price_kg > 0 ? formatPrice(product.price_kg) : "(Rp 0)"}
-          </button>
-        )}
-
-        {/* Jika tidak ada tombol yang muncul, tampilkan pesan */}
-        {product.sell_per_unit !== "all" &&
-          product.sell_per_unit !== "pcs" &&
-          product.sell_per_unit !== "pack" &&
-          product.sell_per_unit !== "kg" && (
-            <span className="text-xs text-red-500">Satuan tidak valid</span>
+      {!showManual ? (
+        /* Tombol Harga Statis */
+        <div className="flex gap-2 flex-wrap">
+          {(product.sell_per_unit === "all" ||
+            product.sell_per_unit === "pcs") && (
+            <button
+              onClick={() => addToCart(product, "pcs")}
+              disabled={
+                !product.price_pcs ||
+                product.price_pcs <= 0 ||
+                (product.stock || 0) <= 0
+              }
+              className={`px-3 py-1 rounded-lg text-sm font-medium transition ${
+                product.price_pcs > 0 && (product.stock || 0) > 0
+                  ? "bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer"
+                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
+              }`}
+            >
+              Pcs {product.price_pcs > 0 ? formatPrice(product.price_pcs) : "(Rp 0)"}
+            </button>
           )}
-      </div>
+
+          {(product.sell_per_unit === "all" ||
+            product.sell_per_unit === "pack") && (
+            <button
+              onClick={() => addToCart(product, "pack")}
+              disabled={
+                !product.price_pack ||
+                product.price_pack <= 0 ||
+                (product.stock || 0) <= 0
+              }
+              className={`px-3 py-1 rounded-lg text-sm font-medium transition ${
+                product.price_pack > 0 && (product.stock || 0) > 0
+                  ? "bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer"
+                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
+              }`}
+            >
+              Pack {product.price_pack > 0 ? formatPrice(product.price_pack) : "(Rp 0)"}
+            </button>
+          )}
+
+          {(product.sell_per_unit === "all" ||
+            product.sell_per_unit === "kg") && (
+            <button
+              onClick={() => addToCart(product, "kg")}
+              disabled={
+                !product.price_kg ||
+                product.price_kg <= 0 ||
+                (product.stock || 0) <= 0
+              }
+              className={`px-3 py-1 rounded-lg text-sm font-medium transition ${
+                product.price_kg > 0 && (product.stock || 0) > 0
+                  ? "bg-purple-100 text-purple-700 hover:bg-purple-200 cursor-pointer"
+                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
+              }`}
+            >
+              Kg {product.price_kg > 0 ? formatPrice(product.price_kg) : "(Rp 0)"}
+            </button>
+          )}
+        </div>
+      ) : (
+        /* Form Input Manual */
+        <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg animate-in fade-in slide-in-from-top-2">
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <div>
+              <label className="block text-[10px] font-bold text-blue-400 uppercase mb-1">Harga</label>
+              <input
+                type="number"
+                placeholder="Harga..."
+                value={manualPrice}
+                onChange={(e) => setManualPrice(e.target.value)}
+                autoFocus
+                className="w-full px-2 py-1.5 text-sm border rounded focus:ring-1 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-blue-400 uppercase mb-1">Qty & Unit</label>
+              <div className="flex gap-1">
+                <input
+                  type="number"
+                  placeholder="Qty"
+                  value={manualQty}
+                  onChange={(e) => setManualQty(e.target.value)}
+                  className="w-12 px-2 py-1.5 text-sm border rounded focus:ring-1 focus:ring-blue-500 outline-none"
+                />
+                <select
+                  value={manualUnit}
+                  onChange={(e) => setManualUnit(e.target.value)}
+                  className="flex-1 px-1 py-1.5 text-xs border rounded bg-white outline-none"
+                >
+                  <option value="pcs">Pcs</option>
+                  <option value="pack">Pack</option>
+                  <option value="kg">Kg</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={handleManualAdd}
+            className="w-full bg-blue-600 text-white py-1.5 rounded text-sm font-bold hover:bg-blue-700 transition"
+          >
+            Tambah ke Keranjang
+          </button>
+        </div>
+      )}
     </div>
   );
 }

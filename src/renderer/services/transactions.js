@@ -74,33 +74,35 @@ export async function createTransaction(transactionData) {
 
       await window.electronAPI.run(itemSql, itemParams);
 
-      // Update stok produk dengan pengamanan stok negatif
-      const updateStockSql = `
-        UPDATE products 
-        SET stock = stock - ? 
-        WHERE id = ? AND stock >= ?
-      `;
-      const updateResult = await window.electronAPI.run(updateStockSql, [
-        item.quantity,
-        item.product_id,
-        item.quantity,
-      ]);
+      // Update stok produk hanya jika ini bukan item kustom (punya product_id)
+      if (item.product_id) {
+        const updateStockSql = `
+          UPDATE products 
+          SET stock = stock - ? 
+          WHERE id = ? AND stock >= ?
+        `;
+        const updateResult = await window.electronAPI.run(updateStockSql, [
+          item.quantity,
+          item.product_id,
+          item.quantity,
+        ]);
 
-      if (updateResult.changes === 0) {
-        throw new Error(`Stok tidak mencukupi untuk: ${item.name}`);
+        if (updateResult.changes === 0) {
+          throw new Error(`Stok tidak mencukupi untuk: ${item.name}`);
+        }
+
+        // Catat riwayat stok (audit trail)
+        const historySql = `
+          INSERT INTO stock_history (product_id, type, quantity, unit, reference_id)
+          VALUES (?, 'sale', ?, ?, ?)
+        `;
+        await window.electronAPI.run(historySql, [
+          item.product_id,
+          -item.quantity, // Minus karena stok keluar
+          item.unit,
+          invoiceNo,
+        ]);
       }
-
-      // Catat riwayat stok (audit trail)
-      const historySql = `
-        INSERT INTO stock_history (product_id, type, quantity, unit, reference_id)
-        VALUES (?, 'sale', ?, ?, ?)
-      `;
-      await window.electronAPI.run(historySql, [
-        item.product_id,
-        -item.quantity, // Minus karena stok keluar
-        item.unit,
-        invoiceNo,
-      ]);
     }
 
     // Commit transaksi

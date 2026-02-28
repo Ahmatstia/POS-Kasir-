@@ -8,386 +8,515 @@ import ProductForm from "./ProductForm";
 import EditProductForm from "./EditProductForm";
 import ImportExcel from "./ImportExcel";
 
+// ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
+const T = {
+  bg:      '#0E0F11',
+  surface: '#161719',
+  card:    '#1A1B1E',
+  border:  '#1F2023',
+  border2: '#2A2B2F',
+  text:    '#F0EDE6',
+  muted:   '#5C5C66',
+  sub:     '#9998A3',
+  accent:  '#F5A623',
+  green:   '#34C98B',
+  red:     '#E85858',
+  blue:    '#5B8AF5',
+  purple:  '#A78BFA',
+};
+
+const fmt = (n) => n ? `Rp ${Number(n).toLocaleString('id-ID')}` : '—';
+
+// ─── UNIT CONFIG ──────────────────────────────────────────────────────────────
+const UNIT_MAP = {
+  all:  { label: 'Semua',    color: T.blue   },
+  pcs:  { label: 'Per Pcs',  color: T.green  },
+  pack: { label: 'Per Pack', color: T.accent },
+  kg:   { label: 'Per Kg',   color: T.purple },
+};
+
+// ─── SMALL REUSABLES ──────────────────────────────────────────────────────────
+function Chip({ children, color }) {
+  return (
+    <span style={{
+      display: 'inline-block', padding: '2px 9px', borderRadius: 100,
+      fontSize: 10, fontWeight: 700, letterSpacing: '0.06em',
+      textTransform: 'uppercase',
+      background: color + '14', border: `1px solid ${color}30`, color,
+    }}>
+      {children}
+    </span>
+  );
+}
+
+function IconBtn({ onClick, disabled, color = T.sub, hoverColor, hoverBg, title, children }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+        border: `1px solid ${hov && !disabled ? (hoverColor || color) + '40' : T.border2}`,
+        background: hov && !disabled ? (hoverBg || color + '10') : 'transparent',
+        color: hov && !disabled ? (hoverColor || color) : disabled ? T.muted : color,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'all 0.15s', opacity: disabled ? 0.4 : 1,
+        fontFamily: 'Syne, sans-serif',
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 function ProductList() {
-  const [products, setProducts] = useState([]);
+  const [products, setProducts]               = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [showImport, setShowImport] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [deletingId, setDeletingId] = useState(null);
+  const [categories, setCategories]           = useState([]);
+  const [loading, setLoading]                 = useState(true);
+  const [showForm, setShowForm]               = useState(false);
+  const [showImport, setShowImport]           = useState(false);
+  const [editingProduct, setEditingProduct]   = useState(null);
+  const [deletingId, setDeletingId]           = useState(null);
+  const [searchTerm, setSearchTerm]           = useState('');
+  const [searchCategory, setSearchCategory]   = useState('');
 
-  // State untuk search
-  const [searchTerm, setSearchTerm] = useState("");
-  const [searchCategory, setSearchCategory] = useState("");
+  useEffect(() => { loadData(); }, []);
 
   useEffect(() => {
-    loadData();
-  }, []);
-
-  // Effect untuk filter produk saat searchTerm atau searchCategory berubah
-  useEffect(() => {
-    filterProducts();
+    let filtered = [...products];
+    if (searchTerm.trim())
+      filtered = filtered.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    if (searchCategory)
+      filtered = filtered.filter(p => p.category_id === parseInt(searchCategory));
+    setFilteredProducts(filtered);
   }, [searchTerm, searchCategory, products]);
 
   const loadData = async () => {
     setLoading(true);
-    const productsData = await getProducts();
-    const categoriesData = await getCategories();
-
-    // Buat map kategori untuk lookup
-    const categoryMap = {};
-    categoriesData.forEach((cat) => {
-      categoryMap[cat.id] = cat.name;
-    });
-
-    // Gabungkan data produk dengan nama kategori
-    const productsWithCategory = productsData.map((product) => ({
-      ...product,
-      category_name: categoryMap[product.category_id] || "-",
-    }));
-
-    setProducts(productsWithCategory);
-    setFilteredProducts(productsWithCategory);
+    const [productsData, categoriesData] = await Promise.all([getProducts(), getCategories()]);
+    const catMap = Object.fromEntries(categoriesData.map(c => [c.id, c.name]));
+    const merged = productsData.map(p => ({ ...p, category_name: catMap[p.category_id] || '—' }));
+    setProducts(merged);
+    setFilteredProducts(merged);
     setCategories(categoriesData);
     setLoading(false);
   };
 
-  // Fungsi filter produk
-  const filterProducts = () => {
-    let filtered = [...products];
-
-    // Filter berdasarkan nama
-    if (searchTerm.trim() !== "") {
-      filtered = filtered.filter((product) =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()),
-      );
-    }
-
-    // Filter berdasarkan kategori
-    if (searchCategory !== "") {
-      filtered = filtered.filter(
-        (product) => product.category_id === parseInt(searchCategory),
-      );
-    }
-
-    setFilteredProducts(filtered);
-  };
-
-  // Reset filter
-  const resetFilters = () => {
-    setSearchTerm("");
-    setSearchCategory("");
-  };
-
-  const handleAddSuccess = () => {
-    loadData(); // reload data setelah tambah produk
-  };
-
-  const handleEdit = (product) => {
-    setEditingProduct(product);
-  };
-
   const handleDelete = async (id) => {
-    if (!window.confirm("Yakin ingin menghapus produk ini?")) return;
-
+    if (!window.confirm('Yakin ingin menghapus produk ini?')) return;
     setDeletingId(id);
     const result = await deleteProduct(id);
     setDeletingId(null);
-
-    if (result.success) {
-      alert("Produk berhasil dihapus!");
-      loadData();
-    } else {
-      alert("Gagal menghapus produk");
-    }
+    if (result.success) { loadData(); }
+    else alert('Gagal menghapus produk');
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading produk...</p>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 280 }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: 36, height: 36, border: `2px solid ${T.border2}`,
+            borderTopColor: T.accent, borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite', margin: '0 auto 12px',
+          }} />
+          <p style={{ fontSize: 11, color: T.muted, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: 'Syne, sans-serif' }}>
+            Memuat produk…
+          </p>
         </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
+  const activeCategoryName = categories.find(c => c.id === parseInt(searchCategory))?.name;
+  const lowStockCount = products.filter(p => (p.stock || 0) <= (p.min_stock || 0)).length;
+
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-semibold">Daftar Produk</h2>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowImport(true)}
-            className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-          >
-            <span>📊</span> Import Excel
-          </button>
-          <button
-            onClick={() => setShowForm(true)}
-            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-          >
-            <span>+</span> Tambah Produk
-          </button>
-        </div>
-      </div>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
 
-      {/* Search Bar */}
-      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Search by Name */}
+        @keyframes spin   { to { transform: rotate(360deg); } }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(10px);} to {opacity:1; transform:translateY(0);} }
+
+        .prod-table { width: 100%; border-collapse: collapse; font-family: 'Syne', sans-serif; }
+        .prod-table th {
+          padding: 10px 14px;
+          font-size: 9px; font-weight: 700; letter-spacing: 0.12em;
+          text-transform: uppercase; color: ${T.muted};
+          border-bottom: 1px solid ${T.border};
+          text-align: left; white-space: nowrap;
+        }
+        .prod-table td {
+          padding: 12px 14px;
+          font-size: 12px; color: ${T.sub};
+          border-bottom: 1px solid ${T.border};
+          white-space: nowrap;
+        }
+        .prod-table tbody tr { transition: background 0.12s; }
+        .prod-table tbody tr:hover td { background: ${T.border}40; }
+        .prod-table tbody tr:last-child td { border-bottom: none; }
+
+        .filter-input {
+          width: 100%; padding: 9px 12px;
+          border-radius: 10px; border: 1px solid ${T.border2};
+          background: ${T.bg}; color: ${T.text};
+          font-family: 'Syne', sans-serif; font-size: 12px;
+          outline: none; transition: border-color 0.15s;
+        }
+        .filter-input:focus { border-color: ${T.accent}60; box-shadow: 0 0 0 2px ${T.accent}10; }
+
+        .action-btn {
+          padding: 7px 16px; border-radius: 9px; cursor: pointer;
+          font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700;
+          letter-spacing: 0.05em; transition: all 0.15s;
+          display: inline-flex; align-items: center; gap: 7px;
+        }
+
+        ::-webkit-scrollbar { height: 4px; width: 4px; }
+        ::-webkit-scrollbar-thumb { background: ${T.border2}; border-radius: 4px; }
+      `}</style>
+
+      <div style={{ animation: 'fadeUp 0.4s ease both', fontFamily: 'Syne, sans-serif' }}>
+
+        {/* ── HEADER ── */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Cari Nama Produk
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Ketik nama produk..."
-                className="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
-            </div>
+            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: T.muted, marginBottom: 4 }}>
+              Manajemen
+            </p>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: T.text, letterSpacing: '-0.01em' }}>
+              Daftar Produk
+            </h2>
           </div>
 
-          {/* Filter by Category */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Filter Kategori
-            </label>
-            <select
-              value={searchCategory}
-              onChange={(e) => setSearchCategory(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Semua Kategori</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {/* Low stock warning badge */}
+            {lowStockCount > 0 && (
+              <div style={{
+                padding: '5px 12px', borderRadius: 100,
+                background: T.accent + '12', border: `1px solid ${T.accent}30`,
+                fontSize: 11, fontWeight: 700, color: T.accent,
+                display: 'flex', alignItems: 'center', gap: 5,
+              }}>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M6 1L11 10H1L6 1Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+                  <path d="M6 5v2.5M6 8.5v.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                </svg>
+                {lowStockCount} stok menipis
+              </div>
+            )}
 
-          {/* Reset Button */}
-          <div className="flex items-end">
             <button
-              onClick={resetFilters}
-              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+              className="action-btn"
+              onClick={() => setShowImport(true)}
+              style={{ border: `1px solid ${T.purple}35`, background: T.purple + '10', color: T.purple }}
+              onMouseEnter={e => e.currentTarget.style.background = T.purple + '20'}
+              onMouseLeave={e => e.currentTarget.style.background = T.purple + '10'}
             >
-              <span>↺</span> Reset Filter
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.4"/>
+                <path d="M4 5h6M4 7.5h4M4 10h5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              </svg>
+              Import Excel
+            </button>
+
+            <button
+              className="action-btn"
+              onClick={() => setShowForm(true)}
+              style={{ border: `1px solid ${T.green}35`, background: T.green + '10', color: T.green }}
+              onMouseEnter={e => e.currentTarget.style.background = T.green + '20'}
+              onMouseLeave={e => e.currentTarget.style.background = T.green + '10'}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+              </svg>
+              Tambah Produk
             </button>
           </div>
         </div>
 
-        {/* Info Hasil Pencarian */}
-        <div className="mt-2 text-sm text-gray-600">
-          Menampilkan {filteredProducts.length} dari {products.length} produk
-          {searchTerm && ` dengan nama mengandung "${searchTerm}"`}
-          {searchCategory &&
-            ` dalam kategori ${categories.find((c) => c.id === parseInt(searchCategory))?.name || ""}`}
+        {/* ── FILTER BAR ── */}
+        <div style={{
+          background: T.surface, border: `1px solid ${T.border}`,
+          borderRadius: 14, padding: '16px 18px', marginBottom: 16,
+        }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 200px auto', gap: 10, alignItems: 'end' }}>
+            {/* Search name */}
+            <div>
+              <label style={{ display: 'block', fontSize: 9, fontWeight: 700, color: T.muted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
+                Cari Produk
+              </label>
+              <div style={{ position: 'relative' }}>
+                <svg style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', opacity: 0.4, pointerEvents: 'none' }} width="13" height="13" viewBox="0 0 13 13" fill="none">
+                  <circle cx="5.5" cy="5.5" r="4" stroke={T.sub} strokeWidth="1.4"/>
+                  <path d="M8.5 8.5L11 11" stroke={T.sub} strokeWidth="1.4" strokeLinecap="round"/>
+                </svg>
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  placeholder="Ketik nama produk…"
+                  className="filter-input"
+                  style={{ paddingLeft: 32 }}
+                />
+                {searchTerm && (
+                  <button onClick={() => setSearchTerm('')} style={{
+                    position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                    background: 'none', border: 'none', cursor: 'pointer', color: T.muted, fontSize: 16, lineHeight: 1,
+                  }}>×</button>
+                )}
+              </div>
+            </div>
+
+            {/* Category filter */}
+            <div>
+              <label style={{ display: 'block', fontSize: 9, fontWeight: 700, color: T.muted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
+                Kategori
+              </label>
+              <select
+                value={searchCategory}
+                onChange={e => setSearchCategory(e.target.value)}
+                className="filter-input"
+                style={{ cursor: 'pointer' }}
+              >
+                <option value="">Semua Kategori</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Reset */}
+            <button
+              onClick={() => { setSearchTerm(''); setSearchCategory(''); }}
+              style={{
+                padding: '9px 14px', borderRadius: 10, cursor: 'pointer',
+                border: `1px solid ${T.border2}`, background: 'transparent',
+                color: T.sub, fontSize: 11, fontWeight: 700,
+                fontFamily: 'Syne, sans-serif', letterSpacing: '0.05em',
+                transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 6,
+                whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = T.border; e.currentTarget.style.color = T.text; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.sub; }}
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M2 6a4 4 0 104 -4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                <path d="M2 3v3h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Reset
+            </button>
+          </div>
+
+          {/* Result info */}
+          <div style={{ marginTop: 10, fontSize: 11, color: T.muted, fontFamily: 'JetBrains Mono, monospace' }}>
+            <span style={{ color: T.accent, fontWeight: 700 }}>{filteredProducts.length}</span>
+            <span> / {products.length} produk</span>
+            {searchTerm && <span style={{ color: T.sub }}> · "{searchTerm}"</span>}
+            {activeCategoryName && <span style={{ color: T.sub }}> · {activeCategoryName}</span>}
+          </div>
         </div>
+
+        {/* ── TABLE / EMPTY STATE ── */}
+        {filteredProducts.length === 0 ? (
+          <div style={{
+            background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14,
+            padding: '48px 24px', textAlign: 'center',
+          }}>
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" style={{ margin: '0 auto 12px', opacity: 0.2 }}>
+              <rect x="6" y="6" width="36" height="36" rx="6" stroke={T.sub} strokeWidth="2"/>
+              <path d="M16 24h16M16 32h10" stroke={T.sub} strokeWidth="2" strokeLinecap="round"/>
+              <path d="M16 16h6" stroke={T.sub} strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+            <p style={{ fontSize: 14, fontWeight: 700, color: T.muted, marginBottom: 8 }}>
+              {products.length === 0 ? 'Belum ada produk' : 'Tidak ada produk yang cocok'}
+            </p>
+            <p style={{ fontSize: 12, color: T.muted, marginBottom: 20 }}>
+              {products.length === 0 ? 'Tambahkan produk pertama Anda' : 'Coba ubah atau reset filter pencarian'}
+            </p>
+            {products.length === 0 ? (
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                <button className="action-btn" onClick={() => setShowImport(true)}
+                  style={{ border: `1px solid ${T.purple}35`, background: T.purple + '10', color: T.purple }}
+                  onMouseEnter={e => e.currentTarget.style.background = T.purple + '20'}
+                  onMouseLeave={e => e.currentTarget.style.background = T.purple + '10'}
+                >Import Excel</button>
+                <button className="action-btn" onClick={() => setShowForm(true)}
+                  style={{ border: `1px solid ${T.green}35`, background: T.green + '10', color: T.green }}
+                  onMouseEnter={e => e.currentTarget.style.background = T.green + '20'}
+                  onMouseLeave={e => e.currentTarget.style.background = T.green + '10'}
+                >Tambah Manual</button>
+              </div>
+            ) : (
+              <button className="action-btn" onClick={() => { setSearchTerm(''); setSearchCategory(''); }}
+                style={{ border: `1px solid ${T.blue}35`, background: T.blue + '10', color: T.blue }}
+                onMouseEnter={e => e.currentTarget.style.background = T.blue + '20'}
+                onMouseLeave={e => e.currentTarget.style.background = T.blue + '10'}
+              >Reset Filter</button>
+            )}
+          </div>
+        ) : (
+          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, overflow: 'hidden' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table className="prod-table">
+                <thead>
+                  <tr>
+                    {['Nama Produk', 'Kategori', 'Satuan', 'Harga Pcs', 'Harga Pack', 'Harga Kg', 'Stok', 'Min Stok', 'Aksi'].map(h => (
+                      <th key={h}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredProducts.map(product => {
+                    const outOfStock = (product.stock || 0) === 0;
+                    const lowStock   = !outOfStock && (product.stock || 0) <= (product.min_stock || 0);
+                    const unit       = UNIT_MAP[product.sell_per_unit] || UNIT_MAP.pcs;
+
+                    return (
+                      <tr key={product.id}>
+                        {/* Name */}
+                        <td>
+                          <span style={{ fontWeight: 700, color: T.text, fontSize: 13 }}>{product.name}</span>
+                        </td>
+
+                        {/* Category */}
+                        <td>
+                          <Chip color={T.sub}>{product.category_name}</Chip>
+                        </td>
+
+                        {/* Unit */}
+                        <td>
+                          <Chip color={unit.color}>{unit.label}</Chip>
+                        </td>
+
+                        {/* Prices */}
+                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: product.price_pcs ? T.text : T.muted }}>
+                          {fmt(product.price_pcs)}
+                        </td>
+                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: product.price_pack ? T.text : T.muted }}>
+                          {fmt(product.price_pack)}
+                        </td>
+                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: product.price_kg ? T.text : T.muted }}>
+                          {fmt(product.price_kg)}
+                        </td>
+
+                        {/* Stock */}
+                        <td>
+                          <span style={{
+                            padding: '2px 9px', borderRadius: 100,
+                            fontSize: 11, fontWeight: 800,
+                            fontFamily: 'JetBrains Mono, monospace',
+                            background: outOfStock ? T.red + '14' : lowStock ? T.accent + '14' : T.green + '14',
+                            border: `1px solid ${outOfStock ? T.red : lowStock ? T.accent : T.green}30`,
+                            color: outOfStock ? T.red : lowStock ? T.accent : T.green,
+                          }}>
+                            {product.stock ?? 0}
+                          </span>
+                        </td>
+
+                        {/* Min stock */}
+                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}>
+                          {product.min_stock ?? 0}
+                        </td>
+
+                        {/* Actions */}
+                        <td>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <IconBtn
+                              onClick={() => setEditingProduct(product)}
+                              color={T.blue} hoverColor={T.blue} title="Edit produk"
+                            >
+                              <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                                <path d="M9 2l2 2-7 7H2V9l7-7z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+                              </svg>
+                            </IconBtn>
+                            <IconBtn
+                              onClick={() => handleDelete(product.id)}
+                              disabled={deletingId === product.id}
+                              color={T.sub} hoverColor={T.red} title="Hapus produk"
+                            >
+                              {deletingId === product.id ? (
+                                <div style={{
+                                  width: 10, height: 10, border: `1.5px solid ${T.muted}`,
+                                  borderTopColor: T.accent, borderRadius: '50%',
+                                  animation: 'spin 0.8s linear infinite',
+                                }} />
+                              ) : (
+                                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                                  <path d="M2 3.5h9M5 3.5V2.5a1 1 0 012 0v1M5.5 6v3M7.5 6v3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                                  <rect x="2.5" y="3.5" width="8" height="7.5" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+                                </svg>
+                              )}
+                            </IconBtn>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Table footer */}
+            <div style={{
+              padding: '12px 16px', borderTop: `1px solid ${T.border}`,
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            }}>
+              <span style={{ fontSize: 11, color: T.muted, fontFamily: 'JetBrains Mono, monospace' }}>
+                <span style={{ color: T.accent, fontWeight: 700 }}>{filteredProducts.length}</span>
+                {' '}dari{' '}
+                <span style={{ color: T.text, fontWeight: 700 }}>{products.length}</span>
+                {' '}produk ditampilkan
+              </span>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <span style={{ fontSize: 10, color: T.muted, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: T.green, display: 'inline-block' }}/>
+                  Stok aman
+                </span>
+                <span style={{ fontSize: 10, color: T.muted, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: T.accent, display: 'inline-block' }}/>
+                  Menipis
+                </span>
+                <span style={{ fontSize: 10, color: T.muted, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: T.red, display: 'inline-block' }}/>
+                  Habis
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Form Tambah Modal */}
+      {/* Modals */}
       {showForm && (
         <ProductForm
           onClose={() => setShowForm(false)}
-          onSuccess={handleAddSuccess}
+          onSuccess={() => { loadData(); setShowForm(false); }}
         />
       )}
-
-      {/* Form Import Modal */}
       {showImport && (
         <ImportExcel
           onClose={() => setShowImport(false)}
-          onSuccess={() => {
-            loadData();
-            setShowImport(false);
-          }}
+          onSuccess={() => { loadData(); setShowImport(false); }}
         />
       )}
-
-      {/* Form Edit Modal */}
       {editingProduct && (
         <EditProductForm
           productId={editingProduct.id}
           onClose={() => setEditingProduct(null)}
-          onSuccess={() => {
-            loadData();
-            setEditingProduct(null);
-          }}
+          onSuccess={() => { loadData(); setEditingProduct(null); }}
         />
       )}
-
-      {filteredProducts.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-lg">
-          <p className="text-gray-500 mb-4">
-            {products.length === 0
-              ? "Belum ada produk."
-              : "Tidak ada produk yang sesuai dengan filter."}
-          </p>
-          {products.length > 0 && (
-            <button
-              onClick={resetFilters}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
-            >
-              Reset Filter
-            </button>
-          )}
-          {products.length === 0 && (
-            <div className="flex gap-2 justify-center">
-              <button
-                onClick={() => setShowImport(true)}
-                className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg"
-              >
-                Import dari Excel
-              </button>
-              <button
-                onClick={() => setShowForm(true)}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
-              >
-                Tambah Manual
-              </button>
-            </div>
-          )}
-        </div>
-      ) : (
-        <>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Nama
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Kategori
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Satuan Jual
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Harga (Pcs)
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Harga (Pack)
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Harga (Kg)
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Stok
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Min Stok
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Aksi
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredProducts.map((product) => (
-                  <tr key={product.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
-                      {product.name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs">
-                        {product.category_name}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium
-                        ${
-                          product.sell_per_unit === "all"
-                            ? "bg-blue-100 text-blue-800"
-                            : product.sell_per_unit === "pcs"
-                              ? "bg-green-100 text-green-800"
-                              : product.sell_per_unit === "pack"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-purple-100 text-purple-800"
-                        }`}
-                      >
-                        {product.sell_per_unit === "all"
-                          ? "Pcs/Pack/Kg"
-                          : product.sell_per_unit === "pcs"
-                            ? "Per Pcs"
-                            : product.sell_per_unit === "pack"
-                              ? "Per Pack"
-                              : "Per Kg"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {product.price_pcs
-                        ? `Rp ${product.price_pcs.toLocaleString()}`
-                        : "-"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {product.price_pack
-                        ? `Rp ${product.price_pack.toLocaleString()}`
-                        : "-"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {product.price_kg
-                        ? `Rp ${product.price_kg.toLocaleString()}`
-                        : "-"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          product.stock <= product.min_stock
-                            ? "bg-red-100 text-red-800"
-                            : "bg-green-100 text-green-800"
-                        }`}
-                      >
-                        {product.stock}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {product.min_stock}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <button
-                        onClick={() => handleEdit(product)}
-                        className="text-blue-600 hover:text-blue-900 mr-3 font-medium"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(product.id)}
-                        disabled={deletingId === product.id}
-                        className="text-red-600 hover:text-red-900 disabled:text-red-300 font-medium"
-                      >
-                        {deletingId === product.id ? "..." : "Hapus"}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Footer dengan total produk */}
-          <div className="mt-4 text-sm text-gray-500 border-t pt-4 flex justify-between items-center">
-            <span>
-              Total: {filteredProducts.length} produk (dari {products.length}{" "}
-              produk)
-            </span>
-            <span className="text-xs text-gray-400">
-              Gunakan filter untuk mencari produk
-            </span>
-          </div>
-        </>
-      )}
-    </div>
+    </>
   );
 }
 

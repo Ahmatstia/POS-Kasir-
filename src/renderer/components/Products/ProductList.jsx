@@ -370,7 +370,7 @@ function ProductList() {
               <table className="prod-table">
                 <thead>
                   <tr>
-                    {['Nama Produk', 'Kategori', 'Satuan', 'Harga Pcs', 'Harga Pack', 'Harga Kg', 'Stok', 'Min Stok', 'Aksi'].map(h => (
+                    {['Nama Produk', 'Kategori', 'Satuan', 'Harga Pcs', 'Harga Pack', 'Harga Dus', 'Harga Kg', 'Stok', 'Min Stok', 'Aksi'].map(h => (
                       <th key={h}>{h}</th>
                     ))}
                   </tr>
@@ -404,6 +404,9 @@ function ProductList() {
                         </td>
                         <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: product.price_pack ? T.text : T.muted }}>
                           {fmt(product.price_pack)}
+                        </td>
+                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: product.price_dus ? T.text : T.muted }}>
+                          {fmt(product.price_dus)}
                         </td>
                         <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: product.price_kg ? T.text : T.muted }}>
                           {fmt(product.price_kg)}

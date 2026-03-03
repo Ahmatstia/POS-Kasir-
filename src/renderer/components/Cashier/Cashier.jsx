@@ -27,6 +27,7 @@ const fmt = (n) => `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
 const UNITS = [
   { key: 'pcs',  label: 'Pcs',  priceKey: 'price_pcs',  color: T.blue   },
   { key: 'pack', label: 'Pack', priceKey: 'price_pack', color: T.green  },
+  { key: 'dus',  label: 'Dus',  priceKey: 'price_dus',  color: T.accent },
   { key: 'kg',   label: 'Kg',   priceKey: 'price_kg',   color: T.purple },
 ];
 
@@ -183,6 +184,7 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef }) {
               >
                 <option value="pcs">Pcs</option>
                 <option value="pack">Pack</option>
+                <option value="dus">Dus</option>
                 <option value="kg">Kg</option>
               </select>
             </div>
@@ -358,12 +360,30 @@ function Cashier() {
     const price = product[u.priceKey];
     if (!price || price <= 0) return;
 
-    const currentQtyInCart = cart
-      .filter(item => item.product_id === product.id)
-      .reduce((sum, item) => sum + item.quantity, 0);
+    // Hitung berapa PCS yang dibutuhkan untuk unit ini
+    const pcsPerPack = product.pcs_per_pack || 1;
+    const packPerDus = product.pack_per_dus || 1;
+    
+    let pcsNeeded = 1;
+    if (unit === 'pack') pcsNeeded = pcsPerPack;
+    if (unit === 'dus')  pcsNeeded = packPerDus * pcsPerPack;
 
-    if (currentQtyInCart + 1 > (product.stock || 0)) {
-      alert(`Stok tidak mencukupi! Tersisa: ${product.stock || 0}`);
+    // Hitung total PCS yang sudah ada di keranjang untuk produk ini
+    const currentPcsInCart = cart
+      .filter(item => item.product_id === product.id)
+      .reduce((sum, item) => {
+        let itemPcs = item.quantity;
+        const p = allProducts.find(x => x.id === item.product_id);
+        const pp = p?.pcs_per_pack || 1;
+        const pd = p?.pack_per_dus || 1;
+        
+        if (item.unit === 'pack') itemPcs = item.quantity * pp;
+        else if (item.unit === 'dus') itemPcs = item.quantity * pd * pp;
+        return sum + itemPcs;
+      }, 0);
+
+    if (currentPcsInCart + pcsNeeded > (product.stock || 0)) {
+      alert(`Stok tidak mencukupi! Tersisa: ${product.stock || 0} Pcs. Di keranjang sudah ada setara ${currentPcsInCart} Pcs.`);
       return;
     }
 
@@ -388,13 +408,31 @@ function Cashier() {
   };
 
   const addManualToCart = (product, { price, quantity, unit }) => {
-    const currentQty = cart
+    const pcsPerPack = product.pcs_per_pack || 1;
+    const packPerDus = product.pack_per_dus || 1;
+    
+    let pcsNeeded = quantity;
+    if (unit === 'pack') pcsNeeded = quantity * pcsPerPack;
+    else if (unit === 'dus')  pcsNeeded = quantity * packPerDus * pcsPerPack;
+
+    const currentPcsInCart = cart
       .filter(item => item.product_id === product.id)
-      .reduce((sum, item) => sum + item.quantity, 0);
-    if (currentQty + quantity > (product.stock || 0)) {
-      alert(`Stok tidak mencukupi! Tersisa: ${product.stock || 0}`);
+      .reduce((sum, item) => {
+        let itemPcs = item.quantity;
+        const p = allProducts.find(x => x.id === item.product_id);
+        const pp = p?.pcs_per_pack || 1;
+        const pd = p?.pack_per_dus || 1;
+        
+        if (item.unit === 'pack') itemPcs = item.quantity * pp;
+        else if (item.unit === 'dus') itemPcs = item.quantity * pd * pp;
+        return sum + itemPcs;
+      }, 0);
+
+    if (currentPcsInCart + pcsNeeded > (product.stock || 0)) {
+      alert(`Stok tidak mencukupi! Tersisa: ${product.stock || 0} Pcs. Di keranjang sudah ada setara ${currentPcsInCart} Pcs.`);
       return;
     }
+
     setCart([...cart, {
       id: 'manual-' + Date.now() + Math.random(),
       product_id: product.id,

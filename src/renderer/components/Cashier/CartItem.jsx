@@ -20,6 +20,7 @@ const T = {
 const UNIT_COLORS = {
   pcs:  T.blue,
   pack: T.green,
+  dus:  T.accent,
   kg:   T.purple,
 };
 

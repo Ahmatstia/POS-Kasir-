@@ -45,11 +45,25 @@ function EditProductForm({ productId, onClose, onSuccess }) {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading]       = useState(true);
   const [saving, setSaving]         = useState(false);
-  const [formData, setFormData]     = useState({
-    name: '', category_id: '',
-    price_pcs: '', price_pack: '', price_kg: '',
-    stock: '', min_stock: '', notes: '',
-  });
+  
+  // States matching ProductForm
+  const [name, setName]               = useState("");
+  const [categoryId, setCategoryId]   = useState("");
+  const [notes, setNotes]             = useState("");
+  const [minStock, setMinStock]       = useState(0);
+
+  const [pricePcs, setPricePcs]       = useState(0);
+  const [pricePack, setPricePack]     = useState(0);
+  const [priceDus, setPriceDus]       = useState(0);
+  const [priceKg, setPriceKg]         = useState(0);
+
+  const [pcsPerPack, setPcsPerPack]   = useState(1);
+  const [packPerDus, setPackPerDus]   = useState(1);
+
+  const [qtyDus, setQtyDus]           = useState(0);
+  const [qtyPack, setQtyPack]         = useState(0);
+  const [qtyPcs, setQtyPcs]           = useState(0);
+  const [qtyKg, setQtyKg]             = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -60,158 +74,137 @@ function EditProductForm({ productId, onClose, onSuccess }) {
       ]);
       setCategories(cats);
       if (product) {
-        setFormData({
-          name:        product.name        || '',
-          category_id: product.category_id || '',
-          price_pcs:   product.price_pcs   || '',
-          price_pack:  product.price_pack  || '',
-          price_kg:    product.price_kg    || '',
-          stock:       product.stock       || '',
-          min_stock:   product.min_stock   || '',
-          notes:       product.notes       || '',
-        });
+        setName(product.name || "");
+        setCategoryId(product.category_id || "");
+        setNotes(product.notes || "");
+        setMinStock(product.min_stock || 0);
+        setPricePcs(product.price_pcs || 0);
+        setPricePack(product.price_pack || 0);
+        setPriceDus(product.price_dus || 0);
+        setPriceKg(product.price_kg || 0);
+        setPcsPerPack(product.pcs_per_pack || 1);
+        setPackPerDus(product.pack_per_dus || 1);
+        
+        // Untuk Edit, kita tampilkan total stok saat ini di bagian Pcs/Kg 
+        // Agar user bisa melihat totalnya dan menyesuaikannya.
+        setQtyPcs(product.stock || 0);
       }
       setLoading(false);
     })();
   }, [productId]);
 
-  const handleChange = e => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  const totalStock = (Number(qtyDus) * Number(packPerDus) * Number(pcsPerPack)) + 
+                     (Number(qtyPack) * Number(pcsPerPack)) + 
+                     Number(qtyPcs) + Number(qtyKg);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!name || !categoryId) return alert("Nama dan Kategori wajib diisi");
+
     setSaving(true);
     const result = await updateProduct(productId, {
-      ...formData,
-      price_pcs:   formData.price_pcs   ? parseInt(formData.price_pcs)   : 0,
-      price_pack:  formData.price_pack  ? parseInt(formData.price_pack)  : 0,
-      price_kg:    formData.price_kg    ? parseInt(formData.price_kg)    : 0,
-      stock:       formData.stock       ? parseInt(formData.stock)       : 0,
-      min_stock:   formData.min_stock   ? parseInt(formData.min_stock)   : 0,
-      category_id: parseInt(formData.category_id),
+      name,
+      category_id: categoryId,
+      sell_per_unit: "all",
+      price_pcs: pricePcs,
+      price_pack: pricePack,
+      price_dus: priceDus,
+      price_kg: priceKg,
+      stock: totalStock,
+      min_stock: minStock,
+      pcs_per_pack: pcsPerPack,
+      pack_per_dus: packPerDus,
+      notes,
     });
     setSaving(false);
-    if (result.success) { onSuccess(); onClose(); }
-    else alert('Gagal mengupdate produk: ' + result.error);
+
+    if (result.success) {
+      onSuccess();
+      onClose();
+    } else {
+      alert("Gagal update produk: " + result.error);
+    }
   };
 
-  // Loading skeleton inside modal
-  if (loading) {
-    return (
-      <FormModal title="Edit Produk" subtitle="Memuat data…" onClose={onClose}>
-        <style>{MODAL_CSS}</style>
-        <div style={{ padding: '20px 0', display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {[120, 80, 200, 100, 80].map((w, i) => (
-            <div key={i} style={{
-              height: 38, borderRadius: 10, background: T.border,
-              width: `${w}%` === '200%' ? '100%' : w + 'px',
-              animation: 'shimmer 1.2s ease infinite',
-            }} />
-          ))}
-          <style>{`@keyframes shimmer { 0%,100%{opacity:0.4}50%{opacity:0.8} }`}</style>
-        </div>
-      </FormModal>
-    );
-  }
+  if (loading) return <FormModal title="Edit Produk" subtitle="Memuat..." onClose={onClose}>...</FormModal>;
 
   return (
-    <FormModal title="Edit Produk" subtitle="Ubah data produk" onClose={onClose}>
+    <FormModal title="Edit Produk" subtitle="Ubah data dan stok produk" onClose={onClose}>
       <style>{MODAL_CSS}</style>
-
-      {/* Edit badge */}
-      <div style={{
-        display: 'inline-flex', alignItems: 'center', gap: 6,
-        padding: '5px 12px', borderRadius: 100, marginBottom: 18,
-        background: T.accent + '10', border: `1px solid ${T.accent}28`,
-        fontSize: 11, fontWeight: 700, color: T.accent,
-        fontFamily: 'JetBrains Mono, monospace',
-      }}>
-        <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-          <path d="M8 1.5l1.5 1.5L4 8.5H2.5V7L8 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-        </svg>
-        ID #{productId}
-      </div>
-
-      <form onSubmit={handleSubmit}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-
-          {/* Name */}
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <Field label="Nama Produk" required>
-            <input name="name" type="text" value={formData.name} onChange={handleChange}
-              required className="form-field" style={fieldStyle} />
+            <input type="text" value={name} onChange={e => setName(e.target.value)} required style={fieldStyle} />
           </Field>
-
-          {/* Category */}
           <Field label="Kategori" required>
-            <select name="category_id" value={formData.category_id} onChange={handleChange}
-              required className="form-field" style={{ ...fieldStyle, cursor: 'pointer' }}>
-              <option value="">Pilih Kategori…</option>
+            <select value={categoryId} onChange={e => setCategoryId(e.target.value)} required style={fieldStyle}>
+              <option value="">Pilih Kategori</option>
               {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </Field>
-
-          {/* Prices */}
-          <div>
-            <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: T.muted, marginBottom: 10 }}>
-              Harga
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-              {[
-                { key: 'price_pcs',  label: 'Pcs',  color: T.blue   },
-                { key: 'price_pack', label: 'Pack', color: T.green  },
-                { key: 'price_kg',   label: 'Kg',   color: T.purple },
-              ].map(({ key, label, color }) => (
-                <div key={key}>
-                  <label style={{
-                    display: 'flex', alignItems: 'center', gap: 5,
-                    fontSize: 9, fontWeight: 700, letterSpacing: '0.1em',
-                    textTransform: 'uppercase', marginBottom: 6,
-                    color,
-                  }}>{label}</label>
-                  <div style={{ position: 'relative' }}>
-                    <span style={{
-                      position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)',
-                      fontSize: 9, color: T.muted, fontFamily: 'JetBrains Mono, monospace', pointerEvents: 'none',
-                    }}>Rp</span>
-                    <input name={key} type="number" value={formData[key]} onChange={handleChange}
-                      placeholder="0" className="form-field"
-                      style={{ ...fieldStyle, paddingLeft: 26, fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Stock */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <Field label="Stok">
-              <input name="stock" type="number" value={formData.stock} onChange={handleChange}
-                placeholder="0" className="form-field"
-                style={{ ...fieldStyle, fontFamily: 'JetBrains Mono, monospace' }} />
-            </Field>
-            <Field label="Minimal Stok">
-              <input name="min_stock" type="number" value={formData.min_stock} onChange={handleChange}
-                placeholder="0" className="form-field"
-                style={{ ...fieldStyle, fontFamily: 'JetBrains Mono, monospace' }} />
-            </Field>
-          </div>
-
-          {/* Notes */}
-          <Field label="Keterangan">
-            <textarea name="notes" value={formData.notes} onChange={handleChange} rows={3}
-              placeholder="Catatan tambahan…" className="form-field"
-              style={{ ...fieldStyle, resize: 'vertical', minHeight: 80 }} />
-          </Field>
         </div>
 
-        <FormActions
-          onClose={onClose}
-          loading={saving}
-          submitLabel="Simpan Perubahan"
-          loadingLabel="Menyimpan…"
-        />
+        {/* Konversi */}
+        <div style={{ padding: 12, background: T.border + "40", borderRadius: 12, border: `1px dashed ${T.border2}` }}>
+          <p style={{ fontSize: 9, fontWeight: 700, color: T.muted, textTransform: "uppercase", marginBottom: 10 }}>Faktor Konversi</p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Field label="1 Pack Berapa Pcs?">
+              <input type="number" value={pcsPerPack} onChange={e => setPcsPerPack(e.target.value)} style={fieldStyle} />
+            </Field>
+            <Field label="1 Dus Berapa Pack?">
+              <input type="number" value={packPerDus} onChange={e => setPackPerDus(e.target.value)} style={fieldStyle} />
+            </Field>
+          </div>
+        </div>
+
+        {/* Harga */}
+        <div>
+          <p style={{ fontSize: 9, fontWeight: 700, color: T.muted, textTransform: "uppercase", marginBottom: 10 }}>Harga Jual</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+            {[
+              { label: "Pcs", val: pricePcs, set: setPricePcs, col: T.blue },
+              { label: "Pack", val: pricePack, set: setPricePack, col: T.green },
+              { label: "Dus", val: priceDus, set: setPriceDus, col: T.accent },
+              { label: "Kg", val: priceKg, set: setPriceKg, col: T.purple },
+            ].map(u => (
+              <div key={u.label}>
+                <label style={{ fontSize: 9, fontWeight: 700, color: u.col, display: "block", marginBottom: 4 }}>{u.label}</label>
+                <input type="number" value={u.val} onChange={e => u.set(e.target.value)} style={fieldStyle} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Stok */}
+        <div style={{ padding: 12, background: T.accent + "08", borderRadius: 12, border: `1px solid ${T.accent}20` }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+            <p style={{ fontSize: 9, fontWeight: 700, color: T.accent, textTransform: "uppercase" }}>Update Stok</p>
+            <p style={{ fontSize: 10, fontWeight: 800, color: T.text }}>Total: <span style={{ color: T.green }}>{totalStock} Pcs</span></p>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+            {[
+              { label: "Dus", val: qtyDus, set: setQtyDus },
+              { label: "Pack", val: qtyPack, set: setQtyPack },
+              { label: "Pcs", val: qtyPcs, set: setQtyPcs },
+              { label: "Kg", val: qtyKg, set: setQtyKg },
+            ].map(u => (
+              <div key={u.label}>
+                <label style={{ fontSize: 8, fontWeight: 700, color: T.muted, display: "block", marginBottom: 4 }}>{u.label}</label>
+                <input type="number" value={u.val} onChange={e => u.set(e.target.value)} style={fieldStyle} />
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: 8, color: T.muted, marginTop: 8, fontStyle: "italic" }}>
+            * Isilah kolom di atas untuk menghitung total stok baru.
+          </p>
+        </div>
+
+        <Field label="Keterangan">
+          <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} style={{ ...fieldStyle, resize: "none" }} />
+        </Field>
+
+        <FormActions onClose={onClose} loading={saving} submitLabel="Simpan Perubahan" />
       </form>
     </FormModal>
   );

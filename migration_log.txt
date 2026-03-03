@@ -1,0 +1,8 @@
+Migration started at 2026-03-03T05:34:18.224Z
+✅ Found DB at: C:\Users\ACER\AppData\Roaming\pos-toko-bumbu\pos-toko-bumbu.db. Migrating...
+❌ DB not found at: C:\Users\ACER\AppData\Roaming\Electron\pos-toko-bumbu.db
+❌ DB not found at: C:\Users\ACER\AppData\Local\pos-toko-bumbu\pos-toko-bumbu.db
+✅ Success in C:\Users\ACER\AppData\Roaming\pos-toko-bumbu\pos-toko-bumbu.db: ALTER TABLE products ADD COLUMN price_dus INTEGER DEFAULT 0
+✅ Success in C:\Users\ACER\AppData\Roaming\pos-toko-bumbu\pos-toko-bumbu.db: ALTER TABLE products ADD COLUMN pcs_per_pack INTEGER DEFAULT 1
+✅ Success in C:\Users\ACER\AppData\Roaming\pos-toko-bumbu\pos-toko-bumbu.db: ALTER TABLE products ADD COLUMN pack_per_dus INTEGER DEFAULT 1
+Migration process finished check.

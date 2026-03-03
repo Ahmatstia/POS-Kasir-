@@ -76,15 +76,29 @@ export async function createTransaction(transactionData) {
 
       // Update stok produk hanya jika ini bukan item kustom (punya product_id)
       if (item.product_id) {
+        // Ambil info konversi produk
+        const [productInfo] = await window.electronAPI.query(
+          "SELECT pcs_per_pack, pack_per_dus FROM products WHERE id = ?",
+          [item.product_id]
+        );
+        
+        const pcsPerPack = productInfo?.pcs_per_pack || 1;
+        const packPerDus = productInfo?.pack_per_dus || 1;
+        
+        let qtyToSubtract = item.quantity;
+        if (item.unit === 'pack') qtyToSubtract = item.quantity * pcsPerPack;
+        else if (item.unit === 'dus') qtyToSubtract = item.quantity * packPerDus * pcsPerPack;
+        // Jika 'kg' atau 'pcs', qtyToSubtract tetap item.quantity (karena porsi sudah dlm base unit)
+
         const updateStockSql = `
           UPDATE products 
           SET stock = stock - ? 
           WHERE id = ? AND stock >= ?
         `;
         const updateResult = await window.electronAPI.run(updateStockSql, [
-          item.quantity,
+          qtyToSubtract,
           item.product_id,
-          item.quantity,
+          qtyToSubtract,
         ]);
 
         if (updateResult.changes === 0) {

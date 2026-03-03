@@ -160,10 +160,20 @@ export async function adjustStock(productId, newTotalPcs, reason = "Koreksi manu
         if (toRemove <= 0) break;
         const remove = Math.min(batch.quantity, toRemove);
         const newQty = batch.quantity - remove;
+        // 1. Update quantity first
         await window.electronAPI.run(
-          "UPDATE stocks SET quantity = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+          "UPDATE stocks SET quantity = ?, is_active = ? WHERE id = ?",
           [newQty, newQty > 0 ? 1 : 0, batch.id]
         );
+        // 2. Try to update updated_at (resilient)
+        try {
+          await window.electronAPI.run(
+            "UPDATE stocks SET updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            [batch.id]
+          );
+        } catch (e) {
+          console.warn("⚠️ updated_at column missing in stocks table");
+        }
         toRemove -= remove;
       }
       await window.electronAPI.run(
@@ -231,10 +241,20 @@ export async function deductStockFIFO(productId, quantityPcs, invoiceNo) {
     if (toDeduct <= 0) break;
     const deduct = Math.min(batch.quantity, toDeduct);
     const newQty = batch.quantity - deduct;
+    // 1. Update quantity
     await window.electronAPI.run(
-      "UPDATE stocks SET quantity = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+      "UPDATE stocks SET quantity = ?, is_active = ? WHERE id = ?",
       [newQty, newQty > 0 ? 1 : 0, batch.id]
     );
+    // 2. Try to update updated_at (resilient)
+    try {
+      await window.electronAPI.run(
+        "UPDATE stocks SET updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [batch.id]
+      );
+    } catch (e) {
+      console.warn("⚠️ updated_at column missing in stocks table");
+    }
     toDeduct -= deduct;
   }
 

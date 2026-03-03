@@ -25,6 +25,15 @@ class DatabaseManager {
           this.db.run("PRAGMA foreign_keys = ON");
           try {
             await this.initTables();
+            
+            // Redundant check to ensure updated_at exists (critical for recent errors)
+            await this._runSQL("ALTER TABLE categories ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "FIX categories.updated_at");
+            await this._runSQL("ALTER TABLE products ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "FIX products.updated_at");
+            await this._runSQL("ALTER TABLE stocks ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "FIX stocks.updated_at");
+            await this._runSQL("ALTER TABLE transactions ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "FIX transactions.updated_at");
+            await this._runSQL("ALTER TABLE inventory_log ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "FIX inventory_log.updated_at");
+            await this._runSQL("ALTER TABLE transaction_items ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "FIX transaction_items.updated_at");
+
             this.ready = true;
             console.log("✅ Database fully ready");
             resolve();
@@ -73,9 +82,11 @@ class DatabaseManager {
               updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
             )`, "CREATE categories");
 
-          // Add new columns to existing categories table (safe if already there)
+          // Add missing columns to existing categories table
           await this._runSQL("ALTER TABLE categories ADD COLUMN description TEXT",         "ADD categories.description");
           await this._runSQL("ALTER TABLE categories ADD COLUMN color TEXT DEFAULT '#5B8AF5'", "ADD categories.color");
+          await this._runSQL("ALTER TABLE categories ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD categories.created_at");
+          await this._runSQL("ALTER TABLE categories ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD categories.updated_at");
 
           // ── PRODUCTS ────────────────────────────────────────────────────────
           await this._runSQL(`
@@ -109,6 +120,8 @@ class DatabaseManager {
           await this._runSQL("ALTER TABLE products ADD COLUMN barcode      TEXT",                 "ADD products.barcode");
           await this._runSQL("ALTER TABLE products ADD COLUMN sku          TEXT",                 "ADD products.sku");
           await this._runSQL("ALTER TABLE products ADD COLUMN min_stock    INTEGER DEFAULT 0",    "ADD products.min_stock");
+          await this._runSQL("ALTER TABLE products ADD COLUMN created_at   DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD products.created_at");
+          await this._runSQL("ALTER TABLE products ADD COLUMN updated_at   DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD products.updated_at");
 
           // ── STOCKS ──────────────────────────────────────────────────────────
           await this._runSQL(`
@@ -125,6 +138,9 @@ class DatabaseManager {
               updated_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
               FOREIGN KEY (product_id) REFERENCES products(id)
             )`, "CREATE stocks");
+          
+          await this._runSQL("ALTER TABLE stocks ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD stocks.created_at");
+          await this._runSQL("ALTER TABLE stocks ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD stocks.updated_at");
 
           // ── INVENTORY LOG ────────────────────────────────────────────────────
           await this._runSQL(`
@@ -145,9 +161,13 @@ class DatabaseManager {
               reference_id   TEXT,
               notes          TEXT,
               created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+              updated_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
               FOREIGN KEY (product_id) REFERENCES products(id),
               FOREIGN KEY (stock_id)   REFERENCES stocks(id)
             )`, "CREATE inventory_log");
+          
+          await this._runSQL("ALTER TABLE inventory_log ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD inventory_log.created_at");
+          await this._runSQL("ALTER TABLE inventory_log ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD inventory_log.updated_at");
 
           // ── TRANSACTIONS ─────────────────────────────────────────────────────
           await this._runSQL(`
@@ -164,13 +184,16 @@ class DatabaseManager {
               customer_name    TEXT,
               notes            TEXT,
               status           TEXT DEFAULT 'COMPLETED' CHECK(status IN ('COMPLETED','CANCELLED','RETURNED')),
-              created_at       DATETIME DEFAULT CURRENT_TIMESTAMP
+              created_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
+              updated_at       DATETIME DEFAULT CURRENT_TIMESTAMP
             )`, "CREATE transactions");
 
           await this._runSQL("ALTER TABLE transactions ADD COLUMN status TEXT DEFAULT 'COMPLETED'",     "ADD transactions.status");
           await this._runSQL("ALTER TABLE transactions ADD COLUMN discount INTEGER DEFAULT 0",           "ADD transactions.discount");
           await this._runSQL("ALTER TABLE transactions ADD COLUMN invoice_no TEXT",                     "ADD transactions.invoice_no");
           await this._runSQL("ALTER TABLE transactions ADD COLUMN customer_name TEXT",                  "ADD transactions.customer_name");
+          await this._runSQL("ALTER TABLE transactions ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD transactions.created_at");
+          await this._runSQL("ALTER TABLE transactions ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD transactions.updated_at");
 
           // ── TRANSACTION ITEMS ────────────────────────────────────────────────
           await this._runSQL(`
@@ -184,11 +207,15 @@ class DatabaseManager {
               unit           TEXT,
               price_per_unit INTEGER,
               subtotal       INTEGER,
+              created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+              updated_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
               FOREIGN KEY (transaction_id) REFERENCES transactions(id),
               FOREIGN KEY (product_id)     REFERENCES products(id)
             )`, "CREATE transaction_items");
 
           await this._runSQL("ALTER TABLE transaction_items ADD COLUMN stock_id INTEGER", "ADD transaction_items.stock_id");
+          await this._runSQL("ALTER TABLE transaction_items ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD transaction_items.created_at");
+          await this._runSQL("ALTER TABLE transaction_items ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD transaction_items.updated_at");
 
           // ── MIGRATE OLD STOCK → stocks table ─────────────────────────────────
           await this.migrateStockData();

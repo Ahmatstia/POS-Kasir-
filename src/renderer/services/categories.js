@@ -31,10 +31,22 @@ export async function addCategory({ name, description = "", color = "#5B8AF5" })
 
 export async function updateCategory(id, { name, description, color }) {
   try {
+    // 1. Update main data first (without updated_at) to avoid crashing if column missing
     await window.electronAPI.run(
-      "UPDATE categories SET name = ?, description = ?, color = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+      "UPDATE categories SET name = ?, description = ?, color = ? WHERE id = ?",
       [name.trim(), description?.trim() || "", color || "#5B8AF5", id]
     );
+
+    // 2. Try to update updated_at separately
+    try {
+      await window.electronAPI.run(
+        "UPDATE categories SET updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [id]
+      );
+    } catch (e) {
+      console.warn("⚠️ updated_at column missing in categories table, skipping...");
+    }
+
     return { success: true };
   } catch (error) {
     console.error("Error updating category:", error);

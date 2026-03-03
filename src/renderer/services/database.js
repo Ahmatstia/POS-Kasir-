@@ -96,8 +96,7 @@ export async function updateProduct(id, product) {
       SET name = ?, category_id = ?, sell_per_unit = ?,
           price_pcs = ?, price_pack = ?, price_dus = ?, price_kg = ?,
           pcs_per_pack = ?, pack_per_dus = ?,
-          min_stock = ?, notes = ?,
-          updated_at = CURRENT_TIMESTAMP
+          min_stock = ?, notes = ?
       WHERE id = ?
     `;
     const params = [
@@ -115,6 +114,17 @@ export async function updateProduct(id, product) {
       id,
     ];
     const result = await window.electronAPI.run(sql, params);
+
+    // Try to update updated_at separately
+    try {
+      await window.electronAPI.run(
+        "UPDATE products SET updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [id]
+      );
+    } catch (e) {
+      console.warn("⚠️ updated_at column missing in products table, skipping...");
+    }
+
     return { success: true, changes: result.changes };
   } catch (error) {
     console.error("Error updating product:", error);
@@ -126,9 +136,20 @@ export async function updateProduct(id, product) {
 export async function deleteProduct(id) {
   try {
     await window.electronAPI.run(
-      "UPDATE products SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+      "UPDATE products SET is_active = 0 WHERE id = ?",
       [id]
     );
+
+    // Try to update updated_at separately
+    try {
+      await window.electronAPI.run(
+        "UPDATE products SET updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [id]
+      );
+    } catch (e) {
+      console.warn("⚠️ updated_at column missing in products table, skipping...");
+    }
+
     return { success: true };
   } catch (error) {
     console.error("Error deleting product:", error);

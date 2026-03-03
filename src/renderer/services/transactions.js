@@ -1,4 +1,7 @@
-// Fungsi untuk membuat transaksi baru
+import { deductStockFIFO } from "./inventory";
+
+// ─── TRANSACTIONS SERVICE ────────────────────────────────────────────────────
+
 export async function createTransaction(transactionData) {
   const {
     items,
@@ -12,164 +15,144 @@ export async function createTransaction(transactionData) {
     notes,
   } = transactionData;
 
-  // Generate nomor invoice: INV-20260223-001
+  // Generate invoice number
   const date = new Date();
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const random = Math.floor(Math.random() * 1000)
-    .toString()
-    .padStart(3, "0");
-  const invoiceNo = `INV-${year}${month}${day}-${random}`;
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  const rand = Math.floor(Math.random() * 1000).toString().padStart(3, "0");
+  const invoiceNo = `INV-${y}${m}${d}-${rand}`;
 
   try {
-    // Mulai transaksi database
     await window.electronAPI.run("BEGIN TRANSACTION");
 
-    // Insert ke tabel transactions
-    const transactionSql = `
-      INSERT INTO transactions (
-        invoice_no, subtotal, discount, total_amount, 
-        payment_amount, change_amount, payment_method, 
-        customer_name, notes, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-    `;
-
-    const transactionParams = [
-      invoiceNo,
-      subtotal,
-      discount,
-      total,
-      payment,
-      change,
-      paymentMethod,
-      customerName || "",
-      notes || "",
-    ];
-
-    const transactionResult = await window.electronAPI.run(
-      transactionSql,
-      transactionParams,
+    // Insert transaction header
+    const txResult = await window.electronAPI.run(
+      `INSERT INTO transactions
+         (invoice_no, subtotal, discount, total_amount, payment_amount, change_amount, payment_method, customer_name, notes, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'COMPLETED')`,
+      [invoiceNo, subtotal, discount || 0, total, payment, change, paymentMethod, customerName || "", notes || ""]
     );
-    const transactionId = transactionResult.lastID;
+    const transactionId = txResult.lastID;
 
-    // Insert ke tabel transaction_items
+    // Process each item
     for (const item of items) {
-      const itemSql = `
-        INSERT INTO transaction_items (
-          transaction_id, product_id, product_name, 
-          quantity, unit, price_per_unit, subtotal
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-      `;
+      // Insert transaction item
+      await window.electronAPI.run(
+        `INSERT INTO transaction_items
+           (transaction_id, product_id, product_name, quantity, unit, price_per_unit, subtotal)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [transactionId, item.product_id, item.name, item.quantity, item.unit, item.price, item.subtotal]
+      );
 
-      const itemParams = [
-        transactionId,
-        item.product_id,
-        item.name,
-        item.quantity,
-        item.unit,
-        item.price,
-        item.subtotal,
-      ];
-
-      await window.electronAPI.run(itemSql, itemParams);
-
-      // Update stok produk hanya jika ini bukan item kustom (punya product_id)
+      // Deduct stock (FIFO) only for real products (not manual items)
       if (item.product_id) {
-        // Ambil info konversi produk
+        // Calculate pcs to deduct based on unit
         const [productInfo] = await window.electronAPI.query(
           "SELECT pcs_per_pack, pack_per_dus FROM products WHERE id = ?",
           [item.product_id]
         );
-        
         const pcsPerPack = productInfo?.pcs_per_pack || 1;
         const packPerDus = productInfo?.pack_per_dus || 1;
-        
-        let qtyToSubtract = item.quantity;
-        if (item.unit === 'pack') qtyToSubtract = item.quantity * pcsPerPack;
-        else if (item.unit === 'dus') qtyToSubtract = item.quantity * packPerDus * pcsPerPack;
-        // Jika 'kg' atau 'pcs', qtyToSubtract tetap item.quantity (karena porsi sudah dlm base unit)
 
-        const updateStockSql = `
-          UPDATE products 
-          SET stock = stock - ? 
-          WHERE id = ? AND stock >= ?
-        `;
-        const updateResult = await window.electronAPI.run(updateStockSql, [
-          qtyToSubtract,
-          item.product_id,
-          qtyToSubtract,
-        ]);
+        let pcsToDeduct = item.quantity;
+        if (item.unit === "pack") pcsToDeduct = item.quantity * pcsPerPack;
+        else if (item.unit === "dus") pcsToDeduct = item.quantity * packPerDus * pcsPerPack;
 
-        if (updateResult.changes === 0) {
-          throw new Error(`Stok tidak mencukupi untuk: ${item.name}`);
-        }
-
-        // Catat riwayat stok (audit trail)
-        const historySql = `
-          INSERT INTO stock_history (product_id, type, quantity, unit, reference_id)
-          VALUES (?, 'sale', ?, ?, ?)
-        `;
-        await window.electronAPI.run(historySql, [
-          item.product_id,
-          -item.quantity, // Minus karena stok keluar
-          item.unit,
-          invoiceNo,
-        ]);
+        // FIFO deduction from stocks table
+        await deductStockFIFO(item.product_id, pcsToDeduct, invoiceNo);
       }
     }
 
-    // Commit transaksi
     await window.electronAPI.run("COMMIT");
-
-    return {
-      success: true,
-      transactionId,
-      invoiceNo,
-    };
+    return { success: true, transactionId, invoiceNo };
   } catch (error) {
-    // Rollback jika error
     await window.electronAPI.run("ROLLBACK");
     console.error("Error creating transaction:", error);
     return { success: false, error: error.message };
   }
 }
 
-// Fungsi untuk mengambil riwayat transaksi
-export async function getTransactions(limit = 50) {
+// Get transaction list
+export async function getTransactions(limit = 100) {
   try {
-    const sql = `
-      SELECT * FROM transactions 
-      ORDER BY created_at DESC 
-      LIMIT ?
-    `;
-    const result = await window.electronAPI.query(sql, [limit]);
-    return result;
+    return await window.electronAPI.query(
+      "SELECT * FROM transactions ORDER BY created_at DESC LIMIT ?",
+      [limit]
+    );
   } catch (error) {
     console.error("Error getting transactions:", error);
     return [];
   }
 }
 
-// Fungsi untuk mengambil detail transaksi
+// Get transaction detail with items
 export async function getTransactionDetail(transactionId) {
   try {
-    // Ambil data transaksi
-    const transactionSql = "SELECT * FROM transactions WHERE id = ?";
-    const transaction = await window.electronAPI.query(transactionSql, [
-      transactionId,
-    ]);
-
-    // Ambil item-item transaksi
-    const itemsSql = "SELECT * FROM transaction_items WHERE transaction_id = ?";
-    const items = await window.electronAPI.query(itemsSql, [transactionId]);
-
-    return {
-      transaction: transaction[0],
-      items,
-    };
+    const [transaction] = await window.electronAPI.query(
+      "SELECT * FROM transactions WHERE id = ?",
+      [transactionId]
+    );
+    const items = await window.electronAPI.query(
+      "SELECT * FROM transaction_items WHERE transaction_id = ?",
+      [transactionId]
+    );
+    return { transaction, items };
   } catch (error) {
     console.error("Error getting transaction detail:", error);
     return null;
+  }
+}
+
+// Cancel transaction (restore stock)
+export async function cancelTransaction(transactionId) {
+  try {
+    await window.electronAPI.run("BEGIN TRANSACTION");
+
+    // Get items
+    const items = await window.electronAPI.query(
+      "SELECT * FROM transaction_items WHERE transaction_id = ?",
+      [transactionId]
+    );
+    const [tx] = await window.electronAPI.query(
+      "SELECT invoice_no FROM transactions WHERE id = ?",
+      [transactionId]
+    );
+
+    for (const item of items) {
+      if (!item.product_id) continue;
+      const [productInfo] = await window.electronAPI.query(
+        "SELECT pcs_per_pack, pack_per_dus FROM products WHERE id = ?",
+        [item.product_id]
+      );
+      const pcsPerPack = productInfo?.pcs_per_pack || 1;
+      const packPerDus = productInfo?.pack_per_dus || 1;
+      let pcsToReturn = item.quantity;
+      if (item.unit === "pack") pcsToReturn = item.quantity * pcsPerPack;
+      else if (item.unit === "dus") pcsToReturn = item.quantity * packPerDus * pcsPerPack;
+
+      // Add stock back (create a RETURN batch)
+      await window.electronAPI.run(
+        "INSERT INTO stocks (product_id, batch_code, quantity, notes) VALUES (?, ?, ?, ?)",
+        [item.product_id, `RETURN-${tx.invoice_no}`, pcsToReturn, `Retur transaksi ${tx.invoice_no}`]
+      );
+      await window.electronAPI.run(
+        `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, reference_id, notes)
+         VALUES (?, 'RETURN', ?, ?, ?, ?, ?)`,
+        [item.product_id, pcsToReturn, item.unit, pcsToReturn, tx.invoice_no, `Retur transaksi ${tx.invoice_no}`]
+      );
+    }
+
+    await window.electronAPI.run(
+      "UPDATE transactions SET status = 'CANCELLED' WHERE id = ?",
+      [transactionId]
+    );
+
+    await window.electronAPI.run("COMMIT");
+    return { success: true };
+  } catch (error) {
+    await window.electronAPI.run("ROLLBACK");
+    console.error("Error cancelling transaction:", error);
+    return { success: false, error: error.message };
   }
 }

@@ -32,6 +32,7 @@ const UNIT_MAP = {
   all:  { label: 'Semua',    color: T.blue   },
   pcs:  { label: 'Per Pcs',  color: T.green  },
   pack: { label: 'Per Pack', color: T.accent },
+  dus:  { label: 'Per Dus',  color: T.green  },
   kg:   { label: 'Per Kg',   color: T.purple },
 };
 
@@ -370,7 +371,7 @@ function ProductList() {
               <table className="prod-table">
                 <thead>
                   <tr>
-                    {['Nama Produk', 'Kategori', 'Satuan', 'Harga Pcs', 'Harga Pack', 'Harga Dus', 'Harga Kg', 'Stok', 'Min Stok', 'Aksi'].map(h => (
+                    {['Nama Produk', 'Kategori', 'Harga Pcs', 'Harga Pack', 'Harga Dus', 'Stok', 'Min Stok', 'Aksi'].map(h => (
                       <th key={h}>{h}</th>
                     ))}
                   </tr>
@@ -390,12 +391,7 @@ function ProductList() {
 
                         {/* Category */}
                         <td>
-                          <Chip color={T.sub}>{product.category_name}</Chip>
-                        </td>
-
-                        {/* Unit */}
-                        <td>
-                          <Chip color={unit.color}>{unit.label}</Chip>
+                          <Chip color={product.category_color || T.blue}>{product.category_name || '—'}</Chip>
                         </td>
 
                         {/* Prices */}
@@ -407,9 +403,6 @@ function ProductList() {
                         </td>
                         <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: product.price_dus ? T.text : T.muted }}>
                           {fmt(product.price_dus)}
-                        </td>
-                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: product.price_kg ? T.text : T.muted }}>
-                          {fmt(product.price_kg)}
                         </td>
 
                         {/* Stock */}

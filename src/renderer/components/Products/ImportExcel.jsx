@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { getCategories, addProduct } from "../../services/database";
+import { addStock } from "../../services/inventory";
 import { FormModal, MODAL_CSS } from "./ProductForm";
 
 // ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
@@ -26,8 +27,9 @@ const MAPPING_FIELDS = [
   { key: 'category',   label: 'Kategori',    required: true,  color: T.text   },
   { key: 'price_pcs',  label: 'Harga Pcs',   required: false, color: T.blue   },
   { key: 'price_pack', label: 'Harga Pack',  required: false, color: T.green  },
+  { key: 'price_dus',  label: 'Harga Dus',   required: false, color: T.accent },
   { key: 'price_kg',   label: 'Harga Kg',    required: false, color: T.purple },
-  { key: 'stock',      label: 'Stok',        required: false, color: T.accent },
+  { key: 'stock',      label: 'Stok Awal',   required: false, color: T.green  },
   { key: 'min_stock',  label: 'Min Stok',    required: false, color: T.sub    },
 ];
 
@@ -48,7 +50,7 @@ function ImportExcel({ onClose, onSuccess }) {
   const [result, setResult]     = useState(null); // { success, error, total }
   const [mapping, setMapping]   = useState({
     name: '', category: '',
-    price_pcs: '', price_pack: '', price_kg: '',
+    price_pcs: '', price_pack: '', price_dus: '', price_kg: '',
     stock: '', min_stock: '',
   });
 
@@ -153,14 +155,22 @@ function ImportExcel({ onClose, onSuccess }) {
             name, category_id,
             price_pcs:  mapping.price_pcs  !== '' ? cleanPrice(row[mapping.price_pcs])  : 0,
             price_pack: mapping.price_pack !== '' ? cleanPrice(row[mapping.price_pack]) : 0,
+            price_dus:  mapping.price_dus  !== '' ? cleanPrice(row[mapping.price_dus])  : 0,
             price_kg:   mapping.price_kg   !== '' ? cleanPrice(row[mapping.price_kg])   : 0,
-            stock:      mapping.stock      !== '' ? cleanPrice(row[mapping.stock])      : 0,
             min_stock:  mapping.min_stock  !== '' ? cleanPrice(row[mapping.min_stock])  : 0,
             notes: 'Import dari Excel',
           });
 
-          if (r.success) successCount++;
-          else errors.push(`Baris ${i + 2}: ${r.error || 'Gagal'}`);
+          if (r.success) {
+            successCount++;
+            // Create initial stock batch if stock column is mapped
+            const initStock = mapping.stock !== '' ? cleanPrice(row[mapping.stock]) : 0;
+            if (initStock > 0) {
+              await addStock(r.id, { qty_pcs: initStock, notes: 'Import Excel' }, { pcs_per_pack: 1, pack_per_dus: 1 });
+            }
+          } else {
+            errors.push(`Baris ${i + 2}: ${r.error || 'Gagal'}`);
+          }
         }
 
         setResult({ success: successCount, error: errors.length, errors });

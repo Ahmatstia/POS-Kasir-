@@ -4,6 +4,8 @@ import Cashier from './components/Cashier/Cashier';
 import Transactions from './components/Transactions/Transactions';
 import Dashboard from './components/Dashboard/Dashboard';
 import Reports from './components/Reports/Reports';
+import CategoryList from './components/Categories/CategoryList';
+import InventoryList from './components/Inventory/InventoryList';
 
 // ─── DESIGN TOKENS (sama persis dengan Dashboard) ─────────────────────────────
 const T = {
@@ -70,6 +72,26 @@ const NAV = [
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <path d="M2 13 L5 8 L8 10 L11 5 L14 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'inventory',
+    label: 'Inventori',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="7" width="14" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
+        <path d="M4 7V5a4 4 0 018 0v2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+        <path d="M6 11h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'categories',
+    label: 'Kategori',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M2 4h5l1.5 1.5H14v8H2V4z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
       </svg>
     ),
   },
@@ -260,11 +282,13 @@ function App() {
         {/* ── MAIN CONTENT ── */}
         <main style={{ flex: 1, maxWidth: 1280, width: '100%', margin: '0 auto', padding: '28px 24px' }}>
           <div key={currentPage} className="page-content">
-            {currentPage === 'dashboard'     && <Dashboard />}
-            {currentPage === 'cashier'       && <Cashier />}
-            {currentPage === 'products'      && <ProductList />}
-            {currentPage === 'transactions'  && <Transactions />}
-            {currentPage === 'reports'       && <Reports />}
+            {currentPage === 'dashboard'   && <Dashboard />}
+            {currentPage === 'cashier'     && <Cashier />}
+            {currentPage === 'products'    && <ProductList />}
+            {currentPage === 'transactions'&& <Transactions />}
+            {currentPage === 'reports'     && <Reports />}
+            {currentPage === 'inventory'   && <InventoryList />}
+            {currentPage === 'categories'  && <CategoryList />}
           </div>
         </main>
 

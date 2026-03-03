@@ -28,13 +28,18 @@ export async function getDashboardData() {
       WHERE created_at >= ?
     `, [startOfMonth]);
 
-    // Query untuk produk stok menipis 
+    // Query untuk produk stok menipis (dari tabel stocks)
     const lowStock = await window.electronAPI.query(`
-  SELECT * FROM products 
-  WHERE stock <= min_stock AND min_stock > 0
-  ORDER BY stock ASC
-  LIMIT 10
-`);
+      SELECT p.id, p.name, p.min_stock,
+             COALESCE(SUM(s.quantity), 0) as stock
+      FROM products p
+      LEFT JOIN stocks s ON s.product_id = p.id AND s.is_active = 1
+      WHERE p.is_active = 1 AND p.min_stock > 0
+      GROUP BY p.id
+      HAVING stock <= p.min_stock
+      ORDER BY stock ASC
+      LIMIT 10
+    `);
 
     // Query untuk 5 produk terlaris
 const topProducts = await window.electronAPI.query(`

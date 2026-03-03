@@ -7,143 +7,247 @@ console.log("dbManager.js is loaded!");
 class DatabaseManager {
   constructor() {
     this.db = null;
+    this.ready = false;
     this.dbPath = path.join(app.getPath("userData"), "pos-toko-bumbu.db");
     console.log("Database path:", this.dbPath);
   }
 
+  // Returns a Promise that resolves when tables are ready
   connect() {
-    console.log("Connecting to database...");
-    this.db = new sqlite3.Database(this.dbPath, (err) => {
-      if (err) {
-        console.error("❌ Database connection error:", err);
-      } else {
-        console.log("✅ Connected to database at:", this.dbPath);
-        this.initTables();
-      }
-    });
-    return this.db;
-  }
-
-  initTables() {
-    console.log("Initializing database tables...");
-
-    const queries = `
-      CREATE TABLE IF NOT EXISTS categories (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT UNIQUE NOT NULL,
-        description TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE IF NOT EXISTS products (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        barcode TEXT UNIQUE,
-        name TEXT NOT NULL,
-        category_id INTEGER,
-        sell_per_unit TEXT CHECK(sell_per_unit IN ('pcs', 'pack', 'kg', 'all')),
-        price_pcs INTEGER DEFAULT 0,
-        price_pack INTEGER DEFAULT 0,
-        price_dus INTEGER DEFAULT 0,
-        price_kg INTEGER DEFAULT 0,
-        stock INTEGER DEFAULT 0,
-        min_stock INTEGER DEFAULT 0,
-        pcs_per_pack INTEGER DEFAULT 1,
-        pack_per_dus INTEGER DEFAULT 1,
-        notes TEXT,
-        is_active BOOLEAN DEFAULT 1,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (category_id) REFERENCES categories(id)
-      );
-
-      CREATE TABLE IF NOT EXISTS transactions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        invoice_no TEXT UNIQUE,
-        transaction_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-        subtotal INTEGER NOT NULL,
-        discount INTEGER DEFAULT 0,
-        total_amount INTEGER NOT NULL,
-        payment_amount INTEGER NOT NULL,
-        change_amount INTEGER NOT NULL,
-        payment_method TEXT DEFAULT 'cash',
-        customer_name TEXT,
-        notes TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE IF NOT EXISTS transaction_items (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        transaction_id INTEGER,
-        product_id INTEGER,
-        product_name TEXT,
-        quantity REAL,
-        unit TEXT,
-        price_per_unit INTEGER,
-        subtotal INTEGER,
-        FOREIGN KEY (transaction_id) REFERENCES transactions(id),
-        FOREIGN KEY (product_id) REFERENCES products(id)
-      );
-
-      CREATE TABLE IF NOT EXISTS stock_history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        product_id INTEGER,
-        type TEXT CHECK(type IN ('sale', 'restock', 'adjustment', 'return')),
-        quantity REAL,
-        unit TEXT,
-        reference_id TEXT,
-        notes TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (product_id) REFERENCES products(id)
-      );
-    `;
-
-    this.db.exec(queries, (err) => {
-      if (err) {
-        console.error("❌ Error creating tables:", err);
-      } else {
-        console.log("✅ Database tables ready");
-        this.seedInitialData();
-      }
-    });
-  }
-
-  seedInitialData() {
-    console.log("Seeding initial data...");
-
-    const categories = [
-      "Bahan Kue",
-      "Rempah-rempah",
-      "Gelas & Cup",
-      "Mika",
-      "Thinwall",
-      "Pipet",
-      "Plastik",
-      "Kantong Plastik",
-      "Kecap",
-      "Saus",
-      "Bumbu Instan",
-      "Kotak Makan",
-      "Gula",
-      "Tutup Cup",
-      "Sendok",
-      "Botol",
-      "Lainnya",
-    ];
-
-    let count = 0;
-    categories.forEach((name) => {
-      this.db.run(
-        "INSERT OR IGNORE INTO categories (name) VALUES (?)",
-        [name],
-        function (err) {
-          if (!err && this.changes > 0) {
-            count++;
+    return new Promise((resolve, reject) => {
+      console.log("Connecting to database...");
+      this.db = new sqlite3.Database(this.dbPath, async (err) => {
+        if (err) {
+          console.error("❌ Database connection error:", err);
+          reject(err);
+        } else {
+          console.log("✅ Connected to database at:", this.dbPath);
+          this.db.run("PRAGMA foreign_keys = ON");
+          try {
+            await this.initTables();
+            this.ready = true;
+            console.log("✅ Database fully ready");
+            resolve();
+          } catch (e) {
+            console.error("❌ initTables error:", e);
+            reject(e);
           }
-        },
-      );
+        }
+      });
     });
+  }
 
-    console.log(`✅ ${categories.length} categories inserted`);
+  // Safely run a statement (no-throw for "already exists" / "duplicate column")
+  _runSQL(sql, label) {
+    return new Promise((resolve) => {
+      this.db.run(sql, (err) => {
+        if (err) {
+          if (
+            err.message.includes("duplicate column name") ||
+            err.message.includes("already exists")
+          ) {
+            console.log(`⚠️  ${label}: already exists`);
+          } else {
+            console.error(`❌ ${label}:`, err.message);
+          }
+        } else {
+          console.log(`✅ ${label}`);
+        }
+        resolve(); // never reject — keep going
+      });
+    });
+  }
+
+  async initTables() {
+    return new Promise((resolve, reject) => {
+      this.db.serialize(async () => {
+        try {
+          // ── CATEGORIES ──────────────────────────────────────────────────────
+          await this._runSQL(`
+            CREATE TABLE IF NOT EXISTS categories (
+              id          INTEGER PRIMARY KEY AUTOINCREMENT,
+              name        TEXT NOT NULL UNIQUE,
+              description TEXT,
+              color       TEXT DEFAULT '#5B8AF5',
+              created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+              updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`, "CREATE categories");
+
+          // Add new columns to existing categories table (safe if already there)
+          await this._runSQL("ALTER TABLE categories ADD COLUMN description TEXT",         "ADD categories.description");
+          await this._runSQL("ALTER TABLE categories ADD COLUMN color TEXT DEFAULT '#5B8AF5'", "ADD categories.color");
+
+          // ── PRODUCTS ────────────────────────────────────────────────────────
+          await this._runSQL(`
+            CREATE TABLE IF NOT EXISTS products (
+              id            INTEGER PRIMARY KEY AUTOINCREMENT,
+              barcode       TEXT,
+              sku           TEXT,
+              name          TEXT NOT NULL,
+              category_id   INTEGER,
+              sell_per_unit TEXT DEFAULT 'all',
+              price_pcs     INTEGER DEFAULT 0,
+              price_pack    INTEGER DEFAULT 0,
+              price_dus     INTEGER DEFAULT 0,
+              price_kg      INTEGER DEFAULT 0,
+              pcs_per_pack  INTEGER DEFAULT 1,
+              pack_per_dus  INTEGER DEFAULT 1,
+              min_stock     INTEGER DEFAULT 0,
+              notes         TEXT,
+              is_active     BOOLEAN DEFAULT 1,
+              created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+              updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (category_id) REFERENCES categories(id)
+            )`, "CREATE products");
+
+          // Add columns if missing (existing DB upgrade)
+          await this._runSQL("ALTER TABLE products ADD COLUMN price_dus    INTEGER DEFAULT 0",    "ADD products.price_dus");
+          await this._runSQL("ALTER TABLE products ADD COLUMN pcs_per_pack INTEGER DEFAULT 1",    "ADD products.pcs_per_pack");
+          await this._runSQL("ALTER TABLE products ADD COLUMN pack_per_dus INTEGER DEFAULT 1",    "ADD products.pack_per_dus");
+          await this._runSQL("ALTER TABLE products ADD COLUMN sell_per_unit TEXT    DEFAULT 'all'", "ADD products.sell_per_unit");
+          await this._runSQL("ALTER TABLE products ADD COLUMN is_active    BOOLEAN DEFAULT 1",    "ADD products.is_active");
+          await this._runSQL("ALTER TABLE products ADD COLUMN barcode      TEXT",                 "ADD products.barcode");
+          await this._runSQL("ALTER TABLE products ADD COLUMN sku          TEXT",                 "ADD products.sku");
+          await this._runSQL("ALTER TABLE products ADD COLUMN min_stock    INTEGER DEFAULT 0",    "ADD products.min_stock");
+
+          // ── STOCKS ──────────────────────────────────────────────────────────
+          await this._runSQL(`
+            CREATE TABLE IF NOT EXISTS stocks (
+              id             INTEGER PRIMARY KEY AUTOINCREMENT,
+              product_id     INTEGER NOT NULL,
+              batch_code     TEXT,
+              quantity       INTEGER DEFAULT 0,
+              purchase_price INTEGER DEFAULT 0,
+              expiry_date    DATE,
+              is_active      BOOLEAN DEFAULT 1,
+              notes          TEXT,
+              created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+              updated_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (product_id) REFERENCES products(id)
+            )`, "CREATE stocks");
+
+          // ── INVENTORY LOG ────────────────────────────────────────────────────
+          await this._runSQL(`
+            CREATE TABLE IF NOT EXISTS inventory_log (
+              id             INTEGER PRIMARY KEY AUTOINCREMENT,
+              product_id     INTEGER NOT NULL,
+              stock_id       INTEGER,
+              type           TEXT NOT NULL CHECK(type IN ('IN','OUT','SALE','ADJUSTMENT','EXPIRED','RETURN')),
+              quantity_input INTEGER NOT NULL,
+              unit_input     TEXT,
+              quantity_pcs   INTEGER NOT NULL,
+              stock_before   INTEGER,
+              stock_after    INTEGER,
+              purchase_price INTEGER DEFAULT 0,
+              selling_price  INTEGER DEFAULT 0,
+              batch_code     TEXT,
+              expiry_date    DATE,
+              reference_id   TEXT,
+              notes          TEXT,
+              created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (product_id) REFERENCES products(id),
+              FOREIGN KEY (stock_id)   REFERENCES stocks(id)
+            )`, "CREATE inventory_log");
+
+          // ── TRANSACTIONS ─────────────────────────────────────────────────────
+          await this._runSQL(`
+            CREATE TABLE IF NOT EXISTS transactions (
+              id               INTEGER PRIMARY KEY AUTOINCREMENT,
+              invoice_no       TEXT UNIQUE,
+              transaction_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+              subtotal         INTEGER NOT NULL,
+              discount         INTEGER DEFAULT 0,
+              total_amount     INTEGER NOT NULL,
+              payment_amount   INTEGER NOT NULL,
+              change_amount    INTEGER NOT NULL,
+              payment_method   TEXT DEFAULT 'cash',
+              customer_name    TEXT,
+              notes            TEXT,
+              status           TEXT DEFAULT 'COMPLETED' CHECK(status IN ('COMPLETED','CANCELLED','RETURNED')),
+              created_at       DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`, "CREATE transactions");
+
+          await this._runSQL("ALTER TABLE transactions ADD COLUMN status TEXT DEFAULT 'COMPLETED'",     "ADD transactions.status");
+          await this._runSQL("ALTER TABLE transactions ADD COLUMN discount INTEGER DEFAULT 0",           "ADD transactions.discount");
+          await this._runSQL("ALTER TABLE transactions ADD COLUMN invoice_no TEXT",                     "ADD transactions.invoice_no");
+          await this._runSQL("ALTER TABLE transactions ADD COLUMN customer_name TEXT",                  "ADD transactions.customer_name");
+
+          // ── TRANSACTION ITEMS ────────────────────────────────────────────────
+          await this._runSQL(`
+            CREATE TABLE IF NOT EXISTS transaction_items (
+              id             INTEGER PRIMARY KEY AUTOINCREMENT,
+              transaction_id INTEGER NOT NULL,
+              product_id     INTEGER,
+              stock_id       INTEGER,
+              product_name   TEXT,
+              quantity       REAL,
+              unit           TEXT,
+              price_per_unit INTEGER,
+              subtotal       INTEGER,
+              FOREIGN KEY (transaction_id) REFERENCES transactions(id),
+              FOREIGN KEY (product_id)     REFERENCES products(id)
+            )`, "CREATE transaction_items");
+
+          await this._runSQL("ALTER TABLE transaction_items ADD COLUMN stock_id INTEGER", "ADD transaction_items.stock_id");
+
+          // ── MIGRATE OLD STOCK → stocks table ─────────────────────────────────
+          await this.migrateStockData();
+
+          // ── SEED CATEGORIES ──────────────────────────────────────────────────
+          await this.seedCategories();
+
+          resolve();
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+  }
+
+  async migrateStockData() {
+    // Check if products table has old 'stock' column
+    const cols = await this.query("PRAGMA table_info(products)");
+    const hasStockCol = cols.some(c => c.name === "stock");
+    if (!hasStockCol) return;
+
+    const products = await this.query("SELECT id, stock FROM products WHERE stock > 0");
+    if (!products.length) return;
+
+    console.log(`🔄 Migrating ${products.length} products' stock to stocks table...`);
+    for (const p of products) {
+      const existing = await this.query("SELECT id FROM stocks WHERE product_id = ?", [p.id]);
+      if (existing.length === 0) {
+        await this.run(
+          "INSERT INTO stocks (product_id, batch_code, quantity, notes) VALUES (?, 'MIGRASI-AWAL', ?, 'Stok sebelum v2')",
+          [p.id, p.stock]
+        );
+        await this.run(
+          `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, stock_before, stock_after, notes)
+           VALUES (?, 'IN', ?, 'pcs', ?, 0, ?, 'Migrasi stok awal v2')`,
+          [p.id, p.stock, p.stock, p.stock]
+        );
+        console.log(`  ✅ Product ${p.id}: ${p.stock} pcs migrated`);
+      }
+    }
+    console.log("✅ Stock migration complete");
+  }
+
+  async seedCategories() {
+    const defaults = [
+      ['Bumbu Instan', '#F5A623'], ['Bahan Kue', '#A78BFA'], ['Rempah-rempah', '#34C98B'],
+      ['Gelas & Cup', '#5B8AF5'], ['Mika', '#E85858'], ['Thinwall', '#34C98B'],
+      ['Plastik', '#9998A3'],     ['Kantong Plastik', '#9998A3'], ['Kecap', '#F5A623'],
+      ['Saus', '#E85858'],        ['Kotak Makan', '#5B8AF5'],     ['Gula', '#F5A623'],
+      ['Sendok', '#9998A3'],      ['Botol', '#5B8AF5'],           ['Lainnya', '#5C5C66'],
+    ];
+    for (const [name, color] of defaults) {
+      await this._runSQL(
+        `INSERT OR IGNORE INTO categories (name, color) VALUES ('${name}', '${color}')`,
+        `Seed category: ${name}`
+      );
+      // Update color if it's missing
+      this.db.run("UPDATE categories SET color = ? WHERE name = ? AND (color IS NULL OR color = '')", [color, name]);
+    }
   }
 
   query(sql, params = []) {

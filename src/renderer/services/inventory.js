@@ -1,0 +1,249 @@
+// ─── INVENTORY SERVICE ───────────────────────────────────────────────────────
+
+// Get all products with their TOTAL aggregated stock across all batches
+export async function getInventorySummary() {
+  try {
+    const sql = `
+      SELECT 
+        p.id, p.name, p.category_id, p.min_stock,
+        p.pcs_per_pack, p.pack_per_dus,
+        p.price_pcs, p.price_pack, p.price_dus, p.price_kg,
+        c.name as category_name, c.color as category_color,
+        COALESCE(SUM(s.quantity), 0) as stock
+      FROM products p
+      LEFT JOIN categories c ON c.id = p.category_id
+      LEFT JOIN stocks s ON s.product_id = p.id AND s.is_active = 1
+      WHERE p.is_active = 1
+      GROUP BY p.id
+      ORDER BY p.name ASC
+    `;
+    return await window.electronAPI.query(sql);
+  } catch (error) {
+    console.error("Error getting inventory:", error);
+    return [];
+  }
+}
+
+// Get all stock batches for one product
+export async function getProductBatches(productId) {
+  try {
+    const sql = `
+      SELECT * FROM stocks
+      WHERE product_id = ? AND is_active = 1
+      ORDER BY created_at ASC
+    `;
+    return await window.electronAPI.query(sql, [productId]);
+  } catch (error) {
+    console.error("Error getting batches:", error);
+    return [];
+  }
+}
+
+// Get products with low stock (below min_stock)
+export async function getLowStockProducts() {
+  try {
+    const sql = `
+      SELECT 
+        p.id, p.name, p.min_stock,
+        COALESCE(SUM(s.quantity), 0) as stock,
+        c.name as category_name, c.color as category_color
+      FROM products p
+      LEFT JOIN categories c ON c.id = p.category_id
+      LEFT JOIN stocks s ON s.product_id = p.id AND s.is_active = 1
+      WHERE p.is_active = 1
+      GROUP BY p.id
+      HAVING stock <= p.min_stock
+      ORDER BY stock ASC
+    `;
+    return await window.electronAPI.query(sql);
+  } catch (error) {
+    console.error("Error getting low stock:", error);
+    return [];
+  }
+}
+
+// Add stock (Stock In) — creates a new batch or adds to existing
+export async function addStock(productId, {
+  qty_dus = 0,
+  qty_pack = 0,
+  qty_pcs = 0,
+  purchase_price = 0,
+  expiry_date = null,
+  batch_code = null,
+  notes = ""
+}, product) {
+  try {
+    const pcsPerPack = product?.pcs_per_pack || 1;
+    const packPerDus = product?.pack_per_dus || 1;
+
+    // Convert all to Pcs (base unit)
+    const totalPcs = (Number(qty_dus) * packPerDus * pcsPerPack)
+                   + (Number(qty_pack) * pcsPerPack)
+                   + Number(qty_pcs);
+
+    if (totalPcs <= 0) return { success: false, error: "Jumlah stok harus lebih dari 0" };
+
+    // Get current total stock
+    const [beforeRow] = await window.electronAPI.query(
+      "SELECT COALESCE(SUM(quantity), 0) as total FROM stocks WHERE product_id = ? AND is_active = 1",
+      [productId]
+    );
+    const stockBefore = beforeRow?.total || 0;
+
+    await window.electronAPI.run("BEGIN TRANSACTION");
+
+    // Generate batch code if not provided
+    const date = new Date();
+    const autoCode = batch_code?.trim() || 
+      `BATCH-${date.getFullYear()}${String(date.getMonth()+1).padStart(2,'0')}${String(date.getDate()).padStart(2,'0')}-${Math.floor(Math.random()*1000).toString().padStart(3,'0')}`;
+
+    // Create new batch
+    const stockResult = await window.electronAPI.run(
+      `INSERT INTO stocks (product_id, batch_code, quantity, purchase_price, expiry_date, notes)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [productId, autoCode, totalPcs, purchase_price, expiry_date || null, notes]
+    );
+    const stockId = stockResult.lastID;
+
+    // Log the movement
+    await window.electronAPI.run(
+      `INSERT INTO inventory_log 
+         (product_id, stock_id, type, quantity_input, unit_input, quantity_pcs, 
+          stock_before, stock_after, purchase_price, batch_code, expiry_date, notes)
+       VALUES (?, ?, 'IN', ?, 'pcs', ?, ?, ?, ?, ?, ?, ?)`,
+      [productId, stockId, totalPcs, totalPcs, stockBefore, stockBefore + totalPcs,
+       purchase_price, autoCode, expiry_date || null, notes]
+    );
+
+    await window.electronAPI.run("COMMIT");
+    return { success: true, batchCode: autoCode, totalPcs };
+  } catch (error) {
+    await window.electronAPI.run("ROLLBACK");
+    console.error("Error adding stock:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Adjust stock manually (correction)
+export async function adjustStock(productId, newTotalPcs, reason = "Koreksi manual") {
+  try {
+    // Get current total
+    const [beforeRow] = await window.electronAPI.query(
+      "SELECT COALESCE(SUM(quantity), 0) as total FROM stocks WHERE product_id = ? AND is_active = 1",
+      [productId]
+    );
+    const currentTotal = beforeRow?.total || 0;
+    const diff = newTotalPcs - currentTotal;
+    if (diff === 0) return { success: true };
+
+    await window.electronAPI.run("BEGIN TRANSACTION");
+
+    if (diff > 0) {
+      // Add a new batch for positive adjustment
+      const stockResult = await window.electronAPI.run(
+        "INSERT INTO stocks (product_id, batch_code, quantity, notes) VALUES (?, 'KOREKSI', ?, ?)",
+        [productId, diff, reason]
+      );
+      await window.electronAPI.run(
+        `INSERT INTO inventory_log (product_id, stock_id, type, quantity_input, unit_input, quantity_pcs, stock_before, stock_after, notes)
+         VALUES (?, ?, 'ADJUSTMENT', ?, 'pcs', ?, ?, ?, ?)`,
+        [productId, stockResult.lastID, diff, diff, currentTotal, newTotalPcs, reason]
+      );
+    } else {
+      // Reduce from existing batches (FIFO)
+      let toRemove = Math.abs(diff);
+      const batches = await window.electronAPI.query(
+        "SELECT * FROM stocks WHERE product_id = ? AND is_active = 1 ORDER BY created_at ASC",
+        [productId]
+      );
+      for (const batch of batches) {
+        if (toRemove <= 0) break;
+        const remove = Math.min(batch.quantity, toRemove);
+        const newQty = batch.quantity - remove;
+        await window.electronAPI.run(
+          "UPDATE stocks SET quantity = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+          [newQty, newQty > 0 ? 1 : 0, batch.id]
+        );
+        toRemove -= remove;
+      }
+      await window.electronAPI.run(
+        `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, stock_before, stock_after, notes)
+         VALUES (?, 'ADJUSTMENT', ?, 'pcs', ?, ?, ?, ?)`,
+        [productId, diff, diff, currentTotal, newTotalPcs, reason]
+      );
+    }
+
+    await window.electronAPI.run("COMMIT");
+    return { success: true };
+  } catch (error) {
+    await window.electronAPI.run("ROLLBACK");
+    console.error("Error adjusting stock:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Get inventory log for a product or all
+export async function getInventoryLog(productId = null, limit = 100) {
+  try {
+    const sql = productId
+      ? `SELECT il.*, p.name as product_name FROM inventory_log il
+         JOIN products p ON p.id = il.product_id
+         WHERE il.product_id = ? ORDER BY il.created_at DESC LIMIT ?`
+      : `SELECT il.*, p.name as product_name FROM inventory_log il
+         JOIN products p ON p.id = il.product_id
+         ORDER BY il.created_at DESC LIMIT ?`;
+    const params = productId ? [productId, limit] : [limit];
+    return await window.electronAPI.query(sql, params);
+  } catch (error) {
+    console.error("Error getting inventory log:", error);
+    return [];
+  }
+}
+
+// Get total stock for one product (used by cashier)
+export async function getProductStock(productId) {
+  try {
+    const [row] = await window.electronAPI.query(
+      "SELECT COALESCE(SUM(quantity), 0) as total FROM stocks WHERE product_id = ? AND is_active = 1",
+      [productId]
+    );
+    return row?.total || 0;
+  } catch (error) {
+    return 0;
+  }
+}
+
+// Deduct stock FIFO (used internally by transactions)
+export async function deductStockFIFO(productId, quantityPcs, invoiceNo) {
+  let toDeduct = quantityPcs;
+  const batches = await window.electronAPI.query(
+    "SELECT * FROM stocks WHERE product_id = ? AND is_active = 1 AND quantity > 0 ORDER BY created_at ASC",
+    [productId]
+  );
+
+  const [beforeRow] = await window.electronAPI.query(
+    "SELECT COALESCE(SUM(quantity), 0) as total FROM stocks WHERE product_id = ? AND is_active = 1",
+    [productId]
+  );
+  const stockBefore = beforeRow?.total || 0;
+
+  for (const batch of batches) {
+    if (toDeduct <= 0) break;
+    const deduct = Math.min(batch.quantity, toDeduct);
+    const newQty = batch.quantity - deduct;
+    await window.electronAPI.run(
+      "UPDATE stocks SET quantity = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+      [newQty, newQty > 0 ? 1 : 0, batch.id]
+    );
+    toDeduct -= deduct;
+  }
+
+  const stockAfter = stockBefore - quantityPcs;
+  await window.electronAPI.run(
+    `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, stock_before, stock_after, reference_id)
+     VALUES (?, 'SALE', ?, 'pcs', ?, ?, ?, ?)`,
+    [productId, quantityPcs, quantityPcs, stockBefore, stockAfter, invoiceNo]
+  );
+
+  if (toDeduct > 0) throw new Error("Stok tidak mencukupi");
+}

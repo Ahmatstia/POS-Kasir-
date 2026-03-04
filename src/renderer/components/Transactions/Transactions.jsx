@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import {
   getTransactions,
   getTransactionDetail,
+  deleteTransaction,
+  deleteAllTransactions,
 } from "../../services/transactions";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
@@ -123,6 +125,7 @@ function Transactions() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selected, setSelected] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState(null); // { type: 'single'|'all', id?: number }
 
   // Date filters
   const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -159,6 +162,30 @@ function Transactions() {
       (t.customer_name &&
         t.customer_name.toLowerCase().includes(searchTerm.toLowerCase())),
   );
+
+  const handleDelete = async () => {
+    if (!deleteDialog) return;
+    
+    setLoading(true);
+    let res;
+    if (deleteDialog.type === 'single') {
+      res = await deleteTransaction(deleteDialog.id);
+    } else if (deleteDialog.type === 'all') {
+      res = await deleteAllTransactions();
+    }
+    
+    setLoading(false);
+    
+    if (res?.success) {
+      setDeleteDialog(null);
+      if (deleteDialog.type === 'single' && selected?.transaction?.id === deleteDialog.id) {
+        setSelected(null);
+      }
+      loadTransactions();
+    } else {
+      alert("Gagal menghapus transaksi: " + (res?.error || "Unknown"));
+    }
+  };
 
   if (loading) {
     return (
@@ -283,6 +310,7 @@ function Transactions() {
                 <div style={{ width: 1, height: 16, background: T.border2, margin: '0 4px' }} />
                 <button
                   onClick={loadTransactions}
+                  title="Refresh Data"
                   style={{
                     width: 32, height: 32, borderRadius: 10, border: `1px solid ${T.border2}`,
                     background: 'transparent', color: T.sub, cursor: 'pointer',
@@ -292,6 +320,20 @@ function Transactions() {
                   onMouseLeave={e => { e.currentTarget.style.borderColor = T.border2; e.currentTarget.style.color = T.sub; }}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                </button>
+                <button
+                  onClick={() => setDeleteDialog({ type: 'all' })}
+                  title="Hapus Semua Data Testing"
+                  style={{
+                    width: 32, height: 32, borderRadius: 10, border: `1px solid ${T.border2}`,
+                    background: 'transparent', color: T.red, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
+                    marginLeft: 'auto'
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = T.red; e.currentTarget.style.background = T.red + '15'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = T.border2; e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
                 </button>
               </div>
             </div>
@@ -585,6 +627,34 @@ function Transactions() {
                       {fmtDt(selected.transaction.created_at)}
                     </p>
                   </div>
+                </div>
+
+                {/* Status & Delete */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                   <div>
+                    {selected.transaction.status === 'CANCELLED' && (
+                        <span style={{ 
+                            fontSize: 10, fontWeight: 800, color: T.red, 
+                            background: T.red + '15', padding: '4px 8px', borderRadius: 6,
+                            letterSpacing: '0.05em'
+                        }}>
+                            DIBATALKAN (REFUND)
+                        </span>
+                    )}
+                   </div>
+                   <button
+                      onClick={() => setDeleteDialog({ type: 'single', id: selected.transaction.id })}
+                      style={{
+                          background: 'transparent', border: 'none', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', gap: 6, color: T.red,
+                          fontSize: 11, fontWeight: 700, fontFamily: 'Syne, sans-serif'
+                      }}
+                   >
+                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                     </svg>
+                     HAPUS INVOICE
+                   </button>
                 </div>
 
                 <div style={{ display: "flex", gap: 10 }}>
@@ -999,6 +1069,39 @@ function Transactions() {
           )}
         </div>
       </div>
+
+      {/* ── DELETE CONFIRMATION DIALOG ── */}
+      {deleteDialog && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.2s ease' }}>
+          <div style={{ background: T.surface, width: 340, borderRadius: 20, padding: 24, boxShadow: '0 20px 40px rgba(0,0,0,0.3)', border: `1px solid ${T.border2}`, animation: 'fadeUp 0.3s ease' }}>
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: T.red + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.red, marginBottom: 16 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+            </div>
+            <h3 style={{ margin: '0 0 8px 0', fontSize: 16, color: T.text, fontFamily: 'Syne, sans-serif' }}>
+                {deleteDialog.type === 'all' ? 'Hapus Semua Transaksi?' : 'Hapus Invoice Ini?'}
+            </h3>
+            <p style={{ margin: '0 0 20px 0', fontSize: 12, color: T.muted, lineHeight: 1.5 }}>
+                {deleteDialog.type === 'all' 
+                 ? 'Aksi ini akan menghapus seluruh data transaksi. Laporan Omzet akan di-reset nol. Aksi ini tidak bisa dikembalikan.' 
+                 : 'Transaksi akan dihapus dari laporan dan produk yang terjual akan otomatis dikembalikan (restock) ke Gudang.'}
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <button 
+                onClick={() => setDeleteDialog(null)}
+                style={{ padding: '10px 0', borderRadius: 10, background: T.bg, border: `1px solid ${T.border2}`, color: T.sub, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}
+              >
+                Batal
+              </button>
+              <button 
+                onClick={handleDelete}
+                style={{ padding: '10px 0', borderRadius: 10, background: T.red, border: 'none', color: '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}
+              >
+                Ya, Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

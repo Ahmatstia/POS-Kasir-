@@ -217,3 +217,68 @@ export async function cancelTransaction(transactionId) {
     return { success: false, error: error.message };
   }
 }
+
+// ─── DELETE TRANSACTIONS (HARD DELETE) ───────────────────────────────────────
+
+export async function deleteTransaction(transactionId) {
+  try {
+    const [tx] = await window.electronAPI.query(
+      "SELECT * FROM transactions WHERE id = ?",
+      [transactionId]
+    );
+    if (!tx) return { success: false, error: "Transaction not found" };
+
+    // Jika statusnya masih COMPLETED, batalkan (restock) dulu sebelum dihapus
+    if (tx.status === 'COMPLETED') {
+        const cancelResult = await cancelTransaction(transactionId);
+        if (!cancelResult.success) {
+            return { success: false, error: "Gagal merestore stok produk: " + cancelResult.error };
+        }
+    }
+
+    await window.electronAPI.run("BEGIN TRANSACTION");
+
+    // Hapus transaction_items
+    await window.electronAPI.run(
+      "DELETE FROM transaction_items WHERE transaction_id = ?",
+      [transactionId]
+    );
+
+    // Hapus transaksi
+    await window.electronAPI.run(
+      "DELETE FROM transactions WHERE id = ?",
+      [transactionId]
+    );
+
+    await window.electronAPI.run("COMMIT");
+    return { success: true };
+  } catch (error) {
+    await window.electronAPI.run("ROLLBACK");
+    console.error("Error deleting transaction:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function deleteAllTransactions() {
+  try {
+    // Karena ini untuk membersihkan data testing, kita bisa
+    // menghapus semua transaksi, item, dan me-reset stok ke 0, 
+    // atau sekadar menghapus transaksi saja. Di sini kita menghapus 
+    // murni data transaksinya. Stok yang terjual diabaikan karena ini hard reset test data.
+    
+    await window.electronAPI.run("BEGIN TRANSACTION");
+    await window.electronAPI.run("DELETE FROM transaction_items");
+    await window.electronAPI.run("DELETE FROM transactions");
+    
+    // Karena ini kemungkinan hard reset, bisa membersihkan inventory logs yang jenisnya OUT (penjualan)
+    // Tapi demi amannya, kita hapus seluruh `transactions` saja. User bisa menyesuaikan stok manual 
+    // via opname jika selisihnya besar paska testing.
+    
+    await window.electronAPI.run("COMMIT");
+    return { success: true };
+  } catch (error) {
+    await window.electronAPI.run("ROLLBACK");
+    console.error("Error deleting all transactions:", error);
+    return { success: false, error: error.message };
+  }
+}

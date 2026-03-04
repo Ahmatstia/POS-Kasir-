@@ -30,6 +30,11 @@ ipcMain.handle("db:run", async (event, sql, params) => {
   }
 });
 
+// App Info
+ipcMain.handle("app:getVersion", () => {
+  return app.getVersion();
+});
+
 const createWindow = async () => {
   console.log("Creating main window...");
 
@@ -39,6 +44,8 @@ const createWindow = async () => {
     console.log("✅ DB ready — loading window");
   } catch (err) {
     console.error("❌ Failed to initialize database:", err);
+    app.quit();
+    return;
   }
 
   const mainWindow = new BrowserWindow({
@@ -52,7 +59,6 @@ const createWindow = async () => {
   });
 
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
-  mainWindow.webContents.openDevTools();
 };
 
 app.whenReady().then(() => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getCategories, getProductById, updateProduct } from '../../services/database';
+import { getCategories, getProductById, updateProduct } from '../../services/products';
 import { FormModal, FormActions, MODAL_CSS, fieldStyle, Field, SELL_UNIT_OPTIONS } from './ProductForm';
 import { useToast } from '../Toast';
 import { T } from '../../theme';

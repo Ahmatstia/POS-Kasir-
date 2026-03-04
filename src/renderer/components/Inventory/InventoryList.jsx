@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { getInventorySummary, getLowStockProducts, addStock, adjustStock } from "../../services/inventory";
-import { getCategories } from "../../services/database";
+import { getCategories } from "../../services/products";
 import { useToast } from "../Toast";
 import { T } from "../../theme";
 

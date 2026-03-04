@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { getProducts } from "../../services/database";
+import { getProducts } from "../../services/products";
 import { createTransaction } from "../../services/transactions";
 import CartItem from "./CartItem";
 import PaymentModal from "./PaymentModal";

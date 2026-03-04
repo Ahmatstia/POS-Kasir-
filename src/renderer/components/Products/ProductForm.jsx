@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getCategories, addProduct } from '../../services/database';
+import { getCategories, addProduct } from '../../services/products';
 import { useToast } from '../Toast';
 import { T } from '../../theme';
 

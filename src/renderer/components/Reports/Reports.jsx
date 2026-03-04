@@ -1243,24 +1243,24 @@ function Reports() {
               />
               <StatCard
                 index={1}
-                label="Total Stok"
+                label="Total Stok (Pcs)"
                 accent={T.green}
-                value={`${fmtNum(sk.total_stock)} item`}
-                sub="Semua kategori"
+                value={`${fmtNum(sk.total_stock)} pcs`}
+                sub="Item satuan"
               />
               <StatCard
                 index={2}
-                label="Stok Menipis"
-                accent={T.accent}
-                value={sk.low_stock_count}
-                sub="Di bawah minimum"
+                label="Total Stok (Kg)"
+                accent={T.purple}
+                value={`${Number(sk.total_stock_kg || 0).toFixed(2)} kg`}
+                sub="Item timbangan"
               />
               <StatCard
                 index={3}
-                label="Stok Habis"
-                accent={T.red}
-                value={sk.out_of_stock_count}
-                sub="Perlu restock"
+                label="Stok Menipis"
+                accent={T.accent}
+                value={sk.low_stock_count}
+                sub={`${sk.out_of_stock_count} habis`}
               />
             </div>
 
@@ -1286,7 +1286,7 @@ function Reports() {
                 rows={stockReport.stockByCategory.map((c) => [
                   { label: c.category_name, bold: true, color: T.text },
                   { label: `${c.product_count}`, mono: true },
-                  { label: `${c.total_stock} item`, mono: true },
+                  { label: `${c.total_stock} pcs / ${Number(c.total_stock_kg || 0).toFixed(2)} kg`, mono: true },
                   {
                     label: fmt(c.total_value_pcs),
                     mono: true,
@@ -1351,20 +1351,25 @@ function Reports() {
                 </div>
               ) : (
                 <ReportTable
-                  headers={["Produk", "Kategori", "Stok", "Min Stok", "Status"]}
+                  headers={["Produk", "Kategori", "Stok Tersedia", "Ambang Batas", "Status"]}
                   rows={stockReport.lowStock.map((p) => {
-                    const isOut = p.stock === 0;
+                    const isKg = p.sell_per_unit === 'kg';
+                    const current = isKg ? p.total_stock_kg : p.total_stock;
+                    const min = isKg ? p.min_stock_kg : p.min_stock;
+                    const unit = isKg ? 'kg' : 'pcs';
+                    const isOut = current <= 0;
+                    
                     return [
                       { label: p.name, bold: true, color: T.text },
                       { label: p.category_name },
                       {
-                        label: p.stock,
+                        label: `${current} ${unit}`,
                         mono: true,
                         highlight: true,
                         color: isOut ? T.red : T.accent,
                         bold: true,
                       },
-                      { label: p.min_stock, mono: true },
+                      { label: `${min} ${unit}`, mono: true },
                       {
                         label: (
                           <span

@@ -80,13 +80,24 @@ export async function createTransaction(transactionData) {
   }
 }
 
-// Get transaction list
-export async function getTransactions(limit = 100) {
+// Get transaction list with optional date filtering
+export async function getTransactions(limit = 100, startDate = null, endDate = null) {
   try {
-    return await window.electronAPI.query(
-      "SELECT * FROM transactions ORDER BY created_at DESC LIMIT ?",
-      [limit]
-    );
+    let query = "SELECT * FROM transactions";
+    let params = [];
+
+    if (startDate && endDate) {
+      query += " WHERE date(created_at, 'localtime') BETWEEN date(?) AND date(?)";
+      params.push(startDate, endDate);
+    } else if (startDate) {
+      query += " WHERE date(created_at, 'localtime') >= date(?)";
+      params.push(startDate);
+    }
+
+    query += " ORDER BY created_at DESC LIMIT ?";
+    params.push(limit);
+
+    return await window.electronAPI.query(query, params);
   } catch (error) {
     console.error("Error getting transactions:", error);
     return [];

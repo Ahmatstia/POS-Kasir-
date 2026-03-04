@@ -121,13 +121,19 @@ function Transactions() {
   const [selected, setSelected] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
+  // Date filters
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const [startDate, setStartDate] = useState(todayStr);
+  const [endDate, setEndDate] = useState(todayStr);
+
   useEffect(() => {
     loadTransactions();
-  }, []);
+  }, [startDate, endDate]);
 
   const loadTransactions = async () => {
     setLoading(true);
-    setTransactions(await getTransactions(100));
+    const data = await getTransactions(500, startDate, endDate);
+    setTransactions(data);
     setLoading(false);
   };
 
@@ -237,163 +243,80 @@ function Transactions() {
           {/* Header */}
           <div
             style={{
-              padding: "18px 20px 14px",
+              padding: "20px 24px 16px",
               borderBottom: `1px solid ${T.border}`,
+              background: `linear-gradient(to bottom, ${T.bg}, ${T.surface})`,
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 14,
-              }}
-            >
-              <div>
-                <p
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <button
+                  onClick={() => {
+                    setStartDate(todayStr);
+                    setEndDate(todayStr);
+                  }}
                   style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    letterSpacing: "0.12em",
-                    textTransform: "uppercase",
-                    color: T.muted,
-                    marginBottom: 2,
+                    padding: "6px 12px", borderRadius: 10, border: `1px solid ${startDate === todayStr && endDate === todayStr ? T.accent + '40' : T.border2}`,
+                    background: startDate === todayStr && endDate === todayStr ? T.accent + '10' : 'transparent',
+                    color: startDate === todayStr && endDate === todayStr ? T.accent : T.sub,
+                    fontSize: 10, fontWeight: 800, cursor: 'pointer', fontFamily: 'Syne, sans-serif'
                   }}
                 >
-                  Riwayat
-                </p>
-                <p style={{ fontSize: 14, fontWeight: 800, color: T.text }}>
-                  Transaksi
-                  <span
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: T.muted,
-                      marginLeft: 8,
-                      fontFamily: "JetBrains Mono, monospace",
-                    }}
-                  >
-                    ({filtered.length})
-                  </span>
-                </p>
+                  HARI INI
+                </button>
+                <button
+                  onClick={() => {
+                    setStartDate('');
+                    setEndDate('');
+                  }}
+                  style={{
+                    padding: "6px 12px", borderRadius: 10, border: `1px solid ${!startDate ? T.accent + '40' : T.border2}`,
+                    background: !startDate ? T.accent + '10' : 'transparent',
+                    color: !startDate ? T.accent : T.sub,
+                    fontSize: 10, fontWeight: 800, cursor: 'pointer', fontFamily: 'Syne, sans-serif'
+                  }}
+                >
+                  SEMUA
+                </button>
+                <div style={{ width: 1, height: 16, background: T.border2, margin: '0 4px' }} />
+                <button
+                  onClick={loadTransactions}
+                  style={{
+                    width: 32, height: 32, borderRadius: 10, border: `1px solid ${T.border2}`,
+                    background: 'transparent', color: T.sub, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = T.accent; e.currentTarget.style.color = T.accent; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = T.border2; e.currentTarget.style.color = T.sub; }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                </button>
               </div>
-              <button
-                onClick={loadTransactions}
-                style={{
-                  padding: "5px 12px",
-                  borderRadius: 9,
-                  border: `1px solid ${T.border2}`,
-                  background: "transparent",
-                  color: T.sub,
-                  fontSize: 11,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  transition: "all 0.15s",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 5,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = T.border;
-                  e.currentTarget.style.color = T.text;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.color = T.sub;
-                }}
-              >
-                <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                  <path
-                    d="M1.5 5.5A4 4 0 115 1.7"
-                    stroke="currentColor"
-                    strokeWidth="1.4"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M1.5 2.5v3h3"
-                    stroke="currentColor"
-                    strokeWidth="1.4"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                Refresh
-              </button>
             </div>
 
-            {/* Search */}
-            <div style={{ position: "relative" }}>
-              <svg
-                style={{
-                  position: "absolute",
-                  left: 11,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  opacity: 0.4,
-                  pointerEvents: "none",
-                }}
-                width="13"
-                height="13"
-                viewBox="0 0 13 13"
-                fill="none"
-              >
-                <circle
-                  cx="5.5"
-                  cy="5.5"
-                  r="4"
-                  stroke={T.sub}
-                  strokeWidth="1.4"
-                />
-                <path
-                  d="M8.5 8.5L11 11"
-                  stroke={T.sub}
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                />
-              </svg>
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Cari invoice atau customer…"
-                className="search-input"
-                style={{
-                  width: "100%",
-                  padding: "9px 12px 9px 32px",
-                  borderRadius: 10,
-                  border: `1px solid ${T.border2}`,
-                  background: T.bg,
-                  color: T.text,
-                  fontFamily: "Syne, sans-serif",
-                  fontSize: 12,
-                  outline: "none",
-                  transition: "border-color 0.15s",
-                }}
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm("")}
-                  style={{
-                    position: "absolute",
-                    right: 10,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    color: T.muted,
-                    fontSize: 16,
-                    lineHeight: 1,
-                  }}
-                >
-                  ×
-                </button>
-              )}
-            </div>
+            {/* Filters Row */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: 10, marginBottom: 14 }}>
+              <div style={{ position: 'relative' }}>
+                <label style={{ display: 'block', fontSize: 8, fontWeight: 800, color: T.muted, marginBottom: 4, textTransform: 'uppercase' }}>Mulai</label>
+                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} 
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: 10, border: `1px solid ${T.border2}`, background: T.bg, color: T.text, fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }} />
+              </div>
+              <div style={{ position: 'relative' }}>
+                <label style={{ display: 'block', fontSize: 8, fontWeight: 800, color: T.muted, marginBottom: 4, textTransform: 'uppercase' }}>Sampai</label>
+                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} 
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: 10, border: `1px solid ${T.border2}`, background: T.bg, color: T.text, fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }} />
+              </div>
+              <div style={{ position: 'relative' }}>
+                <label style={{ display: 'block', fontSize: 8, fontWeight: 800, color: T.muted, marginBottom: 4, textTransform: 'uppercase' }}>Cari Nama / Inv</label>
+                <div style={{ position: 'relative' }}>
+                  <svg style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={T.sub} strokeWidth="3"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                  <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Invoice/Pelanggan..." 
+                    style={{ width: '100%', padding: '8px 10px 8px 28px', borderRadius: 10, border: `1px solid ${T.border2}`, background: T.bg, color: T.text, fontSize: 11, fontFamily: 'Syne, sans-serif' }} />
+                </div>
+              </div>
           </div>
 
           {/* List */}
-          <div className="scroll-pane" style={{ flex: 1, overflowY: "auto" }}>
+          <div className="scroll-pane" style={{ flex: 1, overflowY: "auto", padding: '4px 12px 12px' }}>
             {filtered.length === 0 ? (
               <div
                 style={{
@@ -401,39 +324,24 @@ function Transactions() {
                   flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
-                  height: 200,
-                  gap: 8,
+                  height: 300,
+                  gap: 12,
                 }}
               >
-                <svg
-                  width="40"
-                  height="40"
-                  viewBox="0 0 40 40"
-                  fill="none"
-                  opacity="0.2"
-                >
-                  <rect
-                    x="6"
-                    y="4"
-                    width="28"
-                    height="32"
-                    rx="3"
-                    stroke={T.sub}
-                    strokeWidth="2"
-                  />
-                  <path
-                    d="M13 14h14M13 20h10M13 26h8"
-                    stroke={T.sub}
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <p style={{ fontSize: 12, color: T.muted }}>
-                  Tidak ada transaksi
-                </p>
+                <div style={{ padding: 20, borderRadius: '50%', background: T.border2 + '20' }}>
+                   <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{ fontSize: 13, fontWeight: 800, color: T.muted, marginBottom: 4 }}>
+                    Tidak ada transaksi ditemukan
+                  </p>
+                  <p style={{ fontSize: 11, color: T.sub }}>
+                    Coba ubah rentang tanggal atau kata kunci pencarian
+                  </p>
+                </div>
               </div>
             ) : (
-              filtered.map((t) => {
+              filtered.map((t, idx) => {
                 const m = getMethod(t.payment_method);
                 const isActive = selected?.transaction?.id === t.id;
                 return (
@@ -442,10 +350,24 @@ function Transactions() {
                     className={`tx-item ${isActive ? "active" : ""}`}
                     onClick={() => viewDetail(t.id)}
                     style={{
-                      padding: "13px 18px",
-                      borderBottom: `1px solid ${T.border}`,
-                      border: isActive ? `1px solid ${T.accent}35` : undefined,
-                      background: isActive ? T.accent + "08" : "transparent",
+                      padding: "16px 18px",
+                      margin: '6px 0',
+                      borderRadius: 14,
+                      border: `1px solid ${isActive ? T.accent + '35' : 'transparent'}`,
+                      background: isActive ? T.accent + "08" : T.bg + '50',
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    }}
+                    onMouseEnter={e => {
+                      if(!isActive) {
+                        e.currentTarget.style.background = T.border + '30';
+                        e.currentTarget.style.transform = 'scale(1.005)';
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if(!isActive) {
+                        e.currentTarget.style.background = T.bg + '50';
+                        e.currentTarget.style.transform = 'scale(1)';
+                      }
                     }}
                   >
                     <div
@@ -453,23 +375,25 @@ function Transactions() {
                         display: "flex",
                         justifyContent: "space-between",
                         alignItems: "flex-start",
-                        marginBottom: 6,
+                        marginBottom: 10,
                       }}
                     >
                       {/* Invoice + date */}
                       <div>
                         <p
                           style={{
-                            fontSize: 12,
-                            fontWeight: 800,
+                            fontSize: 13,
+                            fontWeight: 900,
                             color: isActive ? T.accent : T.text,
                             fontFamily: "JetBrains Mono, monospace",
-                            marginBottom: 3,
+                            marginBottom: 4,
+                            letterSpacing: '-0.01em'
                           }}
                         >
                           {t.invoice_no}
                         </p>
-                        <p style={{ fontSize: 10, color: T.muted }}>
+                        <p style={{ fontSize: 10, fontWeight: 600, color: T.sub, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                           {fmtDt(t.created_at)}
                         </p>
                       </div>
@@ -477,11 +401,11 @@ function Transactions() {
                       <div style={{ textAlign: "right" }}>
                         <p
                           style={{
-                            fontSize: 13,
-                            fontWeight: 800,
+                            fontSize: 14,
+                            fontWeight: 900,
                             color: T.text,
                             fontFamily: "JetBrains Mono, monospace",
-                            marginBottom: 4,
+                            marginBottom: 6,
                           }}
                         >
                           {fmt(t.total_amount)}
@@ -490,15 +414,15 @@ function Transactions() {
                           style={{
                             display: "inline-flex",
                             alignItems: "center",
-                            gap: 4,
-                            padding: "2px 8px",
+                            gap: 5,
+                            padding: "3px 10px",
                             borderRadius: 100,
                             fontSize: 9,
-                            fontWeight: 700,
-                            letterSpacing: "0.06em",
+                            fontWeight: 800,
+                            letterSpacing: "0.04em",
                             textTransform: "uppercase",
-                            background: m.color + "12",
-                            border: `1px solid ${m.color}30`,
+                            background: m.color + "14",
+                            border: `1px solid ${m.color}25`,
                             color: m.color,
                           }}
                         >
@@ -508,12 +432,10 @@ function Transactions() {
                       </div>
                     </div>
                     {t.customer_name && (
-                      <p style={{ fontSize: 10, color: T.muted }}>
-                        <span style={{ color: T.muted + "80" }}>
-                          Customer:{" "}
-                        </span>
-                        {t.customer_name}
-                      </p>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, padding: '6px 10px', background: T.border2 + '10', borderRadius: 8, border: `1px solid ${T.border2}20` }}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={T.sub} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                          <p style={{ fontSize: 10, color: T.sub, fontWeight: 700 }}>{t.customer_name}</p>
+                       </div>
                     )}
                   </div>
                 );

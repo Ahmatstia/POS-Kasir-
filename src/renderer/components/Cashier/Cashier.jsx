@@ -3,6 +3,7 @@ import { getProducts } from "../../services/database";
 import { createTransaction } from "../../services/transactions";
 import CartItem from "./CartItem";
 import PaymentModal from "./PaymentModal";
+import { useToast } from "../Toast";
 
 // ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
 const T = {
@@ -30,6 +31,16 @@ const UNITS = [
   { key: 'dus',  label: 'Dus',  priceKey: 'price_dus',  color: T.accent },
   { key: 'kg',   label: 'Kg',   priceKey: 'price_kg',   color: T.purple },
 ];
+
+// Calculate how many Pcs a cart item represents
+function calcPcs(item, product) {
+  if (!product) return item.quantity;
+  const pp = product.pcs_per_pack || 1;
+  const pd = product.pack_per_dus || 1;
+  if (item.unit === 'pack') return item.quantity * pp;
+  if (item.unit === 'dus')  return item.quantity * pd * pp;
+  return item.quantity;
+}
 
 // ─── PRODUCT ITEM ─────────────────────────────────────────────────────────────
 function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef }) {
@@ -106,7 +117,7 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef }) {
             flexShrink: 0,
           }}
         >
-          {showManual ? '✕ Batal' : 'Manual'}
+          {showManual ? '✕ Batal' : 'Harga Kustom'}
         </button>
       </div>
 
@@ -136,12 +147,12 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef }) {
           ))}
 
           {availableUnits.length === 0 && !outOfStock && (
-            <span style={{ fontSize: 11, color: T.muted, fontStyle: 'italic' }}>Gunakan mode manual</span>
+            <span style={{ fontSize: 11, color: T.muted, fontStyle: 'italic' }}>Gunakan mode Harga Kustom</span>
           )}
         </div>
       )}
 
-      {/* Manual form */}
+      {/* Manual / Harga Kustom form */}
       {showManual && (
         <div style={{
           marginTop: 4, padding: '12px', borderRadius: 10,
@@ -150,7 +161,7 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 90px', gap: 8, marginBottom: 10 }}>
             <div>
               <label style={{ display: 'block', fontSize: 9, fontWeight: 700, color: T.muted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 5 }}>
-                Harga / Unit
+                Harga / Unit (Rp)
               </label>
               <input
                 type="number"
@@ -199,6 +210,7 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef }) {
 
           <button
             onClick={handleManualAdd}
+            disabled={!manualPrice || parseFloat(manualPrice) <= 0}
             style={{
               width: '100%', padding: '8px', borderRadius: 8,
               background: T.accent + '18', border: `1px solid ${T.accent}40`,
@@ -296,15 +308,19 @@ const qtyBtnStyle = (borderColor, color) => ({
 
 // ─── MAIN CASHIER ─────────────────────────────────────────────────────────────
 function Cashier() {
-  const [allProducts, setAllProducts]           = useState([]);
-  const [displayedProducts, setDisplayedProducts] = useState([]);
-  const [searchTerm, setSearchTerm]             = useState('');
-  const [cart, setCart]                         = useState([]);
-  const [showPayment, setShowPayment]           = useState(false);
-  const [loading, setLoading]                   = useState(false);
-  const [loadingMore, setLoadingMore]           = useState(false);
-  const [hasMore, setHasMore]                   = useState(true);
-  const [page, setPage]                         = useState(1);
+  const { showToast } = useToast();
+
+  const [allProducts, setAllProducts]               = useState([]);
+  const [displayedProducts, setDisplayedProducts]   = useState([]);
+  const [searchTerm, setSearchTerm]                 = useState('');
+  const [cart, setCart]                             = useState([]);
+  const [showPayment, setShowPayment]               = useState(false);
+  const [loading, setLoading]                       = useState(false);
+  const [loadingMore, setLoadingMore]               = useState(false);
+  const [hasMore, setHasMore]                       = useState(true);
+  const [page, setPage]                             = useState(1);
+  // "Kosongkan" two-step confirm
+  const [confirmClear, setConfirmClear]             = useState(false);
   const ITEMS_PER_PAGE = 30;
 
   const observer = useRef();
@@ -355,35 +371,30 @@ function Cashier() {
     }, 300);
   };
 
+  // Helper: calculate total pcs already in cart for a product (excluding one specific item id)
+  const calcCartPcs = (productId, excludeItemId = null) => {
+    return cart
+      .filter(item => item.product_id === productId && item.id !== excludeItemId)
+      .reduce((sum, item) => {
+        const p = allProducts.find(x => x.id === item.product_id);
+        return sum + calcPcs(item, p);
+      }, 0);
+  };
+
   const addToCart = (product, unit) => {
     const u = UNITS.find(x => x.key === unit);
     const price = product[u.priceKey];
     if (!price || price <= 0) return;
 
-    // Hitung berapa PCS yang dibutuhkan untuk unit ini
-    const pcsPerPack = product.pcs_per_pack || 1;
-    const packPerDus = product.pack_per_dus || 1;
-    
+    const pp = product.pcs_per_pack || 1;
+    const pd = product.pack_per_dus || 1;
     let pcsNeeded = 1;
-    if (unit === 'pack') pcsNeeded = pcsPerPack;
-    if (unit === 'dus')  pcsNeeded = packPerDus * pcsPerPack;
+    if (unit === 'pack') pcsNeeded = pp;
+    if (unit === 'dus')  pcsNeeded = pd * pp;
 
-    // Hitung total PCS yang sudah ada di keranjang untuk produk ini
-    const currentPcsInCart = cart
-      .filter(item => item.product_id === product.id)
-      .reduce((sum, item) => {
-        let itemPcs = item.quantity;
-        const p = allProducts.find(x => x.id === item.product_id);
-        const pp = p?.pcs_per_pack || 1;
-        const pd = p?.pack_per_dus || 1;
-        
-        if (item.unit === 'pack') itemPcs = item.quantity * pp;
-        else if (item.unit === 'dus') itemPcs = item.quantity * pd * pp;
-        return sum + itemPcs;
-      }, 0);
-
+    const currentPcsInCart = calcCartPcs(product.id);
     if (currentPcsInCart + pcsNeeded > (product.stock || 0)) {
-      alert(`Stok tidak mencukupi! Tersisa: ${product.stock || 0} Pcs. Di keranjang sudah ada setara ${currentPcsInCart} Pcs.`);
+      showToast('error', `Stok tidak mencukupi! Tersisa: ${product.stock || 0} Pcs (di keranjang: ${currentPcsInCart} Pcs)`);
       return;
     }
 
@@ -404,46 +415,47 @@ function Cashier() {
         subtotal: price,
       }]);
     }
-    setSearchTerm('');
+    // Do NOT reset searchTerm — keep the user's search active
   };
 
   const addManualToCart = (product, { price, quantity, unit }) => {
-    const pcsPerPack = product.pcs_per_pack || 1;
-    const packPerDus = product.pack_per_dus || 1;
-    
+    const pp = product.pcs_per_pack || 1;
+    const pd = product.pack_per_dus || 1;
     let pcsNeeded = quantity;
-    if (unit === 'pack') pcsNeeded = quantity * pcsPerPack;
-    else if (unit === 'dus')  pcsNeeded = quantity * packPerDus * pcsPerPack;
+    if (unit === 'pack') pcsNeeded = quantity * pp;
+    else if (unit === 'dus')  pcsNeeded = quantity * pd * pp;
 
-    const currentPcsInCart = cart
-      .filter(item => item.product_id === product.id)
-      .reduce((sum, item) => {
-        let itemPcs = item.quantity;
-        const p = allProducts.find(x => x.id === item.product_id);
-        const pp = p?.pcs_per_pack || 1;
-        const pd = p?.pack_per_dus || 1;
-        
-        if (item.unit === 'pack') itemPcs = item.quantity * pp;
-        else if (item.unit === 'dus') itemPcs = item.quantity * pd * pp;
-        return sum + itemPcs;
-      }, 0);
-
+    const currentPcsInCart = calcCartPcs(product.id);
     if (currentPcsInCart + pcsNeeded > (product.stock || 0)) {
-      alert(`Stok tidak mencukupi! Tersisa: ${product.stock || 0} Pcs. Di keranjang sudah ada setara ${currentPcsInCart} Pcs.`);
+      showToast('error', `Stok tidak mencukupi! Tersisa: ${product.stock || 0} Pcs (di keranjang: ${currentPcsInCart} Pcs)`);
       return;
     }
 
     setCart([...cart, {
       id: 'manual-' + Date.now() + Math.random(),
       product_id: product.id,
-      name: `${product.name} (Manual)`,
+      name: `${product.name} ✎`,
       unit, price, quantity,
       subtotal: price * quantity,
     }]);
-    setSearchTerm('');
+    // Do NOT reset searchTerm
   };
 
   const updateQuantity = (itemId, newQty) => {
+    const item = cart.find(i => i.id === itemId);
+    if (!item) return;
+
+    const product = allProducts.find(p => p.id === item.product_id);
+    if (product) {
+      const fakeItem = { ...item, quantity: newQty };
+      const pcsNeeded = calcPcs(fakeItem, product);
+      const otherPcs  = calcCartPcs(product.id, itemId);
+      if (pcsNeeded + otherPcs > (product.stock || 0)) {
+        showToast('error', `Stok tidak mencukupi! Tersisa: ${product.stock || 0} Pcs`);
+        return;
+      }
+    }
+
     setCart(cart.map(item =>
       item.id === itemId ? { ...item, quantity: newQty, subtotal: newQty * item.price } : item
     ));
@@ -460,11 +472,13 @@ function Cashier() {
       paymentMethod: paymentData.method, customerName: '', notes: '',
     });
     if (result.success) {
-      alert(`Transaksi berhasil!\nNo. Invoice: ${result.invoiceNo}\nKembalian: ${fmt(paymentData.change)}`);
       setCart([]);
       setShowPayment(false);
+      // Refresh product list to show updated stock
+      loadProducts();
+      showToast('success', `Transaksi berhasil! Invoice: ${result.invoiceNo} | Kembalian: ${fmt(paymentData.change)}`);
     } else {
-      alert('Transaksi gagal: ' + result.error);
+      showToast('error', 'Transaksi gagal: ' + result.error);
     }
     setLoading(false);
   };
@@ -636,9 +650,9 @@ function Cashier() {
                 Keranjang
               </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {cart.length > 0 && (
+                {cart.length > 0 && !confirmClear && (
                   <button
-                    onClick={() => setCart([])}
+                    onClick={() => setConfirmClear(true)}
                     style={{
                       fontSize: 10, fontWeight: 700, color: T.red, letterSpacing: '0.06em',
                       background: T.red + '10', border: `1px solid ${T.red}25`,
@@ -660,6 +674,27 @@ function Cashier() {
                 </span>
               </div>
             </div>
+
+            {/* Inline confirm clear */}
+            {confirmClear && (
+              <div style={{
+                marginTop: 10, padding: '10px 12px', borderRadius: 10,
+                background: T.red + '0C', border: `1px solid ${T.red}25`,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}>
+                <span style={{ fontSize: 11, color: T.red, fontWeight: 600 }}>Yakin kosongkan keranjang?</span>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button
+                    onClick={() => setConfirmClear(false)}
+                    style={{ padding: '4px 10px', borderRadius: 7, border: `1px solid ${T.border2}`, background: 'transparent', color: T.sub, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+                  >Batal</button>
+                  <button
+                    onClick={() => { setCart([]); setConfirmClear(false); }}
+                    style={{ padding: '4px 10px', borderRadius: 7, border: `1px solid ${T.red}40`, background: T.red + '15', color: T.red, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+                  >Ya, Kosongkan</button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Cart items */}

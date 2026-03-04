@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getCategories, addProduct } from '../../services/database';
+import { useToast } from '../Toast';
 
 const T = {
   bg: '#0E0F11', surface: '#161719', card: '#1A1B1E',
@@ -33,7 +34,7 @@ export function FormModal({ title, subtitle, onClose, children }) {
       }}
     >
       <div style={{
-        width: '100%', maxWidth: 560,
+        width: '100%', maxWidth: 580,
         background: T.surface, border: `1px solid ${T.border2}`,
         borderRadius: 20, overflow: 'hidden',
         animation: 'modalIn 0.25s cubic-bezier(0.16,1,0.3,1) both',
@@ -66,41 +67,54 @@ export function FormActions({ onClose, loading, submitLabel = 'Simpan', loadingL
   );
 }
 
-const fieldStyle = {
+export const fieldStyle = {
   width: '100%', padding: '9px 12px', borderRadius: 10,
   border: `1px solid ${T.border2}`, background: T.bg, color: T.text,
   fontFamily: 'Syne, sans-serif', fontSize: 13, outline: 'none',
   transition: 'border-color 0.15s, box-shadow 0.15s',
 };
 
-function Field({ label, required, hint, children }) {
+export function Field({ label, required, hint, error, children }) {
   return (
     <div>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: T.muted, marginBottom: 7 }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: error ? T.red : T.muted, marginBottom: 7 }}>
         {label}
         {required && <span style={{ color: T.accent, fontSize: 10 }}>✱</span>}
         {hint    && <span style={{ color: T.muted, fontWeight: 400, letterSpacing: 0, textTransform: 'none', fontSize: 9, marginLeft: 2 }}>({hint})</span>}
       </label>
       {children}
+      {error && <p style={{ fontSize: 10, color: T.red, marginTop: 4, fontWeight: 600 }}>⚠ {error}</p>}
     </div>
   );
 }
 
+// sell_per_unit options
+export const SELL_UNIT_OPTIONS = [
+  { value: 'all',  label: 'Semua (Pcs / Pack / Dus / Kg)' },
+  { value: 'pcs',  label: 'Hanya Pcs' },
+  { value: 'pack', label: 'Hanya Pack' },
+  { value: 'dus',  label: 'Hanya Dus' },
+  { value: 'kg',   label: 'Hanya Kg' },
+];
+
 // ─── PRODUCT FORM (Add New Product) ─────────────────────────────────────────
 function ProductForm({ onClose, onSuccess }) {
+  const { showToast } = useToast();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading]       = useState(false);
+  const [errors, setErrors]         = useState({});
 
-  const [name, setName]             = useState('');
-  const [categoryId, setCategoryId] = useState('');
-  const [notes, setNotes]           = useState('');
-  const [minStock, setMinStock]     = useState(0);
-  const [pricePcs, setPricePcs]     = useState(0);
-  const [pricePack, setPricePack]   = useState(0);
-  const [priceDus, setPriceDus]     = useState(0);
-  const [priceKg, setPriceKg]       = useState(0);
-  const [pcsPerPack, setPcsPerPack] = useState(1);
-  const [packPerDus, setPackPerDus] = useState(1);
+  const [name, setName]               = useState('');
+  const [categoryId, setCategoryId]   = useState('');
+  const [notes, setNotes]             = useState('');
+  const [minStock, setMinStock]       = useState(0);
+  const [sellPerUnit, setSellPerUnit] = useState('all');
+  const [pricePcs, setPricePcs]       = useState(0);
+  const [pricePack, setPricePack]     = useState(0);
+  const [priceDus, setPriceDus]       = useState(0);
+  const [priceKg, setPriceKg]         = useState(0);
+  const [pcsPerPack, setPcsPerPack]   = useState(1);
+  const [packPerDus, setPackPerDus]   = useState(1);
 
   useEffect(() => {
     getCategories().then(data => {
@@ -109,16 +123,25 @@ function ProductForm({ onClose, onSuccess }) {
     });
   }, []);
 
+  const validate = () => {
+    const errs = {};
+    if (!name.trim())   errs.name = 'Nama produk harus diisi';
+    if (!categoryId)    errs.category = 'Kategori harus dipilih';
+    const prices = [Number(pricePcs), Number(pricePack), Number(priceDus), Number(priceKg)];
+    if (prices.every(p => p <= 0)) errs.price = 'Minimal satu harga jual harus diisi';
+    return errs;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim())   return alert('Nama produk harus diisi');
-    if (!categoryId)    return alert('Kategori harus dipilih');
+    const errs = validate();
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
     setLoading(true);
     const result = await addProduct({
       name: name.trim(),
       category_id:  categoryId,
-      sell_per_unit: 'all',
+      sell_per_unit: sellPerUnit,
       price_pcs:    Number(pricePcs)    || 0,
       price_pack:   Number(pricePack)   || 0,
       price_dus:    Number(priceDus)    || 0,
@@ -130,8 +153,13 @@ function ProductForm({ onClose, onSuccess }) {
     });
     setLoading(false);
 
-    if (result.success) { onSuccess(); onClose(); }
-    else alert('Gagal menyimpan produk: ' + result.error);
+    if (result.success) {
+      showToast('success', `Produk "${name.trim()}" berhasil ditambahkan`);
+      onSuccess();
+      onClose();
+    } else {
+      showToast('error', 'Gagal menyimpan produk: ' + result.error);
+    }
   };
 
   return (
@@ -141,16 +169,26 @@ function ProductForm({ onClose, onSuccess }) {
 
         {/* Name + Category */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <Field label="Nama Produk" required>
-            <input type="text" value={name} onChange={e => setName(e.target.value)} required className="form-field" style={fieldStyle} placeholder="Masako, Royco…" autoFocus />
+          <Field label="Nama Produk" required error={errors.name}>
+            <input type="text" value={name} onChange={e => { setName(e.target.value); setErrors(v => ({...v, name: ''})); }}
+              required className="form-field" style={{ ...fieldStyle, borderColor: errors.name ? T.red : undefined }} placeholder="Masako, Royco…" autoFocus />
           </Field>
-          <Field label="Kategori" required>
-            <select value={categoryId} onChange={e => setCategoryId(e.target.value)} required className="form-field" style={{ ...fieldStyle, cursor: 'pointer' }}>
+          <Field label="Kategori" required error={errors.category}>
+            <select value={categoryId} onChange={e => { setCategoryId(e.target.value); setErrors(v => ({...v, category: ''})); }}
+              required className="form-field" style={{ ...fieldStyle, cursor: 'pointer', borderColor: errors.category ? T.red : undefined }}>
               <option value="">Pilih Kategori…</option>
               {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </Field>
         </div>
+
+        {/* Sell per unit */}
+        <Field label="Jual Per Satuan" hint="mengontrol tombol di kasir">
+          <select value={sellPerUnit} onChange={e => setSellPerUnit(e.target.value)}
+            className="form-field" style={{ ...fieldStyle, cursor: 'pointer' }}>
+            {SELL_UNIT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </Field>
 
         {/* Conversion */}
         <div style={{ padding: 14, background: T.border + '40', borderRadius: 12, border: `1px dashed ${T.border2}` }}>
@@ -172,7 +210,10 @@ function ProductForm({ onClose, onSuccess }) {
 
         {/* Prices */}
         <div>
-          <p style={{ fontSize: 9, fontWeight: 700, color: T.muted, textTransform: 'uppercase', marginBottom: 10 }}>Harga Jual</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <p style={{ fontSize: 9, fontWeight: 700, color: errors.price ? T.red : T.muted, textTransform: 'uppercase' }}>Harga Jual</p>
+            {errors.price && <p style={{ fontSize: 10, color: T.red, fontWeight: 600 }}>⚠ {errors.price}</p>}
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
             {[
               { label: 'Pcs',  val: pricePcs,  set: setPricePcs,  col: T.blue   },
@@ -184,7 +225,8 @@ function ProductForm({ onClose, onSuccess }) {
                 <label style={{ fontSize: 9, fontWeight: 700, color: u.col, display: 'block', marginBottom: 5 }}>{u.label}</label>
                 <div style={{ position: 'relative' }}>
                   <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', fontSize: 9, color: T.muted, pointerEvents: 'none', fontFamily: 'JetBrains Mono, monospace' }}>Rp</span>
-                  <input type="number" value={u.val} onChange={e => u.set(e.target.value)} placeholder="0" className="form-field" style={{ ...fieldStyle, paddingLeft: 26, fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }} />
+                  <input type="number" value={u.val} onChange={e => { u.set(e.target.value); setErrors(v => ({...v, price: ''})); }}
+                    placeholder="0" className="form-field" style={{ ...fieldStyle, paddingLeft: 26, fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }} />
                 </div>
               </div>
             ))}

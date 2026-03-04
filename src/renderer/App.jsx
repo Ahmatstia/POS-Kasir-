@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ToastProvider } from './components/Toast';
 import ProductList from './components/Products/ProductList';
 import Cashier from './components/Cashier/Cashier';
 import Transactions from './components/Transactions/Transactions';
@@ -101,7 +102,7 @@ function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
 
   return (
-    <>
+    <ToastProvider>
       <style>{`
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -309,7 +310,7 @@ function App() {
         </footer>
 
       </div>
-    </>
+    </ToastProvider>
   );
 }
 

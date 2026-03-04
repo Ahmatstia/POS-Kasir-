@@ -128,6 +128,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
         </Field>
 
         {/* Conversion */}
+        {sellPerUnit !== 'kg' && (
         <div style={{ padding: 16, background: T.blue + '06', borderRadius: 14, border: `1px solid ${T.blue}20` }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <p style={{ fontSize: 10, fontWeight: 700, color: T.blue, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Konversi Satuan (Grosir)</p>
@@ -177,6 +178,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
             </div>
           </div>
         </div>
+        )}
 
         {/* Prices */}
         <div>
@@ -184,13 +186,17 @@ function EditProductForm({ productId, onClose, onSuccess }) {
             <p style={{ fontSize: 9, fontWeight: 700, color: errors.price ? T.red : T.muted, textTransform: 'uppercase' }}>Harga Jual</p>
             {errors.price && <p style={{ fontSize: 10, color: T.red, fontWeight: 600 }}>⚠ {errors.price}</p>}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: sellPerUnit === 'all' ? 'repeat(4, 1fr)' : sellPerUnit === 'kg' ? '1fr' : 'repeat(3, 1fr)', gap: 8 }}>
             {[
               { label: 'Pcs',  val: pricePcs,  set: setPricePcs,  col: T.blue   },
               { label: 'Pack', val: pricePack, set: setPricePack, col: T.green  },
               { label: 'Dus',  val: priceDus,  set: setPriceDus,  col: T.accent },
               { label: 'Kg',   val: priceKg,   set: setPriceKg,   col: T.purple },
-            ].map(u => (
+            ].filter(u => {
+               if (sellPerUnit === 'all') return true;
+               if (sellPerUnit === 'kg') return u.label === 'Kg';
+               return u.label !== 'Kg';
+            }).map(u => (
               <div key={u.label}>
                 <label style={{ fontSize: 9, fontWeight: 700, color: u.col, display: 'block', marginBottom: 5 }}>{u.label}</label>
                 <div style={{ position: 'relative' }}>

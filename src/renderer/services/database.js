@@ -8,7 +8,8 @@ export async function getProducts() {
         p.*,
         c.name  as category_name,
         c.color as category_color,
-        COALESCE(SUM(s.quantity), 0) as stock
+        COALESCE(SUM(s.quantity), 0) as stock,
+        COALESCE(SUM(s.qty_kg), 0) as stock_kg
       FROM products p
       LEFT JOIN categories c ON c.id = p.category_id
       LEFT JOIN stocks s ON s.product_id = p.id AND s.is_active = 1
@@ -43,7 +44,8 @@ export async function getProductById(id) {
         p.*,
         c.name  as category_name,
         c.color as category_color,
-        COALESCE(SUM(s.quantity), 0) as stock
+        COALESCE(SUM(s.quantity), 0) as stock,
+        COALESCE(SUM(s.qty_kg), 0) as stock_kg
       FROM products p
       LEFT JOIN categories c ON c.id = p.category_id
       LEFT JOIN stocks s ON s.product_id = p.id AND s.is_active = 1
@@ -64,8 +66,8 @@ export async function addProduct(product) {
     const sql = `
       INSERT INTO products 
         (name, category_id, sell_per_unit, price_pcs, price_pack, price_dus, price_kg,
-         pcs_per_pack, pack_per_dus, min_stock, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         pcs_per_pack, pack_per_dus, min_stock, min_stock_kg, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const params = [
       product.name,
@@ -78,6 +80,7 @@ export async function addProduct(product) {
       product.pcs_per_pack  || 1,
       product.pack_per_dus  || 1,
       product.min_stock     || 0,
+      product.min_stock_kg  || 0,
       product.notes         || "",
     ];
     const result = await window.electronAPI.run(sql, params);
@@ -96,7 +99,7 @@ export async function updateProduct(id, product) {
       SET name = ?, category_id = ?, sell_per_unit = ?,
           price_pcs = ?, price_pack = ?, price_dus = ?, price_kg = ?,
           pcs_per_pack = ?, pack_per_dus = ?,
-          min_stock = ?, notes = ?
+          min_stock = ?, min_stock_kg = ?, notes = ?
       WHERE id = ?
     `;
     const params = [
@@ -110,6 +113,7 @@ export async function updateProduct(id, product) {
       product.pcs_per_pack  || 1,
       product.pack_per_dus  || 1,
       product.min_stock     || 0,
+      product.min_stock_kg  || 0,
       product.notes         || "",
       id,
     ];

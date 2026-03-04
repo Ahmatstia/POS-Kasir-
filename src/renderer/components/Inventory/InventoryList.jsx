@@ -13,6 +13,7 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
   const [qtyDus, setQtyDus]     = useState('');
   const [qtyPack, setQtyPack]   = useState('');
   const [qtyPcs, setQtyPcs]     = useState('');
+  const [qtyKg, setQtyKg]       = useState('');
   const [buyPrice, setBuyPrice] = useState('');
   const [expiry, setExpiry]     = useState('');
   const [batchCode, setBatch]   = useState('');
@@ -22,17 +23,23 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
 
   const pp = product.pcs_per_pack || 1;
   const pd = product.pack_per_dus || 1;
+  const isKg = product?.sell_per_unit === 'kg' || product?.sell_per_unit === 'all';
+  const isPcsOnly = product?.sell_per_unit === 'pcs' || product?.sell_per_unit === 'pack' || product?.sell_per_unit === 'dus';
+  
   const dusVal  = parseInt(qtyDus)  || 0;
   const packVal = parseInt(qtyPack) || 0;
   const pcsVal  = parseInt(qtyPcs)  || 0;
+  const kgVal   = parseFloat(qtyKg) || 0;
   const totalPcs = (dusVal * pd * pp) + (packVal * pp) + pcsVal;
+  const totalKg  = kgVal;
+  const totalDisplay = isKg ? `${totalKg > 0 ? totalKg + ' Kg' : ''} ${totalPcs > 0 ? totalPcs + ' Pcs' : ''}`.trim() : `${totalPcs} Pcs`;
 
   const handleSave = async () => {
-    if (totalPcs <= 0) { setError('Masukkan jumlah stok yang valid'); return; }
+    if (totalPcs <= 0 && totalKg <= 0) { setError('Masukkan jumlah stok yang valid'); return; }
     setError('');
     setSaving(true);
     const res = await addStock(product.id, {
-      qty_dus: dusVal, qty_pack: packVal, qty_pcs: pcsVal,
+      qty_dus: dusVal, qty_pack: packVal, qty_pcs: pcsVal, qty_kg: kgVal,
       purchase_price: Number(buyPrice) || 0,
       expiry_date: expiry || null,
       batch_code: batchCode,
@@ -40,7 +47,7 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
     }, product);
     setSaving(false);
     if (res.success) {
-      showToast('success', `✓ Stok ${product.name} bertambah ${totalPcs} Pcs`);
+      showToast('success', `✓ Stok ${product.name} bertambah ${totalDisplay}`);
       onSuccess(); onClose();
     } else {
       setError('Gagal menyimpan: ' + res.error);
@@ -121,30 +128,43 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
               )}
 
               {/* Qty inputs */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: 9, fontWeight: 700, color: pd > 1 ? T.accent : T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>
-                    Dus {pd <= 1 && <span style={{ color: T.muted, fontWeight: 400, textTransform: 'none' }}>(set:1)</span>}
-                  </label>
-                  <input type="number" min="0" value={qtyDus} onChange={e => { setQtyDus(e.target.value); setError(''); }}
-                    placeholder="0" style={{ ...inp, opacity: pd > 1 ? 1 : 0.5 }} disabled={pd <= 1} />
-                  {dusVal > 0 && <p style={{ fontSize: 10, color: T.muted, marginTop: 4, fontFamily: 'JetBrains Mono, monospace' }}>= {dusVal * pd} Pack</p>}
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 9, fontWeight: 700, color: pp > 1 ? T.green : T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>
-                    Pack {pp <= 1 && <span style={{ color: T.muted, fontWeight: 400, textTransform: 'none' }}>(set:1)</span>}
-                  </label>
-                  <input type="number" min="0" value={qtyPack} onChange={e => { setQtyPack(e.target.value); setError(''); }}
-                    placeholder="0" style={{ ...inp, opacity: pp > 1 ? 1 : 0.5 }} disabled={pp <= 1} />
-                  {packVal > 0 && <p style={{ fontSize: 10, color: T.muted, marginTop: 4, fontFamily: 'JetBrains Mono, monospace' }}>= {packVal * pp} Pcs</p>}
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 9, fontWeight: 700, color: T.blue, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>
-                    Pcs (Ecer)
-                  </label>
-                  <input type="number" min="0" value={qtyPcs} onChange={e => { setQtyPcs(e.target.value); setError(''); }}
-                    placeholder="0" style={inp} autoFocus />
-                </div>
+              <div style={{ display: 'grid', gridTemplateColumns: isKg ? 'minmax(0, 1fr)' : 'repeat(3, minmax(0,1fr))', gap: 10 }}>
+                {isKg && (
+                  <div>
+                    <label style={{ display: 'block', fontSize: 9, fontWeight: 700, color: T.purple, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>
+                      Jumlah (Kg)
+                    </label>
+                    <input type="number" step="0.01" min="0" value={qtyKg} onChange={e => { setQtyKg(e.target.value); setError(''); }}
+                      placeholder="0.0" style={inp} autoFocus />
+                  </div>
+                )}
+                {(!isKg || product?.sell_per_unit === 'all') && (
+                  <>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 9, fontWeight: 700, color: pd > 1 ? T.accent : T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>
+                        Dus {pd <= 1 && <span style={{ color: T.muted, fontWeight: 400, textTransform: 'none' }}>(set:1)</span>}
+                      </label>
+                      <input type="number" min="0" value={qtyDus} onChange={e => { setQtyDus(e.target.value); setError(''); }}
+                        placeholder="0" style={{ ...inp, opacity: pd > 1 ? 1 : 0.5 }} disabled={pd <= 1} />
+                      {dusVal > 0 && <p style={{ fontSize: 10, color: T.muted, marginTop: 4, fontFamily: 'JetBrains Mono, monospace' }}>= {dusVal * pd} Pack</p>}
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 9, fontWeight: 700, color: pp > 1 ? T.green : T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>
+                        Pack {pp <= 1 && <span style={{ color: T.muted, fontWeight: 400, textTransform: 'none' }}>(set:1)</span>}
+                      </label>
+                      <input type="number" min="0" value={qtyPack} onChange={e => { setQtyPack(e.target.value); setError(''); }}
+                        placeholder="0" style={{ ...inp, opacity: pp > 1 ? 1 : 0.5 }} disabled={pp <= 1} />
+                      {packVal > 0 && <p style={{ fontSize: 10, color: T.muted, marginTop: 4, fontFamily: 'JetBrains Mono, monospace' }}>= {packVal * pp} Pcs</p>}
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 9, fontWeight: 700, color: T.blue, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>
+                        Pcs
+                      </label>
+                      <input type="number" min="0" value={qtyPcs} onChange={e => { setQtyPcs(e.target.value); setError(''); }}
+                        placeholder="0" style={inp} />
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Setup hint if all factors are 1 */}
@@ -157,22 +177,22 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
               {/* Total */}
               <div style={{
                 padding: '14px 16px', borderRadius: 12,
-                background: totalPcs > 0 ? T.green + '0E' : T.border,
-                border: `1px solid ${totalPcs > 0 ? T.green + '30' : T.border2}`,
+                background: (totalPcs > 0 || totalKg > 0) ? T.green + '0E' : T.border,
+                border: `1px solid ${(totalPcs > 0 || totalKg > 0) ? T.green + '30' : T.border2}`,
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 transition: 'all 0.2s',
               }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: totalPcs > 0 ? T.green : T.muted }}>Total yang Masuk</span>
-                <span style={{ fontSize: 24, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace', color: totalPcs > 0 ? T.green : T.muted }}>
-                  {numFmt(totalPcs)} <span style={{ fontSize: 12 }}>Pcs</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: (totalPcs > 0 || totalKg > 0) ? T.green : T.muted }}>Total yang Masuk</span>
+                <span style={{ fontSize: 18, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace', color: (totalPcs > 0 || totalKg > 0) ? T.green : T.muted }}>
+                  {totalDisplay}
                 </span>
               </div>
 
               {error && <div style={{ padding: '8px 12px', borderRadius: 8, background: T.red + '10', border: `1px solid ${T.red}25`, fontSize: 12, color: T.red, fontWeight: 600 }}>⚠ {error}</div>}
 
               <button
-                onClick={() => totalPcs > 0 ? setStep(2) : setError('Masukkan jumlah stok yang valid')}
-                style={{ width: '100%', padding: '12px', borderRadius: 12, border: `1px solid ${totalPcs > 0 ? T.accent + '40' : T.border2}`, background: totalPcs > 0 ? T.accent + '16' : T.border, color: totalPcs > 0 ? T.accent : T.muted, fontFamily: 'Syne, sans-serif', fontSize: 13, fontWeight: 800, cursor: 'pointer', letterSpacing: '0.04em', transition: 'all 0.2s' }}
+                onClick={() => (totalPcs > 0 || totalKg > 0) ? setStep(2) : setError('Masukkan jumlah stok yang valid')}
+                style={{ width: '100%', padding: '12px', borderRadius: 12, border: `1px solid ${(totalPcs > 0 || totalKg > 0) ? T.accent + '40' : T.border2}`, background: (totalPcs > 0 || totalKg > 0) ? T.accent + '16' : T.border, color: (totalPcs > 0 || totalKg > 0) ? T.accent : T.muted, fontFamily: 'Syne, sans-serif', fontSize: 13, fontWeight: 800, cursor: 'pointer', letterSpacing: '0.04em', transition: 'all 0.2s' }}
               >
                 Lanjut → Detail Batch
               </button>
@@ -184,7 +204,7 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
               {/* Summary from step 1 */}
               <div style={{ padding: '12px 14px', borderRadius: 10, background: T.green + '0A', border: `1px solid ${T.green}25`, display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: 12, color: T.sub }}>Jumlah Stok</span>
-                <span style={{ fontSize: 16, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace', color: T.green }}>{numFmt(totalPcs)} Pcs</span>
+                <span style={{ fontSize: 16, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace', color: T.green }}>{totalDisplay}</span>
               </div>
 
               {/* Detail fields */}
@@ -197,9 +217,9 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
                   <input type="number" value={buyPrice} onChange={e => setBuyPrice(e.target.value)}
                     placeholder="0" style={{ ...inp, paddingLeft: 34 }} autoFocus />
                 </div>
-                {buyPrice && totalPcs > 0 && (
+                {buyPrice && (totalPcs > 0 || totalKg > 0) && (
                   <p style={{ fontSize: 10, color: T.sub, marginTop: 4, fontFamily: 'JetBrains Mono, monospace' }}>
-                    Total nilai: {fmt(Number(buyPrice) * totalPcs)}
+                    Total nilai: {fmt(Number(buyPrice) * (totalKg > 0 ? totalKg : totalPcs))}
                   </p>
                 )}
               </div>
@@ -227,7 +247,7 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
                 <button onClick={handleSave} disabled={saving} style={{ padding: '12px', borderRadius: 12, border: `1px solid ${T.green}40`, background: saving ? T.border : T.green + '18', color: saving ? T.muted : T.green, fontFamily: 'Syne, sans-serif', fontSize: 13, fontWeight: 800, cursor: saving ? 'wait' : 'pointer', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.2s' }}>
                   {saving ? (
                     <><div style={{ width: 14, height: 14, border: `2px solid ${T.muted}`, borderTopColor: T.green, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}/>Menyimpan…</>
-                  ) : `✓ Simpan +${numFmt(totalPcs)} Pcs`}
+                  ) : `✓ Simpan +${totalDisplay}`}
                 </button>
               </div>
             </>
@@ -240,7 +260,10 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
 
 // ─── ADJUST MODAL ─────────────────────────────────────────────────────────────
 function AdjustModal({ product, onClose, onSuccess, showToast }) {
-  const [newQty, setNewQty] = useState(String(product.stock || 0));
+  const isKg = product?.sell_per_unit === 'kg' || product?.sell_per_unit === 'all';
+  const currentBase = isKg ? (product.stock_kg || 0) : (product.stock || 0);
+
+  const [newQty, setNewQty] = useState(String(currentBase));
   const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState('');
@@ -248,9 +271,9 @@ function AdjustModal({ product, onClose, onSuccess, showToast }) {
   const pp = product.pcs_per_pack || 1;
   const pd = product.pack_per_dus || 1;
 
-  const current = product.stock || 0;
-  const newVal  = parseInt(newQty) || 0;
-  const diff    = newVal - current;
+  const current = currentBase;
+  const newVal  = isKg ? (parseFloat(newQty) || 0) : (parseInt(newQty) || 0);
+  const diff    = isKg ? Number((newVal - current).toFixed(2)) : (newVal - current);
   const isPlus  = diff > 0;
   const isMinus = diff < 0;
 
@@ -262,14 +285,19 @@ function AdjustModal({ product, onClose, onSuccess, showToast }) {
     if (newVal < 0)     { setError('Stok tidak boleh negatif'); return; }
     setError('');
     setSaving(true);
-    const res = await adjustStock(product.id, newVal, reason);
-    setSaving(false);
-    if (res.success) {
-      showToast('success', `✓ Stok ${product.name} dikoreksi ke ${newVal} Pcs`);
-      onSuccess(); onClose();
-    } else {
-      setError('Gagal: ' + res.error);
-    }
+    let res;
+    import('../../services/inventory').then(async ({ adjustStockKg }) => {
+       if (isKg) res = await adjustStockKg(product.id, newVal, reason);
+       else      res = await adjustStock(product.id, newVal, reason);
+
+       setSaving(false);
+       if (res.success) {
+         showToast('success', `✓ Stok ${product.name} dikoreksi ke ${newVal} ${isKg ? 'Kg' : 'Pcs'}`);
+         onSuccess(); onClose();
+       } else {
+         setError('Gagal: ' + res.error);
+       }
+    });
   };
 
   const inp = { width: '100%', padding: '10px 12px', borderRadius: 10, border: `1px solid ${T.border2}`, background: T.bg, color: T.text, fontFamily: 'JetBrains Mono, monospace', fontSize: 14, outline: 'none' };
@@ -293,22 +321,22 @@ function AdjustModal({ product, onClose, onSuccess, showToast }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 8, alignItems: 'center' }}>
             <div style={{ padding: '12px', borderRadius: 12, background: T.border, textAlign: 'center' }}>
               <p style={{ fontSize: 9, color: T.muted, fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Stok Sekarang</p>
-              <p style={{ fontSize: 24, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace', color: T.text }}>{numFmt(current)}</p>
-              <p style={{ fontSize: 9, color: T.sub }}>Pcs</p>
+              <p style={{ fontSize: 24, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace', color: T.text }}>{isKg ? current : numFmt(current)}</p>
+              <p style={{ fontSize: 9, color: T.sub }}>{isKg ? 'Kg' : 'Pcs'}</p>
             </div>
             <div style={{ fontSize: 18, color: diff !== 0 ? (isPlus ? T.green : T.red) : T.muted, fontWeight: 700, transition: 'color 0.2s' }}>→</div>
             <div style={{ padding: '12px', borderRadius: 12, background: diff === 0 ? T.border : isPlus ? T.green + '0E' : T.red + '0E', border: `1px solid ${diff === 0 ? T.border2 : isPlus ? T.green + '30' : T.red + '30'}`, textAlign: 'center', transition: 'all 0.2s' }}>
               <p style={{ fontSize: 9, color: T.muted, fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Stok Baru</p>
-              <p style={{ fontSize: 24, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace', color: diff === 0 ? T.text : isPlus ? T.green : T.red }}>{numFmt(newVal)}</p>
-              <p style={{ fontSize: 9, color: T.sub }}>Pcs</p>
+              <p style={{ fontSize: 24, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace', color: diff === 0 ? T.text : isPlus ? T.green : T.red }}>{isKg ? newVal : numFmt(newVal)}</p>
+              <p style={{ fontSize: 9, color: T.sub }}>{isKg ? 'Kg' : 'Pcs'}</p>
             </div>
           </div>
 
           {/* Diff badge */}
           {diff !== 0 && (
             <div style={{ textAlign: 'center', padding: '6px', borderRadius: 8, background: isPlus ? T.green + '0C' : T.red + '0C', fontSize: 12, fontWeight: 800, color: isPlus ? T.green : T.red, fontFamily: 'JetBrains Mono, monospace' }}>
-              {isPlus ? '+' : ''}{numFmt(diff)} Pcs {isPlus ? 'ditambahkan' : 'dikurangi'}
-              {(pp > 1 || pd > 1) && Math.abs(diff) >= pp && (
+              {isPlus ? '+' : ''}{isKg ? diff : numFmt(diff)} {isKg ? 'Kg' : 'Pcs'} {isPlus ? 'ditambahkan' : 'dikurangi'}
+              {!isKg && (pp > 1 || pd > 1) && Math.abs(diff) >= pp && (
                 <span style={{ color: T.sub, fontWeight: 400 }}>
                   {' '}≈ {pp > 1 ? `${Math.floor(Math.abs(diff) / pp)} Pack` : ''}{pd > 1 && Math.abs(diff) >= pp * pd ? ` / ${Math.floor(Math.abs(diff) / (pp * pd))} Dus` : ''}
                 </span>
@@ -319,9 +347,9 @@ function AdjustModal({ product, onClose, onSuccess, showToast }) {
           {/* New qty input */}
           <div>
             <label style={{ display: 'block', fontSize: 9, fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>
-              Masukkan Stok Baru (dalam Pcs)
+              Masukkan Stok Baru (dalam {isKg ? 'Kg' : 'Pcs'})
             </label>
-            <input type="number" min="0" value={newQty}
+            <input type={isKg ? "number" : "number"} step={isKg ? "0.01" : "1"} min="0" value={newQty}
               onChange={e => setNewQty(e.target.value)}
               style={{ ...inp, fontSize: 20, textAlign: 'center', fontWeight: 800 }}
               autoFocus
@@ -493,7 +521,7 @@ function InventoryList() {
               borderBottom: `1px solid ${T.border}`,
               background: T.bg,
             }}>
-              {['Produk', 'Stok (Pcs)', 'Min Stok', 'Level Stok', 'Aksi'].map(h => (
+              {['Produk', 'Stok', 'Min Stok', 'Level Stok', 'Aksi'].map(h => (
                 <p key={h} style={{ fontSize: 9, fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{h}</p>
               ))}
             </div>
@@ -501,15 +529,16 @@ function InventoryList() {
             {/* Rows */}
             <div style={{ maxHeight: 'calc(100vh - 400px)', overflowY: 'auto' }}>
               {filtered.map((product, idx) => {
-                const stock   = product.stock || 0;
-                const minSt   = product.min_stock || 0;
-                const outOf   = stock === 0;
+                const isKg    = product.sell_per_unit === 'kg';
+                const stock   = isKg ? (product.stock_kg || 0) : (product.stock || 0);
+                const minSt   = isKg ? (product.min_stock_kg || 0) : (product.min_stock || 0);
+                const outOf   = stock <= 0;
                 const low     = !outOf && stock <= minSt;
                 const sc      = outOf ? T.red : low ? T.accent : T.green;
                 const label   = outOf ? 'Habis'   : low ? 'Menipis' : 'Aman';
                 const pct     = minSt > 0 ? Math.min(100, (stock / Math.max(minSt * 2, 1)) * 100) : (stock > 0 ? 100 : 0);
-                const pp = product.pcs_per_pack || 1;
-                const pd = product.pack_per_dus || 1;
+                const pp      = product.pcs_per_pack || 1;
+                const pd      = product.pack_per_dus || 1;
 
                 return (
                   <div
@@ -531,8 +560,12 @@ function InventoryList() {
                       <p style={{ fontSize: 13, fontWeight: 700, color: outOf ? T.sub : T.text, marginBottom: 3 }}>{product.name}</p>
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 9, fontWeight: 700, color: T.sub, fontFamily: 'JetBrains Mono, monospace' }}>
-                          {pp > 1 ? `${Math.floor(stock / pp)} Pack ${stock % pp} Pcs` : `${stock} Pcs`}
-                          {pd > 1 && stock >= pp * pd ? ` / ${Math.floor(stock / (pp * pd))} Dus` : ''}
+                          {isKg ? 
+                             `${stock} Kg` 
+                           : 
+                             (pp > 1 ? `${Math.floor(stock / pp)} Pack ${stock % pp} Pcs` : `${stock} Pcs`) +
+                             (pd > 1 && stock >= pp * pd ? ` / ${Math.floor(stock / (pp * pd))} Dus` : '')
+                          }
                         </span>
                         {product.category_name && (
                           <span style={{ fontSize: 8, padding: '1px 6px', borderRadius: 100, background: T.border2, color: T.muted, fontWeight: 600 }}>
@@ -545,14 +578,14 @@ function InventoryList() {
                     {/* Stock number */}
                     <div>
                       <span style={{ fontSize: 22, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace', color: sc }}>
-                        {numFmt(stock)}
+                        {isKg ? stock : numFmt(stock)}
                       </span>
-                      <span style={{ fontSize: 10, color: T.muted, marginLeft: 4 }}>Pcs</span>
+                      <span style={{ fontSize: 10, color: T.muted, marginLeft: 4 }}>{isKg ? 'Kg' : 'Pcs'}</span>
                     </div>
 
                     {/* Min stock */}
                     <div style={{ fontSize: 12, fontFamily: 'JetBrains Mono, monospace', color: T.sub }}>
-                      {minSt > 0 ? `${numFmt(minSt)} Pcs` : '—'}
+                      {minSt > 0 ? `${isKg ? minSt : numFmt(minSt)} ${isKg ? 'Kg' : 'Pcs'}` : '—'}
                     </div>
 
                     {/* Progress bar + status */}

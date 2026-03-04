@@ -15,6 +15,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
   const [categoryId, setCategoryId]   = useState('');
   const [notes, setNotes]             = useState('');
   const [minStock, setMinStock]       = useState(0);
+  const [minStockKg, setMinStockKg]   = useState(0);
   const [sellPerUnit, setSellPerUnit] = useState('all');
   const [pricePcs, setPricePcs]       = useState(0);
   const [pricePack, setPricePack]     = useState(0);
@@ -33,6 +34,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
         setCategoryId(product.category_id || '');
         setNotes(product.notes || '');
         setMinStock(product.min_stock || 0);
+        setMinStockKg(product.min_stock_kg || 0);
         setSellPerUnit(product.sell_per_unit || 'all');
         setPricePcs(product.price_pcs   || 0);
         setPricePack(product.price_pack || 0);
@@ -71,6 +73,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
       pcs_per_pack: Number(pcsPerPack)  || 1,
       pack_per_dus: Number(packPerDus)  || 1,
       min_stock:    Number(minStock)    || 0,
+      min_stock_kg: Number(minStockKg)  || 0,
       notes,
     });
     setSaving(false);
@@ -202,9 +205,18 @@ function EditProductForm({ productId, onClose, onSuccess }) {
 
         {/* Min stock + notes */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12 }}>
-          <Field label="Minimal Stok">
-            <input type="number" value={minStock} onChange={e => setMinStock(e.target.value)} min="0" placeholder="0" className="form-field" style={{ ...fieldStyle, fontFamily: 'JetBrains Mono, monospace' }} />
-          </Field>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {(sellPerUnit !== 'kg') && (
+              <Field label="Min Stok (Pcs)">
+                <input type="number" value={minStock} onChange={e => setMinStock(e.target.value)} min="0" placeholder="0" className="form-field" style={{ ...fieldStyle, fontFamily: 'JetBrains Mono, monospace' }} />
+              </Field>
+            )}
+            {(sellPerUnit === 'kg' || sellPerUnit === 'all') && (
+              <Field label="Min Stok (Kg)">
+                <input type="number" step="0.01" value={minStockKg} onChange={e => setMinStockKg(e.target.value)} min="0" placeholder="0.0" className="form-field" style={{ ...fieldStyle, fontFamily: 'JetBrains Mono, monospace' }} />
+              </Field>
+            )}
+          </div>
           <Field label="Keterangan">
             <input type="text" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Opsional…" className="form-field" style={fieldStyle} />
           </Field>

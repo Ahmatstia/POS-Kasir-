@@ -156,18 +156,15 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef }) {
                 autoFocus
                 style={inputStyle}
               />
+              <input type="number" min="0" value={manualPrice} onChange={e => setManualPrice(e.target.value)}
+                placeholder="0" style={inputStyle} autoFocus />
             </div>
             <div>
               <label style={{ display: 'block', fontSize: 9, fontWeight: 700, color: T.muted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 5 }}>
-                Qty
+                {manualUnit === 'kg' ? 'Jml (Kg)' : 'Qty'}
               </label>
-              <input
-                type="number"
-                placeholder="1"
-                value={manualQty}
-                onChange={e => setManualQty(e.target.value)}
-                style={inputStyle}
-              />
+              <input type="number" step={manualUnit === 'kg' ? "0.01" : "1"} min="0" value={manualQty} onChange={e => setManualQty(e.target.value)}
+                placeholder={manualUnit === 'kg' ? "0.0" : "1"} style={{ ...inputStyle, textAlign: 'center' }} />
             </div>
             <div>
               <label style={{ display: 'block', fontSize: 9, fontWeight: 700, color: T.muted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 5 }}>
@@ -256,10 +253,10 @@ function CartRow({ item, onUpdate, onRemove }) {
       {/* Qty control */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
         <button
-          onClick={() => item.quantity > 1 ? onUpdate(item.id, item.quantity - 1) : onRemove(item.id)}
-          style={qtyBtnStyle(item.quantity === 1 ? T.red : T.border2, item.quantity === 1 ? T.red : T.sub)}
+          onClick={() => (item.quantity <= 1 && item.unit !== 'kg') ? onRemove(item.id) : onUpdate(item.id, item.quantity - 1)}
+          style={qtyBtnStyle((item.quantity <= 1 && item.unit !== 'kg') ? T.red : T.border2, (item.quantity <= 1 && item.unit !== 'kg') ? T.red : T.sub)}
         >
-          {item.quantity === 1 ? '×' : '−'}
+          {(item.quantity <= 1 && item.unit !== 'kg') ? '×' : '−'}
         </button>
         <span style={{ minWidth: 22, textAlign: 'center', fontSize: 13, fontWeight: 800, color: T.text, fontFamily: 'JetBrains Mono, monospace' }}>
           {item.quantity}
@@ -366,21 +363,44 @@ function Cashier() {
       }, 0);
   };
 
+  // Helper: calculate total kg already in cart for a product
+  const calcCartKg = (productId, excludeItemId = null) => {
+    return cart
+      .filter(item => item.product_id === productId && item.id !== excludeItemId && item.unit === 'kg')
+      .reduce((sum, item) => sum + parseFloat(item.quantity || 0), 0);
+  };
+
   const addToCart = (product, unit) => {
     const u = UNITS.find(x => x.key === unit);
     const price = product[u.priceKey];
     if (!price || price <= 0) return;
 
+    // Determine quantity to add
+    let qtyToAdd = 1;
+    if (unit === 'kg') {
+      const inputKg = window.prompt(`Masukkan berat Kg untuk ${product.name}:`, "1.0");
+      if (inputKg === null) return; // User cancelled
+      qtyToAdd = parseFloat(inputKg);
+      if (isNaN(qtyToAdd) || qtyToAdd <= 0) {
+        showToast('error', 'Masukkan jumlah berat Kg yang valid.');
+        return;
+      }
+    }
+
     const pp = product.pcs_per_pack || 1;
     const pd = product.pack_per_dus || 1;
     let pcsNeeded = 1;
-    if (unit === 'pack') pcsNeeded = pp;
-    if (unit === 'dus')  pcsNeeded = pd * pp;
 
-    // Kg unit uses weight-based model, skip Pcs stock check
+    // Kg unit uses weight-based model, Pcs uses integer model
     if (unit === 'kg') {
-      // For Kg, no Pcs conversion — just add to cart
+      const currentKgInCart = calcCartKg(product.id);
+      if (currentKgInCart + qtyToAdd > (product.stock_kg || 0)) {
+        showToast('error', `Stok Kg tidak mencukupi! Tersisa: ${product.stock_kg || 0} Kg (di keranjang: ${currentKgInCart} Kg)`);
+        return;
+      }
     } else {
+      if (unit === 'pack') pcsNeeded = pp;
+      if (unit === 'dus')  pcsNeeded = pd * pp;
       const currentPcsInCart = calcCartPcs(product.id);
       if (currentPcsInCart + pcsNeeded > (product.stock || 0)) {
         showToast('error', `Stok tidak mencukupi! Tersisa: ${product.stock || 0} Pcs (di keranjang: ${currentPcsInCart} Pcs)`);
@@ -388,11 +408,11 @@ function Cashier() {
       }
     }
 
-    const existing = cart.find(item => item.product_id === product.id && item.unit === unit);
-    if (existing) {
+    const existing = cart.find(item => item.product_id === product.id && item.unit === unit && unit !== 'kg'); // DON'T merge kg items so we can distinguish distinct weights, but merging is fine if identical price
+    if (existing && unit !== 'kg') {
       setCart(cart.map(item =>
         item.product_id === product.id && item.unit === unit
-          ? { ...item, quantity: item.quantity + 1, subtotal: (item.quantity + 1) * price }
+          ? { ...item, quantity: item.quantity + qtyToAdd, subtotal: (item.quantity + qtyToAdd) * price }
           : item
       ));
     } else {
@@ -401,16 +421,22 @@ function Cashier() {
         product_id: product.id,
         name: product.name,
         unit, price,
-        quantity: 1,
-        subtotal: price,
+        quantity: qtyToAdd,
+        subtotal: price * qtyToAdd,
       }]);
     }
     // Do NOT reset searchTerm — keep the user's search active
   };
 
   const addManualToCart = (product, { price, quantity, unit }) => {
-    // Kg unit uses weight-based model, skip Pcs stock check
-    if (unit !== 'kg') {
+    // Check Kg vs Pcs
+    if (unit === 'kg') {
+      const currentKgInCart = calcCartKg(product.id);
+      if (currentKgInCart + parseFloat(quantity) > (product.stock_kg || 0)) {
+        showToast('error', `Stok Kg tidak mencukupi! Tersisa: ${product.stock_kg || 0} Kg (di keranjang: ${currentKgInCart} Kg)`);
+        return;
+      }
+    } else {
       const pp = product.pcs_per_pack || 1;
       const pd = product.pack_per_dus || 1;
       let pcsNeeded = quantity;
@@ -438,6 +464,30 @@ function Cashier() {
     const item = cart.find(i => i.id === itemId);
     if (!item) return;
 
+    if (item.unit === 'kg') {
+       const userKgStr = window.prompt(`Masukkan berat Kg baru:`, String(item.quantity));
+       if (userKgStr === null) return;
+       const kgVal = parseFloat(userKgStr);
+       if (isNaN(kgVal) || kgVal < 0) {
+         showToast('error', 'Masukkan jumlah Kg yang valid.');
+         return;
+       }
+       if (kgVal === 0) {
+         removeFromCart(itemId);
+         return;
+       }
+       const product = allProducts.find(p => p.id === item.product_id);
+       if (product) {
+         const otherKg = calcCartKg(product.id, itemId);
+         if (kgVal + otherKg > (product.stock_kg || 0)) {
+            showToast('error', `Stok Kg tidak mencukupi! Tersisa: ${product.stock_kg || 0} Kg`);
+            return;
+         }
+       }
+       setCart(cart.map(i => i.id === itemId ? { ...i, quantity: kgVal, subtotal: kgVal * i.price } : i));
+       return;
+    }
+
     const product = allProducts.find(p => p.id === item.product_id);
     if (product) {
       const fakeItem = { ...item, quantity: newQty };
@@ -449,9 +499,7 @@ function Cashier() {
       }
     }
 
-    setCart(cart.map(item =>
-      item.id === itemId ? { ...item, quantity: newQty, subtotal: newQty * item.price } : item
-    ));
+    setCart(cart.map(i => i.id === itemId ? { ...i, quantity: newQty, subtotal: newQty * i.price } : i));
   };
 
   const removeFromCart = (itemId) => setCart(cart.filter(item => item.id !== itemId));

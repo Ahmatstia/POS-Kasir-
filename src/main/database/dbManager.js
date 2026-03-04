@@ -122,6 +122,7 @@ class DatabaseManager {
           await this._runSQL("ALTER TABLE products ADD COLUMN min_stock    INTEGER DEFAULT 0",    "ADD products.min_stock");
           await this._runSQL("ALTER TABLE products ADD COLUMN created_at   DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD products.created_at");
           await this._runSQL("ALTER TABLE products ADD COLUMN updated_at   DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD products.updated_at");
+          await this._runSQL("ALTER TABLE products ADD COLUMN min_stock_kg REAL DEFAULT 0", "ADD products.min_stock_kg");
 
           // ── STOCKS ──────────────────────────────────────────────────────────
           await this._runSQL(`
@@ -141,6 +142,7 @@ class DatabaseManager {
           
           await this._runSQL("ALTER TABLE stocks ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD stocks.created_at");
           await this._runSQL("ALTER TABLE stocks ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD stocks.updated_at");
+          await this._runSQL("ALTER TABLE stocks ADD COLUMN qty_kg REAL DEFAULT 0", "ADD stocks.qty_kg");
 
           // ── INVENTORY LOG ────────────────────────────────────────────────────
           await this._runSQL(`
@@ -168,6 +170,7 @@ class DatabaseManager {
           
           await this._runSQL("ALTER TABLE inventory_log ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD inventory_log.created_at");
           await this._runSQL("ALTER TABLE inventory_log ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD inventory_log.updated_at");
+          await this._runSQL("ALTER TABLE inventory_log ADD COLUMN quantity_kg REAL DEFAULT 0", "ADD inventory_log.quantity_kg");
 
           // ── TRANSACTIONS ─────────────────────────────────────────────────────
           await this._runSQL(`

@@ -392,10 +392,15 @@ function Cashier() {
     if (unit === 'pack') pcsNeeded = pp;
     if (unit === 'dus')  pcsNeeded = pd * pp;
 
-    const currentPcsInCart = calcCartPcs(product.id);
-    if (currentPcsInCart + pcsNeeded > (product.stock || 0)) {
-      showToast('error', `Stok tidak mencukupi! Tersisa: ${product.stock || 0} Pcs (di keranjang: ${currentPcsInCart} Pcs)`);
-      return;
+    // Kg unit uses weight-based model, skip Pcs stock check
+    if (unit === 'kg') {
+      // For Kg, no Pcs conversion — just add to cart
+    } else {
+      const currentPcsInCart = calcCartPcs(product.id);
+      if (currentPcsInCart + pcsNeeded > (product.stock || 0)) {
+        showToast('error', `Stok tidak mencukupi! Tersisa: ${product.stock || 0} Pcs (di keranjang: ${currentPcsInCart} Pcs)`);
+        return;
+      }
     }
 
     const existing = cart.find(item => item.product_id === product.id && item.unit === unit);

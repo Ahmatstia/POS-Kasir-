@@ -12,6 +12,7 @@ export async function getSalesReport(startDate, endDate) {
         COUNT(DISTINCT strftime('%Y-%m-%d', created_at)) as active_days
       FROM transactions 
       WHERE date(created_at) BETWEEN date(?) AND date(?)
+        AND status = 'COMPLETED'
     `, [startDate, endDate]);
 
     // Query untuk penjualan per hari
@@ -22,6 +23,7 @@ export async function getSalesReport(startDate, endDate) {
         COALESCE(SUM(total_amount), 0) as total
       FROM transactions 
       WHERE date(created_at) BETWEEN date(?) AND date(?)
+        AND status = 'COMPLETED'
       GROUP BY date(created_at)
       ORDER BY date ASC
     `, [startDate, endDate]);
@@ -34,6 +36,7 @@ export async function getSalesReport(startDate, endDate) {
         COALESCE(SUM(total_amount), 0) as total
       FROM transactions 
       WHERE date(created_at) BETWEEN date(?) AND date(?)
+        AND status = 'COMPLETED'
       GROUP BY payment_method
     `, [startDate, endDate]);
 
@@ -48,6 +51,7 @@ export async function getSalesReport(startDate, endDate) {
       FROM transaction_items ti
       JOIN transactions t ON ti.transaction_id = t.id
       WHERE date(t.created_at) BETWEEN date(?) AND date(?)
+        AND t.status = 'COMPLETED'
       GROUP BY ti.product_id, ti.product_name
       ORDER BY total_quantity DESC
       LIMIT 10
@@ -65,6 +69,7 @@ export async function getSalesReport(startDate, endDate) {
       JOIN products p ON ti.product_id = p.id
       JOIN categories c ON p.category_id = c.id
       WHERE date(t.created_at) BETWEEN date(?) AND date(?)
+        AND t.status = 'COMPLETED'
       GROUP BY c.id, c.name
       ORDER BY total_sales DESC
     `, [startDate, endDate]);
@@ -77,6 +82,7 @@ export async function getSalesReport(startDate, endDate) {
         COALESCE(SUM(total_amount), 0) as total
       FROM transactions 
       WHERE date(created_at) BETWEEN date(?) AND date(?)
+        AND status = 'COMPLETED'
       GROUP BY hour
       ORDER BY hour ASC
     `, [startDate, endDate]);
@@ -97,44 +103,56 @@ export async function getSalesReport(startDate, endDate) {
   }
 }
 
-// Fungsi untuk mendapatkan laporan stok
+// Fungsi untuk mendapatkan laporan stok (aggregated from stocks table)
 export async function getStockReport() {
   try {
-    // Ringkasan stok
+    // Ringkasan stok (from stocks table, not products.stock)
     const summary = await window.electronAPI.query(`
       SELECT 
-        COUNT(*) as total_products,
-        SUM(stock) as total_stock,
-        AVG(stock) as average_stock,
-        COUNT(CASE WHEN stock <= min_stock THEN 1 END) as low_stock_count,
-        COUNT(CASE WHEN stock = 0 THEN 1 END) as out_of_stock_count
-      FROM products
+        COUNT(DISTINCT p.id) as total_products,
+        COALESCE(SUM(s.quantity), 0) as total_stock,
+        COALESCE(AVG(stock_agg.stock), 0) as average_stock,
+        COUNT(CASE WHEN COALESCE(stock_agg.stock, 0) <= p.min_stock AND p.min_stock > 0 THEN 1 END) as low_stock_count,
+        COUNT(CASE WHEN COALESCE(stock_agg.stock, 0) = 0 THEN 1 END) as out_of_stock_count
+      FROM products p
+      LEFT JOIN (
+        SELECT product_id, SUM(quantity) as stock
+        FROM stocks WHERE is_active = 1
+        GROUP BY product_id
+      ) stock_agg ON stock_agg.product_id = p.id
+      LEFT JOIN stocks s ON s.product_id = p.id AND s.is_active = 1
+      WHERE p.is_active = 1
     `);
 
-    // Stok per kategori
+    // Stok per kategori (from stocks table)
     const stockByCategory = await window.electronAPI.query(`
       SELECT 
         c.name as category_name,
-        COUNT(p.id) as product_count,
-        SUM(p.stock) as total_stock,
-        COALESCE(SUM(p.stock * p.price_pcs), 0) as total_value_pcs,
-        COALESCE(SUM(p.stock * p.price_pack), 0) as total_value_pack,
-        COALESCE(SUM(p.stock * p.price_kg), 0) as total_value_kg
+        COUNT(DISTINCT p.id) as product_count,
+        COALESCE(SUM(s.quantity), 0) as total_stock,
+        COALESCE(SUM(s.quantity * p.price_pcs), 0) as total_value_pcs
       FROM products p
       JOIN categories c ON p.category_id = c.id
+      LEFT JOIN stocks s ON s.product_id = p.id AND s.is_active = 1
+      WHERE p.is_active = 1
       GROUP BY c.id, c.name
       ORDER BY total_stock DESC
     `);
 
-    // Produk dengan stok menipis
+    // Produk dengan stok menipis (from stocks table)
     const lowStock = await window.electronAPI.query(`
       SELECT 
-        p.*,
-        c.name as category_name
+        p.id, p.name, p.min_stock, p.price_pcs,
+        p.pcs_per_pack, p.pack_per_dus,
+        c.name as category_name,
+        COALESCE(SUM(s.quantity), 0) as stock
       FROM products p
       JOIN categories c ON p.category_id = c.id
-      WHERE p.stock <= p.min_stock
-      ORDER BY (p.stock * 1.0 / p.min_stock) ASC
+      LEFT JOIN stocks s ON s.product_id = p.id AND s.is_active = 1
+      WHERE p.is_active = 1 AND p.min_stock > 0
+      GROUP BY p.id
+      HAVING stock <= p.min_stock
+      ORDER BY (stock * 1.0 / MAX(p.min_stock, 1)) ASC
     `);
 
     return {

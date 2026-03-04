@@ -11,6 +11,7 @@ export async function getDashboardData() {
       SELECT COALESCE(SUM(total_amount), 0) as total 
       FROM transactions 
       WHERE created_at BETWEEN ? AND ?
+        AND status = 'COMPLETED'
     `, [startOfDay, endOfDay]);
 
     // Query untuk jumlah transaksi hari ini
@@ -18,6 +19,7 @@ export async function getDashboardData() {
       SELECT COUNT(*) as count 
       FROM transactions 
       WHERE created_at BETWEEN ? AND ?
+        AND status = 'COMPLETED'
     `, [startOfDay, endOfDay]);
 
     // Query untuk total penjualan bulan ini
@@ -26,6 +28,7 @@ export async function getDashboardData() {
       SELECT COALESCE(SUM(total_amount), 0) as total 
       FROM transactions 
       WHERE created_at >= ?
+        AND status = 'COMPLETED'
     `, [startOfMonth]);
 
     // Query untuk produk stok menipis (dari tabel stocks)
@@ -51,6 +54,7 @@ const topProducts = await window.electronAPI.query(`
   FROM transaction_items ti
   JOIN transactions t ON ti.transaction_id = t.id
   WHERE t.created_at >= ?
+    AND t.status = 'COMPLETED'
   GROUP BY ti.product_id, ti.product_name
   ORDER BY total_terjual DESC
   LIMIT 5
@@ -74,6 +78,7 @@ const topProducts = await window.electronAPI.query(`
         SELECT COALESCE(SUM(total_amount), 0) as total 
         FROM transactions 
         WHERE created_at BETWEEN ? AND ?
+          AND status = 'COMPLETED'
       `, [start, end]);
       
       dailySales.push({
@@ -84,7 +89,7 @@ const topProducts = await window.electronAPI.query(`
 
     // Query untuk total produk
     const totalProducts = await window.electronAPI.query(`
-      SELECT COUNT(*) as count FROM products
+      SELECT COUNT(*) as count FROM products WHERE is_active = 1
     `);
 
     // Query untuk total kategori

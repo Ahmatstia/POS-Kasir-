@@ -15,13 +15,16 @@ export async function createTransaction(transactionData) {
     notes,
   } = transactionData;
 
-  // Generate invoice number
+  // Generate invoice number (timestamp-based for uniqueness)
   const date = new Date();
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
+  const h = String(date.getHours()).padStart(2, "0");
+  const mi = String(date.getMinutes()).padStart(2, "0");
+  const s = String(date.getSeconds()).padStart(2, "0");
   const rand = Math.floor(Math.random() * 1000).toString().padStart(3, "0");
-  const invoiceNo = `INV-${y}${m}${d}-${rand}`;
+  const invoiceNo = `INV-${y}${m}${d}${h}${mi}${s}-${rand}`;
 
   try {
     await window.electronAPI.run("BEGIN TRANSACTION");
@@ -132,14 +135,22 @@ export async function cancelTransaction(transactionId) {
       else if (item.unit === "dus") pcsToReturn = item.quantity * packPerDus * pcsPerPack;
 
       // Add stock back (create a RETURN batch)
+      // Get current stock before return
+      const [stockInfo] = await window.electronAPI.query(
+        "SELECT COALESCE(SUM(quantity), 0) as current_stock FROM stocks WHERE product_id = ? AND is_active = 1",
+        [item.product_id]
+      );
+      const stockBefore = stockInfo?.current_stock || 0;
+      const stockAfter = stockBefore + pcsToReturn;
+
       await window.electronAPI.run(
         "INSERT INTO stocks (product_id, batch_code, quantity, notes) VALUES (?, ?, ?, ?)",
         [item.product_id, `RETURN-${tx.invoice_no}`, pcsToReturn, `Retur transaksi ${tx.invoice_no}`]
       );
       await window.electronAPI.run(
-        `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, reference_id, notes)
-         VALUES (?, 'RETURN', ?, ?, ?, ?, ?)`,
-        [item.product_id, pcsToReturn, item.unit, pcsToReturn, tx.invoice_no, `Retur transaksi ${tx.invoice_no}`]
+        `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, stock_before, stock_after, reference_id, notes)
+         VALUES (?, 'RETURN', ?, ?, ?, ?, ?, ?, ?)`,
+        [item.product_id, pcsToReturn, item.unit, pcsToReturn, stockBefore, stockAfter, tx.invoice_no, `Retur transaksi ${tx.invoice_no}`]
       );
     }
 

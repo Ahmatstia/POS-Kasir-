@@ -156,7 +156,6 @@ export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [tab, setTab] = useState('week');
 
   useEffect(() => {
     loadDashboard();
@@ -355,11 +354,14 @@ export default function Dashboard() {
                 <p style={{ fontSize: 12, color: T.sub, marginTop: 4 }}>Total 7 hari terakhir</p>
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
-                {['week', 'month', 'year'].map((r) => (
-                  <button key={r} className={`tab-btn ${tab === r ? 'active' : ''}`} onClick={() => setTab(r)}>
-                    {r === 'week' ? 'Minggu' : r === 'month' ? 'Bulan' : 'Tahun'}
-                  </button>
-                ))}
+                <span style={{
+                  padding: '6px 14px', borderRadius: 8,
+                  background: T.accent + '15', border: `1px solid ${T.accent}50`,
+                  color: T.accent, fontSize: 11, fontWeight: 700,
+                  letterSpacing: '0.06em', textTransform: 'uppercase',
+                }}>
+                  7 Hari
+                </span>
               </div>
             </div>
 

@@ -12,7 +12,6 @@ module.exports = {
       name: '@electron-forge/maker-squirrel',
       config: {
         setupIcon: './assets/icon.ico',
-        loadingGif: './assets/install_anim.gif',
         authors: 'Ahmatstia',
         description: 'Aplikasi POS Kasir Bumbu'
       },

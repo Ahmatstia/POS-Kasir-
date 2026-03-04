@@ -470,25 +470,32 @@ export default function Dashboard() {
                 <p style={{ fontSize: 12, color: T.muted, textAlign: 'center', padding: '20px 0' }}>Semua stok aman ✓</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {data.lowStock.map((p) => (
-                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 10, background: T.bg, border: `1px solid ${T.border}` }}>
-                      <div>
-                        <p style={{ fontSize: 12, fontWeight: 600, color: T.text, marginBottom: 2 }}>{p.name}</p>
-                        <p style={{ fontSize: 11, color: T.muted, fontFamily: 'JetBrains Mono, monospace' }}>min {p.min_stock} unit</p>
+                  {data.lowStock.map((p) => {
+                    const isKg = p.sell_per_unit === 'kg';
+                    const current = isKg ? p.total_stock_kg : p.total_stock;
+                    const min = isKg ? p.min_stock_kg : p.min_stock;
+                    const unit = isKg ? 'kg' : 'unit';
+                    
+                    return (
+                      <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 10, background: T.bg, border: `1px solid ${T.border}` }}>
+                        <div>
+                          <p style={{ fontSize: 12, fontWeight: 600, color: T.text, marginBottom: 2 }}>{p.name}</p>
+                          <p style={{ fontSize: 11, color: T.muted, fontFamily: 'JetBrains Mono, monospace' }}>min {min} {unit}</p>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <span style={{
+                            display: 'block',
+                            fontSize: 20, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace',
+                            color: current <= 0 ? T.red : T.accent,
+                            lineHeight: 1,
+                          }}>{current}</span>
+                          <Chip color={current <= 0 ? T.red : T.accent}>
+                            {current <= 0 ? 'Habis' : 'Menipis'}
+                          </Chip>
+                        </div>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <span style={{
-                          display: 'block',
-                          fontSize: 20, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace',
-                          color: p.stock === 0 ? T.red : T.accent,
-                          lineHeight: 1,
-                        }}>{p.stock}</span>
-                        <Chip color={p.stock === 0 ? T.red : T.accent}>
-                          {p.stock === 0 ? 'Habis' : 'Menipis'}
-                        </Chip>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

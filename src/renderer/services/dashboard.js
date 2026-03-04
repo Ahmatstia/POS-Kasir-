@@ -10,82 +10,83 @@ export async function getDashboardData() {
     const todaySales = await window.electronAPI.query(`
       SELECT COALESCE(SUM(total_amount), 0) as total 
       FROM transactions 
-      WHERE created_at BETWEEN ? AND ?
+      WHERE date(created_at, 'localtime') = date('now', 'localtime')
         AND status = 'COMPLETED'
-    `, [startOfDay, endOfDay]);
+    `);
 
     // Query untuk jumlah transaksi hari ini
     const todayTransactions = await window.electronAPI.query(`
       SELECT COUNT(*) as count 
       FROM transactions 
-      WHERE created_at BETWEEN ? AND ?
+      WHERE date(created_at, 'localtime') = date('now', 'localtime')
         AND status = 'COMPLETED'
-    `, [startOfDay, endOfDay]);
+    `);
 
     // Query untuk total penjualan bulan ini
-    const startOfMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01 00:00:00`;
     const monthSales = await window.electronAPI.query(`
       SELECT COALESCE(SUM(total_amount), 0) as total 
       FROM transactions 
-      WHERE created_at >= ?
+      WHERE strftime('%Y-%m', created_at, 'localtime') = strftime('%Y-%m', 'now', 'localtime')
         AND status = 'COMPLETED'
-    `, [startOfMonth]);
+    `);
 
     // Query untuk produk stok menipis (dari tabel stocks)
     const lowStock = await window.electronAPI.query(`
-      SELECT p.id, p.name, p.min_stock,
-             COALESCE(SUM(s.quantity), 0) as stock
+      SELECT p.id, p.name, p.min_stock, p.min_stock_kg, p.sell_per_unit,
+             COALESCE(SUM(s.quantity), 0) as total_stock,
+             COALESCE(SUM(s.qty_kg), 0) as total_stock_kg
       FROM products p
       LEFT JOIN stocks s ON s.product_id = p.id AND s.is_active = 1
-      WHERE p.is_active = 1 AND p.min_stock > 0
+      WHERE p.is_active = 1
       GROUP BY p.id
-      HAVING stock <= p.min_stock
-      ORDER BY stock ASC
+      HAVING 
+        (p.sell_per_unit != 'kg' AND p.min_stock > 0 AND total_stock <= p.min_stock)
+        OR (p.sell_per_unit = 'kg' AND p.min_stock_kg > 0 AND total_stock_kg <= p.min_stock_kg)
+      ORDER BY 
+        CASE WHEN p.sell_per_unit = 'kg' THEN total_stock_kg ELSE total_stock END ASC
       LIMIT 10
     `);
 
-    // Query untuk 5 produk terlaris
-const topProducts = await window.electronAPI.query(`
-  SELECT 
-    ti.product_id,
-    ti.product_name,
-    SUM(ti.quantity) as total_terjual,
-    SUM(ti.subtotal) as total_omzet
-  FROM transaction_items ti
-  JOIN transactions t ON ti.transaction_id = t.id
-  WHERE t.created_at >= ?
-    AND t.status = 'COMPLETED'
-  GROUP BY ti.product_id, ti.product_name
-  ORDER BY total_terjual DESC
-  LIMIT 5
-`, [startOfMonth]);
+    // Query untuk 5 produk terlaris bulan ini (localtime)
+    const topProducts = await window.electronAPI.query(`
+      SELECT 
+        ti.product_id,
+        ti.product_name,
+        SUM(ti.quantity) as total_terjual,
+        SUM(ti.subtotal) as total_omzet
+      FROM transaction_items ti
+      JOIN transactions t ON ti.transaction_id = t.id
+      WHERE strftime('%Y-%m', t.created_at, 'localtime') = strftime('%Y-%m', 'now', 'localtime')
+        AND t.status = 'COMPLETED'
+      GROUP BY ti.product_id, ti.product_name
+      ORDER BY total_terjual DESC
+      LIMIT 5
+    `);
 
-    // Query untuk penjualan 7 hari terakhir
+    // Query untuk penjualan 7 hari terakhir (Optimized single query with localtime)
+    const dailySalesRaw = await window.electronAPI.query(`
+      SELECT 
+        date(created_at, 'localtime') as date,
+        COALESCE(SUM(total_amount), 0) as total
+      FROM transactions 
+      WHERE date(created_at, 'localtime') >= date('now', 'localtime', '-6 days')
+        AND status = 'COMPLETED'
+      GROUP BY date(created_at, 'localtime')
+      ORDER BY date ASC
+    `);
+
+    // Fill gaps in 7 days data if any
     const last7Days = [];
     for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-      last7Days.push(dateStr);
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      last7Days.push(d.toISOString().split('T')[0]);
     }
 
-    const dailySales = [];
-    for (const dateStr of last7Days) {
-      const start = `${dateStr} 00:00:00`;
-      const end = `${dateStr} 23:59:59`;
-      
-      const result = await window.electronAPI.query(`
-        SELECT COALESCE(SUM(total_amount), 0) as total 
-        FROM transactions 
-        WHERE created_at BETWEEN ? AND ?
-          AND status = 'COMPLETED'
-      `, [start, end]);
-      
-      dailySales.push({
-        date: dateStr,
-        total: result[0].total
-      });
-    }
+    const dailySales = last7Days.map(dateStr => {
+      const match = dailySalesRaw.find(r => r.date === dateStr);
+      return { date: dateStr, total: match ? match.total : 0 };
+    });
 
     // Query untuk total produk
     const totalProducts = await window.electronAPI.query(`

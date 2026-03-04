@@ -11,7 +11,7 @@ export async function getSalesReport(startDate, endDate) {
         COALESCE(SUM(change_amount), 0) as total_change,
         COUNT(DISTINCT strftime('%Y-%m-%d', created_at)) as active_days
       FROM transactions 
-      WHERE date(created_at) BETWEEN date(?) AND date(?)
+      WHERE date(created_at, 'localtime') BETWEEN date(?) AND date(?)
         AND status = 'COMPLETED'
     `, [startDate, endDate]);
 
@@ -22,9 +22,9 @@ export async function getSalesReport(startDate, endDate) {
         COUNT(*) as transaction_count,
         COALESCE(SUM(total_amount), 0) as total
       FROM transactions 
-      WHERE date(created_at) BETWEEN date(?) AND date(?)
+      WHERE date(created_at, 'localtime') BETWEEN date(?) AND date(?)
         AND status = 'COMPLETED'
-      GROUP BY date(created_at)
+      GROUP BY date(created_at, 'localtime')
       ORDER BY date ASC
     `, [startDate, endDate]);
 
@@ -35,7 +35,7 @@ export async function getSalesReport(startDate, endDate) {
         COUNT(*) as count,
         COALESCE(SUM(total_amount), 0) as total
       FROM transactions 
-      WHERE date(created_at) BETWEEN date(?) AND date(?)
+      WHERE date(created_at, 'localtime') BETWEEN date(?) AND date(?)
         AND status = 'COMPLETED'
       GROUP BY payment_method
     `, [startDate, endDate]);
@@ -50,7 +50,7 @@ export async function getSalesReport(startDate, endDate) {
         COUNT(DISTINCT ti.transaction_id) as times_sold
       FROM transaction_items ti
       JOIN transactions t ON ti.transaction_id = t.id
-      WHERE date(t.created_at) BETWEEN date(?) AND date(?)
+      WHERE date(t.created_at, 'localtime') BETWEEN date(?) AND date(?)
         AND t.status = 'COMPLETED'
       GROUP BY ti.product_id, ti.product_name
       ORDER BY total_quantity DESC
@@ -81,7 +81,7 @@ export async function getSalesReport(startDate, endDate) {
         COUNT(*) as transaction_count,
         COALESCE(SUM(total_amount), 0) as total
       FROM transactions 
-      WHERE date(created_at) BETWEEN date(?) AND date(?)
+      WHERE date(created_at, 'localtime') BETWEEN date(?) AND date(?)
         AND status = 'COMPLETED'
       GROUP BY hour
       ORDER BY hour ASC
@@ -111,12 +111,19 @@ export async function getStockReport() {
       SELECT 
         COUNT(DISTINCT p.id) as total_products,
         COALESCE(SUM(s.quantity), 0) as total_stock,
+        COALESCE(SUM(s.qty_kg), 0) as total_stock_kg,
         COALESCE(AVG(stock_agg.stock), 0) as average_stock,
-        COUNT(CASE WHEN COALESCE(stock_agg.stock, 0) <= p.min_stock AND p.min_stock > 0 THEN 1 END) as low_stock_count,
-        COUNT(CASE WHEN COALESCE(stock_agg.stock, 0) = 0 THEN 1 END) as out_of_stock_count
+        COUNT(CASE 
+          WHEN (p.sell_per_unit != 'kg' AND COALESCE(stock_agg.stock, 0) <= p.min_stock AND p.min_stock > 0)
+            OR (p.sell_per_unit = 'kg' AND COALESCE(stock_agg.stock_kg, 0) <= p.min_stock_kg AND p.min_stock_kg > 0)
+          THEN 1 END) as low_stock_count,
+        COUNT(CASE 
+          WHEN (p.sell_per_unit != 'kg' AND COALESCE(stock_agg.stock, 0) = 0)
+            OR (p.sell_per_unit = 'kg' AND COALESCE(stock_agg.stock_kg, 0) = 0)
+          THEN 1 END) as out_of_stock_count
       FROM products p
       LEFT JOIN (
-        SELECT product_id, SUM(quantity) as stock
+        SELECT product_id, SUM(quantity) as stock, SUM(qty_kg) as stock_kg
         FROM stocks WHERE is_active = 1
         GROUP BY product_id
       ) stock_agg ON stock_agg.product_id = p.id
@@ -130,29 +137,36 @@ export async function getStockReport() {
         c.name as category_name,
         COUNT(DISTINCT p.id) as product_count,
         COALESCE(SUM(s.quantity), 0) as total_stock,
-        COALESCE(SUM(s.quantity * p.price_pcs), 0) as total_value_pcs
+        COALESCE(SUM(s.qty_kg), 0) as total_stock_kg,
+        COALESCE(SUM(s.quantity * p.price_pcs), 0) as total_value_pcs,
+        COALESCE(SUM(s.qty_kg * p.price_kg), 0) as total_value_kg
       FROM products p
       JOIN categories c ON p.category_id = c.id
       LEFT JOIN stocks s ON s.product_id = p.id AND s.is_active = 1
       WHERE p.is_active = 1
       GROUP BY c.id, c.name
-      ORDER BY total_stock DESC
+      ORDER BY total_stock DESC, total_stock_kg DESC
     `);
 
     // Produk dengan stok menipis (from stocks table)
     const lowStock = await window.electronAPI.query(`
       SELECT 
-        p.id, p.name, p.min_stock, p.price_pcs,
+        p.id, p.name, p.min_stock, p.min_stock_kg, p.price_pcs, p.price_kg, p.sell_per_unit,
         p.pcs_per_pack, p.pack_per_dus,
         c.name as category_name,
-        COALESCE(SUM(s.quantity), 0) as stock
+        COALESCE(SUM(s.quantity), 0) as total_stock,
+        COALESCE(SUM(s.qty_kg), 0) as total_stock_kg
       FROM products p
       JOIN categories c ON p.category_id = c.id
       LEFT JOIN stocks s ON s.product_id = p.id AND s.is_active = 1
-      WHERE p.is_active = 1 AND p.min_stock > 0
+      WHERE p.is_active = 1
       GROUP BY p.id
-      HAVING stock <= p.min_stock
-      ORDER BY (stock * 1.0 / MAX(p.min_stock, 1)) ASC
+      HAVING 
+        (p.sell_per_unit != 'kg' AND p.min_stock > 0 AND total_stock <= p.min_stock)
+        OR (p.sell_per_unit = 'kg' AND p.min_stock_kg > 0 AND total_stock_kg <= p.min_stock_kg)
+      ORDER BY 
+        CASE WHEN p.sell_per_unit = 'kg' THEN (total_stock_kg * 1.0 / MAX(p.min_stock_kg, 1)) 
+             ELSE (total_stock * 1.0 / MAX(p.min_stock, 1)) END ASC
     `);
 
     return {

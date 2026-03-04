@@ -27,6 +27,114 @@ function calcPcs(item, product) {
   return item.quantity;
 }
 
+// ─── WEIGHING MODAL (Kalkulator Timbangan Sembako) ──────────────────────────
+function WeighingModal({ product, onClose, onConfirm }) {
+  const [tab, setTab] = useState('quick'); // 'quick', 'custom', 'nominal'
+  const [customVal, setCustomVal] = useState('');
+  const [customUnit, setCustomUnit] = useState('kg'); // 'kg', 'ons', 'gram'
+  const [nominalVal, setNominalVal] = useState('');
+
+  const priceKg = product.price_kg || 0;
+
+  // Calculate final Kg and Subtotal
+  let finalKg = 0;
+  if (tab === 'quick' || tab === 'custom') {
+    let v = parseFloat(customVal) || 0;
+    if (customUnit === 'ons') v = v / 10;
+    else if (customUnit === 'gram') v = v / 1000;
+    finalKg = v;
+  } else if (tab === 'nominal') {
+    let v = parseFloat(nominalVal) || 0;
+    finalKg = priceKg > 0 ? (v / priceKg) : 0;
+  }
+
+  const handleQuick = (v, u) => {
+    setTab('custom');
+    setCustomVal(String(v));
+    setCustomUnit(u);
+  };
+  
+  const isInvalid = finalKg <= 0 || isNaN(finalKg);
+  const inputStyle = { width: '100%', padding: '12px 14px', borderRadius: 10, border: `1px solid ${T.border2}`, background: T.bg, color: T.text, fontFamily: 'JetBrains Mono, monospace', fontSize: 16, outline: 'none' };
+  
+  const btnStyle = (active) => ({ flex: 1, padding: '10px 0', borderRadius: 10, fontSize: 11, fontWeight: 700, fontFamily: 'Syne, sans-serif', cursor: 'pointer', border: `1.5px solid ${active ? T.purple : T.border2}`, background: active ? T.purple + '10' : T.bg, color: active ? T.purple : T.sub, transition: 'all 0.2s', textAlign: 'center' });
+
+  return (
+    <div onClick={(e) => e.target === e.currentTarget && onClose()} style={{ position: 'fixed', inset: 0, zIndex: 999, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Syne, sans-serif' }}>
+       <style>{`@keyframes modalPop { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }`}</style>
+       <div style={{ width: 440, background: T.surface, borderRadius: 24, padding: 24, boxShadow: '0 20px 40px rgba(0,0,0,0.4)', animation: 'modalPop 0.25s cubic-bezier(0.16,1,0.3,1) both' }}>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+             <div>
+                <p style={{ fontSize: 9, fontWeight: 800, color: T.purple, textTransform: 'uppercase', letterSpacing: '0.12em', padding: '2px 8px', background: T.purple + '15', borderRadius: 6, display: 'inline-block', marginBottom: 8 }}>Kalkulator Timbangan</p>
+                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: T.text }}>{product.name}</h3>
+                <p style={{ fontSize: 12, color: T.sub, marginTop: 4, fontFamily: 'JetBrains Mono, monospace' }}>{fmt(priceKg)} <span style={{fontSize: 10}}>/ Kg</span></p>
+             </div>
+             <button onClick={onClose} style={{ border: 'none', background: T.border2, width: 28, height: 28, borderRadius: '50%', color: T.sub, cursor: 'pointer', fontWeight: 800 }}>×</button>
+          </div>
+
+          {/* Menus */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+             <button onClick={() => setTab('quick')}   style={btnStyle(tab === 'quick')}>Cepat</button>
+             <button onClick={() => setTab('custom')}  style={btnStyle(tab === 'custom')}>Ketik Bebas</button>
+             <button onClick={() => setTab('nominal')} style={btnStyle(tab === 'nominal')}>Nominal Uang</button>
+          </div>
+
+          {/* CONTENT QUICK */}
+          {tab === 'quick' && (
+             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+                <button onClick={() => handleQuick(1, 'kg')} style={{ padding:'12px', borderRadius: 12, border: `1px solid ${T.border2}`, background: T.bg, color: T.text, fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily:'JetBrains Mono, monospace' }}>1 Kg</button>
+                <button onClick={() => handleQuick(0.5, 'kg')} style={{ padding:'12px', borderRadius: 12, border: `1px solid ${T.border2}`, background: T.bg, color: T.text, fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily:'JetBrains Mono, monospace' }}>1/2 Kg <span style={{fontSize: 9, color:T.muted}}>(0.5)</span></button>
+                <button onClick={() => handleQuick(0.25, 'kg')} style={{ padding:'12px', borderRadius: 12, border: `1px solid ${T.border2}`, background: T.bg, color: T.text, fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily:'JetBrains Mono, monospace' }}>1/4 Kg <span style={{fontSize: 9, color:T.muted}}>(0.25)</span></button>
+                <button onClick={() => handleQuick(1, 'ons')} style={{ padding:'12px', borderRadius: 12, border: `1px solid ${T.border2}`, background: T.bg, color: T.text, fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily:'JetBrains Mono, monospace' }}>1 Ons <span style={{fontSize: 9, color:T.muted}}>(0.1)</span></button>
+             </div>
+          )}
+
+          {/* CONTENT CUSTOM */}
+          {tab === 'custom' && (
+             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10, marginBottom: 20 }}>
+                <input type="number" step="0.01" value={customVal} onChange={e => setCustomVal(e.target.value)} placeholder="0.0" style={inputStyle} autoFocus />
+                <select value={customUnit} onChange={e => setCustomUnit(e.target.value)} style={{...inputStyle, cursor: 'pointer'}}>
+                   <option value="kg">Kg</option>
+                   <option value="ons">Ons</option>
+                   <option value="gram">Gram</option>
+                </select>
+             </div>
+          )}
+
+          {/* CONTENT NOMINAL */}
+          {tab === 'nominal' && (
+             <div style={{ marginBottom: 20, position:'relative' }}>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: T.muted, textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.1em' }}>Pembeli Bawa Uang (Rp)</label>
+                <span style={{ position: 'absolute', left: 14, top: 40, color: T.muted, fontSize: 14, fontWeight: 800 }}>Rp</span>
+                <input type="number" min="0" value={nominalVal} onChange={e => setNominalVal(e.target.value)} placeholder="10000" style={{...inputStyle, paddingLeft: 40}} autoFocus />
+             </div>
+          )}
+
+          {/* SUMMARY BOX */}
+          <div style={{ padding: 16, borderRadius: 16, background: finalKg > 0 ? T.purple + '10' : T.bg, border: `1px dashed ${finalKg > 0 ? T.purple + '40' : T.border2}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+             <div>
+                <p style={{ fontSize: 10, color: T.sub, fontWeight: 700, textTransform: 'uppercase', letterSpacing:'0.05em' }}>Otomatis Terhitung</p>
+                <p style={{ fontSize: 24, fontWeight: 900, color: finalKg > 0 ? T.purple : T.muted, fontFamily: 'JetBrains Mono, monospace' }}>{finalKg > 0 ? finalKg.toFixed(3).replace(/\.?0+$/, '') : '0'} <span style={{fontSize: 14}}>Kg</span></p>
+             </div>
+             <div style={{ textAlign: 'right' }}>
+                <p style={{ fontSize: 10, color: T.sub, fontWeight: 700, textTransform: 'uppercase', letterSpacing:'0.05em' }}>Harga Akhir</p>
+                <p style={{ fontSize: 16, fontWeight: 900, color: finalKg > 0 ? T.text : T.muted, fontFamily: 'JetBrains Mono, monospace' }}>{fmt(finalKg * priceKg)}</p>
+             </div>
+          </div>
+
+          <button 
+             onClick={() => onConfirm(finalKg)}
+             disabled={isInvalid}
+             style={{ width: '100%', padding: '16px', borderRadius: 14, border: 'none', background: isInvalid ? T.border2 : T.purple, color: isInvalid ? T.muted : '#fff', fontWeight: 800, fontSize: 14, fontFamily:'Syne, sans-serif', cursor: isInvalid ? 'not-allowed' : 'pointer', transition: 'all 0.2s', boxShadow: isInvalid ? 'none' : `0 8px 24px ${T.purple}40` }}
+          >
+             + Masukkan ke Keranjang
+          </button>
+       </div>
+    </div>
+  );
+}
+
 // ─── PRODUCT ITEM ─────────────────────────────────────────────────────────────
 function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef }) {
   const [showManual, setShowManual] = useState(false);
@@ -300,6 +408,7 @@ function Cashier() {
   const [searchTerm, setSearchTerm]                 = useState('');
   const [cart, setCart]                             = useState([]);
   const [showPayment, setShowPayment]               = useState(false);
+  const [weighingProduct, setWeighingProduct]       = useState(null); // the product to weigh
   const [loading, setLoading]                       = useState(false);
   const [loadingMore, setLoadingMore]               = useState(false);
   const [hasMore, setHasMore]                       = useState(true);
@@ -378,44 +487,30 @@ function Cashier() {
     const price = product[u.priceKey];
     if (!price || price <= 0) return;
 
-    // Determine quantity to add
-    let qtyToAdd = 1;
+    // Use Weighing Scale Modal for KG products
     if (unit === 'kg') {
-      const inputKg = window.prompt(`Masukkan berat Kg untuk ${product.name}:`, "1.0");
-      if (inputKg === null) return; // User cancelled
-      qtyToAdd = parseFloat(inputKg);
-      if (isNaN(qtyToAdd) || qtyToAdd <= 0) {
-        showToast('error', 'Masukkan jumlah berat Kg yang valid.');
-        return;
-      }
+      setWeighingProduct(product);
+      return;
     }
 
     const pp = product.pcs_per_pack || 1;
     const pd = product.pack_per_dus || 1;
     let pcsNeeded = 1;
-
-    // Kg unit uses weight-based model, Pcs uses integer model
-    if (unit === 'kg') {
-      const currentKgInCart = calcCartKg(product.id);
-      if (currentKgInCart + qtyToAdd > (product.stock_kg || 0)) {
-        showToast('error', `Stok Kg tidak mencukupi! Tersisa: ${product.stock_kg || 0} Kg (di keranjang: ${currentKgInCart} Kg)`);
-        return;
-      }
-    } else {
-      if (unit === 'pack') pcsNeeded = pp;
-      if (unit === 'dus')  pcsNeeded = pd * pp;
-      const currentPcsInCart = calcCartPcs(product.id);
-      if (currentPcsInCart + pcsNeeded > (product.stock || 0)) {
-        showToast('error', `Stok tidak mencukupi! Tersisa: ${product.stock || 0} Pcs (di keranjang: ${currentPcsInCart} Pcs)`);
-        return;
-      }
+    
+    // For non-kg
+    if (unit === 'pack') pcsNeeded = pp;
+    if (unit === 'dus')  pcsNeeded = pd * pp;
+    const currentPcsInCart = calcCartPcs(product.id);
+    if (currentPcsInCart + pcsNeeded > (product.stock || 0)) {
+       showToast('error', `Stok tidak mencukupi! Tersisa: ${product.stock || 0} Pcs (di keranjang: ${currentPcsInCart} Pcs)`);
+       return;
     }
 
-    const existing = cart.find(item => item.product_id === product.id && item.unit === unit && unit !== 'kg'); // DON'T merge kg items so we can distinguish distinct weights, but merging is fine if identical price
-    if (existing && unit !== 'kg') {
+    const existing = cart.find(item => item.product_id === product.id && item.unit === unit);
+    if (existing) {
       setCart(cart.map(item =>
         item.product_id === product.id && item.unit === unit
-          ? { ...item, quantity: item.quantity + qtyToAdd, subtotal: (item.quantity + qtyToAdd) * price }
+          ? { ...item, quantity: item.quantity + 1, subtotal: (item.quantity + 1) * price }
           : item
       ));
     } else {
@@ -424,11 +519,28 @@ function Cashier() {
         product_id: product.id,
         name: product.name,
         unit, price,
-        quantity: qtyToAdd,
-        subtotal: price * qtyToAdd,
+        quantity: 1,
+        subtotal: price * 1,
       }]);
     }
-    // Do NOT reset searchTerm — keep the user's search active
+  };
+
+  const addKgToCartConfirm = (product, kgQty) => {
+    const currentKgInCart = calcCartKg(product.id);
+    if (currentKgInCart + kgQty > (product.stock_kg || 0)) {
+       showToast('error', `Stok Kg tidak mencukupi! Tersisa: ${product.stock_kg || 0} Kg (di keranjang: ${currentKgInCart} Kg)`);
+       return;
+    }
+    
+    setCart([...cart, {
+       id: Date.now() + Math.random(),
+       product_id: product.id,
+       name: product.name,
+       unit: 'kg', price: product.price_kg,
+       quantity: kgQty,
+       subtotal: product.price_kg * kgQty,
+    }]);
+    setWeighingProduct(null);
   };
 
   const addManualToCart = (product, { price, quantity, unit }) => {
@@ -825,6 +937,15 @@ function Cashier() {
           total={total}
           onClose={() => setShowPayment(false)}
           onConfirm={handlePayment}
+        />
+      )}
+
+      {/* WEIGHING MODAL */}
+      {weighingProduct && (
+        <WeighingModal 
+          product={weighingProduct}
+          onClose={() => setWeighingProduct(null)}
+          onConfirm={(kgQty) => addKgToCartConfirm(weighingProduct, kgQty)}
         />
       )}
     </>

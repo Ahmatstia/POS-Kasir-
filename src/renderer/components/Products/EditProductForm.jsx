@@ -120,12 +120,33 @@ function EditProductForm({ productId, onClose, onSuccess }) {
         </div>
 
         {/* Sell per unit */}
-        <Field label="Jual Per Satuan" hint="mengontrol tombol di kasir">
-          <select value={sellPerUnit} onChange={e => setSellPerUnit(e.target.value)}
-            className="form-field" style={{ ...fieldStyle, cursor: 'pointer' }}>
-            {SELL_UNIT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-        </Field>
+        <div style={{ padding: '2px 0 0 0' }}>
+           <Field label="Tipe Produk" hint="menentukan cara kasir melayani (bulat / desimal timbangan)">
+             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+               {SELL_UNIT_OPTIONS.map(o => {
+                  const isActive = sellPerUnit === o.value;
+                  const color = o.value === 'kg' ? T.purple : T.blue;
+                  return (
+                    <button
+                      key={o.value}
+                      type="button"
+                      onClick={() => setSellPerUnit(o.value)}
+                      style={{
+                        padding: '12px', borderRadius: 12, cursor: 'pointer',
+                        border: `1.5px solid ${isActive ? color : T.border2}`,
+                        background: isActive ? color + '10' : T.bg,
+                        color: isActive ? color : T.sub,
+                        fontFamily: 'Syne, sans-serif', fontSize: 11, fontWeight: 700,
+                        transition: 'all 0.2s', textAlign: 'left'
+                      }}
+                    >
+                      {o.label}
+                    </button>
+                  );
+               })}
+             </div>
+           </Field>
+        </div>
 
         {/* Conversion */}
         {sellPerUnit !== 'kg' && (
@@ -211,18 +232,15 @@ function EditProductForm({ productId, onClose, onSuccess }) {
 
         {/* Min stock + notes */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12 }}>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {(sellPerUnit !== 'kg') && (
+          {sellPerUnit !== 'kg' ? (
               <Field label="Min Stok (Pcs)">
                 <input type="number" value={minStock} onChange={e => setMinStock(e.target.value)} min="0" placeholder="0" className="form-field" style={{ ...fieldStyle, fontFamily: 'JetBrains Mono, monospace' }} />
               </Field>
-            )}
-            {(sellPerUnit === 'kg' || sellPerUnit === 'all') && (
+            ) : (
               <Field label="Min Stok (Kg)">
                 <input type="number" step="0.01" value={minStockKg} onChange={e => setMinStockKg(e.target.value)} min="0" placeholder="0.0" className="form-field" style={{ ...fieldStyle, fontFamily: 'JetBrains Mono, monospace' }} />
               </Field>
-            )}
-          </div>
+          )}
           <Field label="Keterangan">
             <input type="text" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Opsional…" className="form-field" style={fieldStyle} />
           </Field>

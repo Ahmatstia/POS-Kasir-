@@ -11,7 +11,10 @@ import { T } from "../../theme";
 const fmt = (n) => `Rp ${Number(n || 0).toLocaleString("id-ID")}`;
 const fmtDt = (str) => {
   if (!str) return '-';
-  const d = new Date(str);
+  // created_at disimpan sebagai waktu lokal WIB, parse langsung tanpa konversi
+  // Ganti spasi dengan 'T' agar standard ISO format (Safari-compatible)
+  const normalized = typeof str === 'string' ? str.replace(' ', 'T') : str;
+  const d = new Date(normalized);
   if (isNaN(d.getTime())) return String(str);
   return format(d, 'dd MMM yyyy · HH:mm', { locale: id });
 };

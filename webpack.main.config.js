@@ -9,6 +9,6 @@ module.exports = {
     rules: require('./webpack.rules'),
   },
   externals: {
-    sqlite3: 'commonjs sqlite3',
+    // sqlite3 removed from here to allow webpack-asset-relocator-loader to handle it
   },
 };

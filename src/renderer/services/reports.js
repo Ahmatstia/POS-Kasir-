@@ -11,7 +11,7 @@ export async function getSalesReport(startDate, endDate) {
         COALESCE(SUM(change_amount), 0) as total_change,
         COUNT(DISTINCT strftime('%Y-%m-%d', created_at)) as active_days
       FROM transactions 
-      WHERE date(created_at, 'localtime') BETWEEN date(?) AND date(?)
+      WHERE date(created_at) BETWEEN date(?) AND date(?)
         AND status = 'COMPLETED'
     `, [startDate, endDate]);
 
@@ -22,9 +22,9 @@ export async function getSalesReport(startDate, endDate) {
         COUNT(*) as transaction_count,
         COALESCE(SUM(total_amount), 0) as total
       FROM transactions 
-      WHERE date(created_at, 'localtime') BETWEEN date(?) AND date(?)
+      WHERE date(created_at) BETWEEN date(?) AND date(?)
         AND status = 'COMPLETED'
-      GROUP BY date(created_at, 'localtime')
+      GROUP BY date(created_at)
       ORDER BY date ASC
     `, [startDate, endDate]);
 
@@ -35,7 +35,7 @@ export async function getSalesReport(startDate, endDate) {
         COUNT(*) as count,
         COALESCE(SUM(total_amount), 0) as total
       FROM transactions 
-      WHERE date(created_at, 'localtime') BETWEEN date(?) AND date(?)
+      WHERE date(created_at) BETWEEN date(?) AND date(?)
         AND status = 'COMPLETED'
       GROUP BY payment_method
     `, [startDate, endDate]);
@@ -50,7 +50,7 @@ export async function getSalesReport(startDate, endDate) {
         COUNT(DISTINCT ti.transaction_id) as times_sold
       FROM transaction_items ti
       JOIN transactions t ON ti.transaction_id = t.id
-      WHERE date(t.created_at, 'localtime') BETWEEN date(?) AND date(?)
+      WHERE date(t.created_at) BETWEEN date(?) AND date(?)
         AND t.status = 'COMPLETED'
       GROUP BY ti.product_id, ti.product_name
       ORDER BY total_quantity DESC
@@ -81,7 +81,7 @@ export async function getSalesReport(startDate, endDate) {
         COUNT(*) as transaction_count,
         COALESCE(SUM(total_amount), 0) as total
       FROM transactions 
-      WHERE date(created_at, 'localtime') BETWEEN date(?) AND date(?)
+      WHERE date(created_at) BETWEEN date(?) AND date(?)
         AND status = 'COMPLETED'
       GROUP BY hour
       ORDER BY hour ASC

@@ -1,5 +1,19 @@
 import { deductStockFIFO, deductStockFIFOKg } from "./inventory";
 
+// ─── DATETIME HELPER ─────────────────────────────────────────────────────────
+// Menghasilkan datetime string waktu lokal (WIB) format: 'YYYY-MM-DD HH:MM:SS'
+// Lebih akurat daripada CURRENT_TIMESTAMP SQLite yang selalu UTC
+export function getLocalDatetimeStr() {
+  const now = new Date();
+  const y  = now.getFullYear();
+  const mo = String(now.getMonth() + 1).padStart(2, '0');
+  const d  = String(now.getDate()).padStart(2, '0');
+  const h  = String(now.getHours()).padStart(2, '0');
+  const mi = String(now.getMinutes()).padStart(2, '0');
+  const s  = String(now.getSeconds()).padStart(2, '0');
+  return `${y}-${mo}-${d} ${h}:${mi}:${s}`;
+}
+
 // ─── TRANSACTIONS SERVICE ────────────────────────────────────────────────────
 
 export async function createTransaction(transactionData) {
@@ -15,26 +29,24 @@ export async function createTransaction(transactionData) {
     notes,
   } = transactionData;
 
-  // Generate invoice number (timestamp-based for uniqueness)
-  const date = new Date();
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  const h = String(date.getHours()).padStart(2, "0");
-  const mi = String(date.getMinutes()).padStart(2, "0");
-  const s = String(date.getSeconds()).padStart(2, "0");
+  // Generate invoice number (timestamp-based for uniqueness, waktu lokal WIB)
+  const nowStr = getLocalDatetimeStr(); // format: 'YYYY-MM-DD HH:MM:SS'
+  const [datePart, timePart] = nowStr.split(' ');
+  const [y, m, d] = datePart.split('-');
+  const [h, mi, s] = timePart.split(':');
   const rand = Math.floor(Math.random() * 1000).toString().padStart(3, "0");
   const invoiceNo = `INV-${y}${m}${d}${h}${mi}${s}-${rand}`;
+  const createdAt = nowStr; // waktu lokal WIB untuk disimpan ke DB
 
   try {
     await window.electronAPI.run("BEGIN TRANSACTION");
 
-    // Insert transaction header
+    // Insert transaction header (dengan created_at waktu lokal WIB)
     const txResult = await window.electronAPI.run(
       `INSERT INTO transactions
-         (invoice_no, subtotal, discount, total_amount, payment_amount, change_amount, payment_method, customer_name, notes, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'COMPLETED')`,
-      [invoiceNo, subtotal, discount || 0, total, payment, change, paymentMethod, customerName || "", notes || ""]
+         (invoice_no, subtotal, discount, total_amount, payment_amount, change_amount, payment_method, customer_name, notes, status, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'COMPLETED', ?)`,
+      [invoiceNo, subtotal, discount || 0, total, payment, change, paymentMethod, customerName || "", notes || "", createdAt]
     );
     const transactionId = txResult.lastID;
 
@@ -87,10 +99,11 @@ export async function getTransactions(limit = 100, startDate = null, endDate = n
     let params = [];
 
     if (startDate && endDate) {
-      query += " WHERE date(created_at, 'localtime') BETWEEN date(?) AND date(?)";
+      // created_at kini disimpan sebagai waktu lokal, tidak perlu konversi 'localtime'
+      query += " WHERE date(created_at) BETWEEN date(?) AND date(?)";
       params.push(startDate, endDate);
     } else if (startDate) {
-      query += " WHERE date(created_at, 'localtime') >= date(?)";
+      query += " WHERE date(created_at) >= date(?)";
       params.push(startDate);
     }
 

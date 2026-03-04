@@ -36,7 +36,9 @@ const fmt = (n) => `Rp ${Number(n || 0).toLocaleString("id-ID")}`;
 const fmtNum = (n) => Number(n || 0).toLocaleString("id-ID");
 const fmtD = (str) => {
   if (!str) return '-';
-  const d = new Date(str);
+  // created_at kini disimpan sebagai waktu lokal WIB, parse langsung
+  const normalized = typeof str === 'string' ? str.replace(' ', 'T') : str;
+  const d = new Date(normalized);
   if (isNaN(d.getTime())) return String(str);
   return format(d, 'dd MMM yyyy', { locale: id });
 };

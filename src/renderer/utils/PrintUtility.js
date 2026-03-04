@@ -1,8 +1,11 @@
 // Utility untuk mencetak struk
 export const printReceipt = (transaction, items) => {
-  // Format tanggal
-  const date = new Date(transaction.created_at);
-  const formattedDate = date.toLocaleDateString('id-ID', {
+  // Format tanggal - created_at disimpan sebagai waktu lokal WIB
+  // Ganti spasi dengan 'T' agar browser tidak salah parse sebagai UTC
+  const rawDt = transaction.created_at || '';
+  const normalized = typeof rawDt === 'string' ? rawDt.replace(' ', 'T') : rawDt;
+  const date = new Date(normalized);
+  const formattedDate = isNaN(date.getTime()) ? rawDt : date.toLocaleDateString('id-ID', {
     day: '2-digit',
     month: 'long',
     year: 'numeric',
@@ -181,8 +184,11 @@ export const printReceipt = (transaction, items) => {
 
 // Fungsi untuk cetak struk thermal (ukuran kecil)
 export const printThermalReceipt = (transaction, items) => {
-  const date = new Date(transaction.created_at);
-  const formattedDate = date.toLocaleDateString('id-ID', {
+  // Format tanggal - created_at disimpan sebagai waktu lokal WIB
+  const rawDt = transaction.created_at || '';
+  const normalized = typeof rawDt === 'string' ? rawDt.replace(' ', 'T') : rawDt;
+  const date = new Date(normalized);
+  const formattedDate = isNaN(date.getTime()) ? rawDt : date.toLocaleDateString('id-ID', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',

@@ -1,36 +1,47 @@
 // Fungsi untuk mendapatkan data dashboard
 export async function getDashboardData() {
   try {
-    // Hitung total penjualan hari ini
+    // Hitung tanggal lokal (WIB) sebagai string untuk dipakai di query
     const today = new Date();
-    const startOfDay = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')} 00:00:00`;
-    const endOfDay = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')} 23:59:59`;
+    const y  = today.getFullYear();
+    const mo = String(today.getMonth() + 1).padStart(2, '0');
+    const d  = String(today.getDate()).padStart(2, '0');
+    const todayStr   = `${y}-${mo}-${d}`;          // 'YYYY-MM-DD'
+    const yearMonStr = `${y}-${mo}`;               // 'YYYY-MM'
 
-    // Query untuk total penjualan hari ini
+    // Tanggal 7 hari lalu
+    const d7 = new Date(today);
+    d7.setDate(today.getDate() - 6);
+    const d7y  = d7.getFullYear();
+    const d7mo = String(d7.getMonth() + 1).padStart(2, '0');
+    const d7d  = String(d7.getDate()).padStart(2, '0');
+    const sevenDaysAgo = `${d7y}-${d7mo}-${d7d}`;
+
+    // Query total penjualan hari ini
     const todaySales = await window.electronAPI.query(`
       SELECT COALESCE(SUM(total_amount), 0) as total 
       FROM transactions 
-      WHERE date(created_at, 'localtime') = date('now', 'localtime')
+      WHERE date(created_at) = ?
         AND status = 'COMPLETED'
-    `);
+    `, [todayStr]);
 
-    // Query untuk jumlah transaksi hari ini
+    // Query jumlah transaksi hari ini
     const todayTransactions = await window.electronAPI.query(`
       SELECT COUNT(*) as count 
       FROM transactions 
-      WHERE date(created_at, 'localtime') = date('now', 'localtime')
+      WHERE date(created_at) = ?
         AND status = 'COMPLETED'
-    `);
+    `, [todayStr]);
 
-    // Query untuk total penjualan bulan ini
+    // Query total penjualan bulan ini
     const monthSales = await window.electronAPI.query(`
       SELECT COALESCE(SUM(total_amount), 0) as total 
       FROM transactions 
-      WHERE strftime('%Y-%m', created_at, 'localtime') = strftime('%Y-%m', 'now', 'localtime')
+      WHERE strftime('%Y-%m', created_at) = ?
         AND status = 'COMPLETED'
-    `);
+    `, [yearMonStr]);
 
-    // Query untuk produk stok menipis (dari tabel stocks)
+    // Query produk stok menipis
     const lowStock = await window.electronAPI.query(`
       SELECT p.id, p.name, p.min_stock, p.min_stock_kg, p.sell_per_unit,
              COALESCE(SUM(s.quantity), 0) as total_stock,
@@ -47,7 +58,7 @@ export async function getDashboardData() {
       LIMIT 10
     `);
 
-    // Query untuk 5 produk terlaris bulan ini (localtime)
+    // Query 5 produk terlaris bulan ini
     const topProducts = await window.electronAPI.query(`
       SELECT 
         ti.product_id,
@@ -56,31 +67,33 @@ export async function getDashboardData() {
         SUM(ti.subtotal) as total_omzet
       FROM transaction_items ti
       JOIN transactions t ON ti.transaction_id = t.id
-      WHERE strftime('%Y-%m', t.created_at, 'localtime') = strftime('%Y-%m', 'now', 'localtime')
+      WHERE strftime('%Y-%m', t.created_at) = ?
         AND t.status = 'COMPLETED'
       GROUP BY ti.product_id, ti.product_name
       ORDER BY total_terjual DESC
       LIMIT 5
-    `);
+    `, [yearMonStr]);
 
-    // Query untuk penjualan 7 hari terakhir (Optimized single query with localtime)
+    // Query penjualan 7 hari terakhir
     const dailySalesRaw = await window.electronAPI.query(`
       SELECT 
-        date(created_at, 'localtime') as date,
+        date(created_at) as date,
         COALESCE(SUM(total_amount), 0) as total
       FROM transactions 
-      WHERE date(created_at, 'localtime') >= date('now', 'localtime', '-6 days')
+      WHERE date(created_at) >= ?
         AND status = 'COMPLETED'
-      GROUP BY date(created_at, 'localtime')
+      GROUP BY date(created_at)
       ORDER BY date ASC
-    `);
+    `, [sevenDaysAgo]);
 
     // Fill gaps in 7 days data if any
     const last7Days = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      last7Days.push(d.toISOString().split('T')[0]);
+      // Use local date format YYYY-MM-DD
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      last7Days.push(dateStr);
     }
 
     const dailySales = last7Days.map(dateStr => {

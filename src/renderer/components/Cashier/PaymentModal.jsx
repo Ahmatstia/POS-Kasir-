@@ -49,7 +49,7 @@ function PaymentModal({ total, onClose, onConfirm }) {
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const inputRef = useRef(null);
 
-  const paymentNum = parseInt(payment) || 0;
+  const paymentNum = Number(payment) || 0;
   const change     = paymentNum - total;
   const isValid    = paymentNum >= total;
   const shortfall  = isValid ? 0 : total - paymentNum;

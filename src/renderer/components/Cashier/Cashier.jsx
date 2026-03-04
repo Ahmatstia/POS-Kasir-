@@ -34,8 +34,12 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef }) {
   const [manualQty, setManualQty]   = useState(1);
   const [manualUnit, setManualUnit] = useState('pcs');
 
-  const outOfStock = (product.stock || 0) <= 0;
-  const lowStock   = !outOfStock && (product.stock || 0) <= (product.min_stock || 0);
+  // Tentukan status stok berdasarkan unit jual
+  const isKgProduct = product.sell_per_unit === 'kg';
+  const currentStock = isKgProduct ? (product.stock_kg || 0) : (product.stock || 0);
+  const minStock     = isKgProduct ? (product.min_stock_kg || 0) : (product.min_stock || 0);
+  const outOfStock = currentStock <= 0;
+  const lowStock   = !outOfStock && currentStock <= minStock;
 
   const handleManualAdd = () => {
     const price = parseFloat(manualPrice);
@@ -78,7 +82,7 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef }) {
               fontSize: 10, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
               color: outOfStock ? T.red : lowStock ? T.accent : T.green,
             }}>
-              {outOfStock ? 'HABIS' : `${product.stock} stok`}
+            {outOfStock ? 'HABIS' : `${currentStock}${isKgProduct ? ' kg' : ' stok'}`}
             </span>
             <span style={{
               fontSize: 9, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
@@ -150,14 +154,13 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef }) {
               </label>
               <input
                 type="number"
+                min="0"
                 placeholder="0"
                 value={manualPrice}
                 onChange={e => setManualPrice(e.target.value)}
                 autoFocus
                 style={inputStyle}
               />
-              <input type="number" min="0" value={manualPrice} onChange={e => setManualPrice(e.target.value)}
-                placeholder="0" style={inputStyle} autoFocus />
             </div>
             <div>
               <label style={{ display: 'block', fontSize: 9, fontWeight: 700, color: T.muted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 5 }}>

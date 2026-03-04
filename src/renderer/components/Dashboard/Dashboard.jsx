@@ -16,7 +16,9 @@ const fmtShort = (n) => {
 };
 const fmtDate = (s) => {
   if (!s) return '-';
-  const d = new Date(s);
+  // created_at kini disimpan sebagai waktu lokal WIB, parse langsung
+  const normalized = typeof s === 'string' ? s.replace(' ', 'T') : s;
+  const d = new Date(normalized);
   if (isNaN(d.getTime())) return s;
   return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
 };

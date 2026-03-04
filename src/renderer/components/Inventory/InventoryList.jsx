@@ -23,7 +23,7 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
 
   const pp = product.pcs_per_pack || 1;
   const pd = product.pack_per_dus || 1;
-  const isKg = product?.sell_per_unit === 'kg' || product?.sell_per_unit === 'all';
+  const isKg = product?.sell_per_unit === 'kg';
   const isPcsOnly = product?.sell_per_unit === 'pcs' || product?.sell_per_unit === 'pack' || product?.sell_per_unit === 'dus';
   
   const dusVal  = parseInt(qtyDus)  || 0;
@@ -140,7 +140,7 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
                       placeholder="0.00" style={{ ...inp, fontSize: 18, padding: '14px' }} autoFocus />
                   </div>
                 )}
-                {(!isKg || product?.sell_per_unit === 'all') && (
+                {(!isKg) && (
                   <>
                     <div>
                       <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: pd > 1 ? T.accent : T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
@@ -256,7 +256,7 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
 
 // ─── ADJUST MODAL ─────────────────────────────────────────────────────────────
 function AdjustModal({ product, onClose, onSuccess, showToast }) {
-  const isKg = product?.sell_per_unit === 'kg' || product?.sell_per_unit === 'all';
+  const isKg = product?.sell_per_unit === 'kg';
   const currentBase = isKg ? (product.stock_kg || 0) : (product.stock || 0);
 
   const [newQty, setNewQty] = useState(String(currentBase));

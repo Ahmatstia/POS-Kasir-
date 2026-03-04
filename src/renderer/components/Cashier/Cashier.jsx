@@ -159,10 +159,10 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef }) {
     setManualQty(1);
   };
 
-  const availableUnits = UNITS.filter(u =>
-    (product.sell_per_unit === 'all' || product.sell_per_unit === u.key) &&
-    product[u.priceKey] > 0
-  );
+  const availableUnits = UNITS.filter(u => {
+    if (product.sell_per_unit === 'all') return u.key !== 'kg' && product[u.priceKey] > 0;
+    return product.sell_per_unit === u.key && product[u.priceKey] > 0;
+  });
 
   return (
     <div

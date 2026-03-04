@@ -266,14 +266,13 @@ function ProductForm({ onClose, onSuccess }) {
             <p style={{ fontSize: 9, fontWeight: 700, color: errors.price ? T.red : T.muted, textTransform: 'uppercase' }}>Harga Jual</p>
             {errors.price && <p style={{ fontSize: 10, color: T.red, fontWeight: 600 }}>⚠ {errors.price}</p>}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: sellPerUnit === 'all' ? 'repeat(4, 1fr)' : sellPerUnit === 'kg' ? '1fr' : 'repeat(3, 1fr)', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: sellPerUnit === 'kg' ? '1fr' : 'repeat(3, 1fr)', gap: 8 }}>
             {[
               { label: 'Pcs',  val: pricePcs,  set: setPricePcs,  col: T.blue   },
               { label: 'Pack', val: pricePack, set: setPricePack, col: T.green  },
               { label: 'Dus',  val: priceDus,  set: setPriceDus,  col: T.accent },
               { label: 'Kg',   val: priceKg,   set: setPriceKg,   col: T.purple },
             ].filter(u => {
-               if (sellPerUnit === 'all') return true;
                if (sellPerUnit === 'kg') return u.label === 'Kg';
                return u.label !== 'Kg';
             }).map(u => (

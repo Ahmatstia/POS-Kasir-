@@ -437,17 +437,32 @@ function InventoryList() {
   const filtered = products.filter(p => {
     if (searchTerm && !p.name?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     if (filterCat && p.category_id !== parseInt(filterCat)) return false;
-    if (filterStatus === 'habis'   && (p.stock || 0) > 0) return false;
-    if (filterStatus === 'menipis' && ((p.stock || 0) === 0 || (p.stock || 0) > (p.min_stock || 0))) return false;
-    if (filterStatus === 'aman'    && (p.stock || 0) <= (p.min_stock || 0)) return false;
+    
+    const isKg = p.sell_per_unit === 'kg';
+    const cStock = isKg ? (p.stock_kg || 0) : (p.stock || 0);
+    const cMin = isKg ? (p.min_stock_kg || 0) : (p.min_stock || 0);
+
+    if (filterStatus === 'habis'   && cStock > 0) return false;
+    if (filterStatus === 'menipis' && (cStock === 0 || cStock > cMin)) return false;
+    if (filterStatus === 'aman'    && cStock <= cMin) return false;
     return true;
   });
 
   // Stats
   const totalValue = products.reduce((sum, p) => sum + (p.total_value || 0), 0);
-  const aman    = products.filter(p => (p.stock || 0) > (p.min_stock || 0)).length;
-  const menipis = products.filter(p => (p.stock || 0) > 0 && (p.stock || 0) <= (p.min_stock || 0)).length;
-  const habis   = products.filter(p => (p.stock || 0) === 0).length;
+  const aman    = products.filter(p => {
+    const isKg = p.sell_per_unit === 'kg';
+    return isKg ? (p.stock_kg || 0) > (p.min_stock_kg || 0) : (p.stock || 0) > (p.min_stock || 0);
+  }).length;
+  const menipis = products.filter(p => {
+    const isKg = p.sell_per_unit === 'kg';
+    const s = isKg ? (p.stock_kg || 0) : (p.stock || 0);
+    const m = isKg ? (p.min_stock_kg || 0) : (p.min_stock || 0);
+    return s > 0 && s <= m;
+  }).length;
+  const habis   = products.filter(p => {
+    return p.sell_per_unit === 'kg' ? (p.stock_kg || 0) <= 0 : (p.stock || 0) <= 0;
+  }).length;
 
   if (loading) {
     return (

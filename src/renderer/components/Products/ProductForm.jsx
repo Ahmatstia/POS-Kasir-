@@ -191,21 +191,58 @@ function ProductForm({ onClose, onSuccess }) {
         </Field>
 
         {/* Conversion */}
-        <div style={{ padding: 14, background: T.border + '40', borderRadius: 12, border: `1px dashed ${T.border2}` }}>
-          <p style={{ fontSize: 9, fontWeight: 700, color: T.muted, textTransform: 'uppercase', marginBottom: 10 }}>Faktor Konversi Satuan</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <Field label="1 Pack = berapa Pcs?">
-              <input type="number" value={pcsPerPack} onChange={e => setPcsPerPack(e.target.value)} min="1" className="form-field" style={{ ...fieldStyle, fontFamily: 'JetBrains Mono, monospace' }} />
+        <div style={{ padding: 16, background: T.blue + '06', borderRadius: 14, border: `1px solid ${T.blue}20` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: T.blue, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Konversi Satuan (Grosir)</p>
+            <div style={{ padding: '2px 8px', borderRadius: 100, background: T.blue + '14', color: T.blue, fontSize: 9, fontWeight: 700 }}>
+              Base: Pcs
+            </div>
+          </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <Field label="1 Pack = Isi Berapa Pcs?">
+              <div style={{ position: 'relative' }}>
+                <input type="number" value={pcsPerPack} onChange={e => setPcsPerPack(e.target.value)} min="1" className="form-field" style={{ ...fieldStyle, fontFamily: 'JetBrains Mono, monospace', paddingRight: 40 }} />
+                <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: T.muted, fontWeight: 700 }}>Pcs</span>
+              </div>
             </Field>
-            <Field label="1 Dus = berapa Pack?">
-              <input type="number" value={packPerDus} onChange={e => setPackPerDus(e.target.value)} min="1" className="form-field" style={{ ...fieldStyle, fontFamily: 'JetBrains Mono, monospace' }} />
+            <Field label="1 Dus = Isi Berapa Pack?">
+              <div style={{ position: 'relative' }}>
+                <input type="number" value={packPerDus} onChange={e => setPackPerDus(e.target.value)} min="1" className="form-field" style={{ ...fieldStyle, fontFamily: 'JetBrains Mono, monospace', paddingRight: 45 }} />
+                <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: T.muted, fontWeight: 700 }}>Pack</span>
+              </div>
             </Field>
           </div>
-          {(Number(pcsPerPack) > 1 || Number(packPerDus) > 1) && (
-            <p style={{ fontSize: 10, color: T.sub, marginTop: 8, fontFamily: 'JetBrains Mono, monospace' }}>
-              1 Dus = {Number(packPerDus)} Pack = {Number(packPerDus) * Number(pcsPerPack)} Pcs
-            </p>
-          )}
+
+          {/* Visual Formula */}
+          <div style={{ 
+            marginTop: 16, padding: '10px 12px', borderRadius: 10, 
+            background: T.surface, border: `1px solid ${T.border2}`,
+            display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center'
+          }}>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: 8, color: T.muted, fontWeight: 700, marginBottom: 2 }}>1 DUS</p>
+              <p style={{ fontSize: 13, fontWeight: 800, color: T.text }}>= {Number(packPerDus)}</p>
+              <p style={{ fontSize: 8, color: T.sub }}>Pack</p>
+            </div>
+            <div style={{ color: T.muted, fontSize: 12 }}>×</div>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: 8, color: T.muted, fontWeight: 700, marginBottom: 2 }}>1 PACK</p>
+              <p style={{ fontSize: 13, fontWeight: 800, color: T.text }}>= {Number(pcsPerPack)}</p>
+              <p style={{ fontSize: 8, color: T.sub }}>Pcs</p>
+            </div>
+            <div style={{ color: T.accent, fontSize: 14, fontWeight: 800 }}>=</div>
+            <div style={{ textAlign: 'center', padding: '0 10px', borderLeft: `1px solid ${T.border}` }}>
+              <p style={{ fontSize: 8, color: T.accent, fontWeight: 700, marginBottom: 2 }}>TOTAL</p>
+              <p style={{ fontSize: 16, fontWeight: 900, color: T.accent, fontFamily: 'JetBrains Mono, monospace' }}>
+                {Number(packPerDus) * Number(pcsPerPack)}
+              </p>
+              <p style={{ fontSize: 8, color: T.accent, fontWeight: 700 }}>PCS / DUS</p>
+            </div>
+          </div>
+          <p style={{ fontSize: 9, color: T.muted, marginTop: 10, textAlign: 'center', fontStyle: 'italic' }}>
+            * Gunakan angka 1 jika produk tidak memiliki satuan tersebut.
+          </p>
         </div>
 
         {/* Prices */}

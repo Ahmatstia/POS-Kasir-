@@ -9,7 +9,8 @@ export async function getInventorySummary() {
         p.pcs_per_pack, p.pack_per_dus,
         p.price_pcs, p.price_pack, p.price_dus, p.price_kg,
         c.name as category_name, c.color as category_color,
-        COALESCE(SUM(s.quantity), 0) as stock
+        COALESCE(SUM(s.quantity), 0) as stock,
+        COALESCE(SUM(s.quantity * s.purchase_price), 0) as total_value
       FROM products p
       LEFT JOIN categories c ON c.id = p.category_id
       LEFT JOIN stocks s ON s.product_id = p.id AND s.is_active = 1

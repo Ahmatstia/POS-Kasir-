@@ -128,35 +128,38 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
               )}
 
               {/* Qty inputs */}
-              <div style={{ display: 'grid', gridTemplateColumns: `${pd > 1 ? '1fr 1fr ' : ''} 1fr`, gap: 10 }}>
-                {pd > 1 && (
-                  <div>
-                    <label style={{ display: 'block', fontSize: 9, fontWeight: 700, color: T.accent, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>
-                      Dus
-                    </label>
-                    <input type="number" min="0" value={qtyDus} onChange={e => { setQtyDus(e.target.value); setError(''); }}
-                      placeholder="0" style={inp} autoFocus />
-                    {dusVal > 0 && <p style={{ fontSize: 10, color: T.muted, marginTop: 4, fontFamily: 'JetBrains Mono, monospace' }}>= {dusVal * pd} Pack</p>}
-                  </div>
-                )}
-                {pp > 1 && (
-                  <div>
-                    <label style={{ display: 'block', fontSize: 9, fontWeight: 700, color: T.green, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>
-                      Pack
-                    </label>
-                    <input type="number" min="0" value={qtyPack} onChange={e => { setQtyPack(e.target.value); setError(''); }}
-                      placeholder="0" style={inp} autoFocus={pd <= 1} />
-                    {packVal > 0 && <p style={{ fontSize: 10, color: T.muted, marginTop: 4, fontFamily: 'JetBrains Mono, monospace' }}>= {packVal * pp} Pcs</p>}
-                  </div>
-                )}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 9, fontWeight: 700, color: pd > 1 ? T.accent : T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>
+                    Dus {pd <= 1 && <span style={{ color: T.muted, fontWeight: 400, textTransform: 'none' }}>(set:1)</span>}
+                  </label>
+                  <input type="number" min="0" value={qtyDus} onChange={e => { setQtyDus(e.target.value); setError(''); }}
+                    placeholder="0" style={{ ...inp, opacity: pd > 1 ? 1 : 0.5 }} disabled={pd <= 1} />
+                  {dusVal > 0 && <p style={{ fontSize: 10, color: T.muted, marginTop: 4, fontFamily: 'JetBrains Mono, monospace' }}>= {dusVal * pd} Pack</p>}
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 9, fontWeight: 700, color: pp > 1 ? T.green : T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>
+                    Pack {pp <= 1 && <span style={{ color: T.muted, fontWeight: 400, textTransform: 'none' }}>(set:1)</span>}
+                  </label>
+                  <input type="number" min="0" value={qtyPack} onChange={e => { setQtyPack(e.target.value); setError(''); }}
+                    placeholder="0" style={{ ...inp, opacity: pp > 1 ? 1 : 0.5 }} disabled={pp <= 1} />
+                  {packVal > 0 && <p style={{ fontSize: 10, color: T.muted, marginTop: 4, fontFamily: 'JetBrains Mono, monospace' }}>= {packVal * pp} Pcs</p>}
+                </div>
                 <div>
                   <label style={{ display: 'block', fontSize: 9, fontWeight: 700, color: T.blue, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>
-                    Pcs (Satuan)
+                    Pcs (Ecer)
                   </label>
                   <input type="number" min="0" value={qtyPcs} onChange={e => { setQtyPcs(e.target.value); setError(''); }}
-                    placeholder="0" style={inp} autoFocus={pp <= 1 && pd <= 1} />
+                    placeholder="0" style={inp} autoFocus />
                 </div>
               </div>
+
+              {/* Setup hint if all factors are 1 */}
+              {pd <= 1 && pp <= 1 && (
+                <p style={{ fontSize: 10, color: T.sub, textAlign: 'center', background: T.accent + '08', padding: '8px', borderRadius: 8, border: `1px dashed ${T.accent}30` }}>
+                  💡 Ingin input Grosir (Dus/Pack)? <span style={{ color: T.accent, fontWeight: 700 }}>Atur konversi</span> di halaman Produk.
+                </p>
+              )}
 
               {/* Total */}
               <div style={{
@@ -394,6 +397,7 @@ function InventoryList() {
   });
 
   // Stats
+  const totalValue = products.reduce((sum, p) => sum + (p.total_value || 0), 0);
   const aman    = products.filter(p => (p.stock || 0) > (p.min_stock || 0)).length;
   const menipis = products.filter(p => (p.stock || 0) > 0 && (p.stock || 0) <= (p.min_stock || 0)).length;
   const habis   = products.filter(p => (p.stock || 0) === 0).length;
@@ -436,20 +440,24 @@ function InventoryList() {
         </div>
 
         {/* ── STAT STRIP ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 18 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 18 }}>
           {[
             { label: 'Total Produk', value: products.length, color: T.blue },
+            { label: 'Nilai Aset',   value: fmt(totalValue), color: T.purple, isMoney: true },
             { label: 'Stok Aman',    value: aman,            color: T.green },
             { label: 'Stok Menipis', value: menipis,         color: T.accent },
             { label: 'Stok Habis',   value: habis,           color: T.red },
           ].map(s => (
             <div key={s.label} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: '14px 18px', cursor: 'pointer', transition: 'border-color 0.2s' }}
-              onClick={() => setFilterStatus(s.label === 'Total Produk' ? '' : s.label.toLowerCase().split(' ')[1])}
+              onClick={() => {
+                if (s.isMoney) return;
+                setFilterStatus(s.label === 'Total Produk' ? '' : s.label.toLowerCase().split(' ')[1]);
+              }}
               onMouseEnter={e => e.currentTarget.style.borderColor = s.color + '50'}
               onMouseLeave={e => e.currentTarget.style.borderColor = T.border}
             >
               <p style={{ fontSize: 9, fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>{s.label}</p>
-              <p style={{ fontSize: 26, fontWeight: 800, color: s.color, fontFamily: 'JetBrains Mono, monospace', lineHeight: 1 }}>{s.value}</p>
+              <p style={{ fontSize: s.isMoney ? 16 : 26, fontWeight: 800, color: s.color, fontFamily: 'JetBrains Mono, monospace', lineHeight: 1 }}>{s.value}</p>
             </div>
           ))}
         </div>

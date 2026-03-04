@@ -1,15 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-
-const T = {
-  surface: '#1A1B1E',
-  border:  '#2A2B2F',
-  text:    '#F0EDE6',
-  muted:   '#5C5C66',
-  accent:  '#F5A623',
-  green:   '#34C98B',
-  red:     '#E85858',
-  blue:    '#5B8AF5',
-};
+import { T } from '../theme';
 
 const ToastContext = createContext(null);
 
@@ -49,7 +39,7 @@ function ToastItem({ id, type, message, onRemove }) {
         border: `1px solid ${config.color}35`,
         borderLeft: `3px solid ${config.color}`,
         borderRadius: 12,
-        boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08)',
         fontFamily: 'Syne, sans-serif',
         maxWidth: 340,
         width: '100%',

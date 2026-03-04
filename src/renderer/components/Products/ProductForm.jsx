@@ -1,14 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getCategories, addProduct } from '../../services/database';
 import { useToast } from '../Toast';
-
-const T = {
-  bg: '#0E0F11', surface: '#161719', card: '#1A1B1E',
-  border: '#1F2023', border2: '#2A2B2F',
-  text: '#F0EDE6', muted: '#5C5C66', sub: '#9998A3',
-  accent: '#F5A623', green: '#34C98B', red: '#E85858',
-  blue: '#5B8AF5', purple: '#A78BFA',
-};
+import { T } from '../../theme';
 
 // ─── SHARED EXPORTS (used by EditProductForm) ────────────────────────────────
 export const MODAL_CSS = `

@@ -4,6 +4,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import { getDashboardData } from '../../services/dashboard';
+import { T } from '../../theme';
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 const fmt = (n) => `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
@@ -18,23 +19,6 @@ const fmtDate = (s) => {
   const d = new Date(s);
   if (isNaN(d.getTime())) return s;
   return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-};
-
-// ─── STYLE TOKENS ─────────────────────────────────────────────────────────────
-const T = {
-  bg:      '#0E0F11',
-  surface: '#161719',
-  border:  '#1F2023',
-  border2: '#2A2B2F',
-  text:    '#F0EDE6',
-  muted:   '#5C5C66',
-  sub:     '#9998A3',
-  accent:  '#F5A623',
-  accentD: '#C07D0F',
-  green:   '#34C98B',
-  red:     '#E85858',
-  blue:    '#5B8AF5',
-  purple:  '#A78BFA',
 };
 
 const PALETTE = [T.accent, T.green, T.blue, T.purple, T.red];

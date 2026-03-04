@@ -7,92 +7,72 @@ import Dashboard from './components/Dashboard/Dashboard';
 import Reports from './components/Reports/Reports';
 import CategoryList from './components/Categories/CategoryList';
 import InventoryList from './components/Inventory/InventoryList';
-
-// ─── DESIGN TOKENS (sama persis dengan Dashboard) ─────────────────────────────
-const T = {
-  bg:      '#0E0F11',
-  surface: '#161719',
-  border:  '#1F2023',
-  border2: '#2A2B2F',
-  text:    '#F0EDE6',
-  muted:   '#5C5C66',
-  sub:     '#9998A3',
-  accent:  '#F5A623',
-  green:   '#34C98B',
-  blue:    '#5B8AF5',
-};
+import { T } from './theme';
 
 // ─── NAV ITEMS ────────────────────────────────────────────────────────────────
 const NAV = [
   {
-    id: 'dashboard',
-    label: 'Dashboard',
+    id: 'dashboard', label: 'Dashboard',
     icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity="0.9"/>
-        <rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity="0.5"/>
-        <rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity="0.5"/>
-        <rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity="0.9"/>
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <rect x="2" y="2" width="7" height="7" rx="2" fill="currentColor" opacity="0.9"/>
+        <rect x="11" y="2" width="7" height="7" rx="2" fill="currentColor" opacity="0.5"/>
+        <rect x="2" y="11" width="7" height="7" rx="2" fill="currentColor" opacity="0.5"/>
+        <rect x="11" y="11" width="7" height="7" rx="2" fill="currentColor" opacity="0.9"/>
       </svg>
     ),
   },
   {
-    id: 'cashier',
-    label: 'Kasir',
+    id: 'cashier', label: 'Kasir',
     icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.4"/>
-        <path d="M5 8h6M8 6v4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <rect x="2" y="4" width="16" height="12" rx="2.5" stroke="currentColor" strokeWidth="1.6"/>
+        <path d="M6 10h8M10 7v6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
       </svg>
     ),
   },
   {
-    id: 'products',
-    label: 'Produk',
+    id: 'products', label: 'Produk',
     icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
-        <rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
-        <rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
-        <rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <rect x="2" y="2" width="7" height="7" rx="2" stroke="currentColor" strokeWidth="1.6"/>
+        <rect x="11" y="2" width="7" height="7" rx="2" stroke="currentColor" strokeWidth="1.6"/>
+        <rect x="2" y="11" width="7" height="7" rx="2" stroke="currentColor" strokeWidth="1.6"/>
+        <rect x="11" y="11" width="7" height="7" rx="2" stroke="currentColor" strokeWidth="1.6"/>
       </svg>
     ),
   },
   {
-    id: 'transactions',
-    label: 'Transaksi',
+    id: 'inventory', label: 'Inventori',
     icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <rect x="2" y="8" width="16" height="10" rx="2" stroke="currentColor" strokeWidth="1.6"/>
+        <path d="M5 8V6a5 5 0 0110 0v2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+        <path d="M7 13h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
       </svg>
     ),
   },
   {
-    id: 'reports',
-    label: 'Laporan',
+    id: 'transactions', label: 'Transaksi',
     icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M2 13 L5 8 L8 10 L11 5 L14 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M3 5h14M3 10h10M3 15h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
       </svg>
     ),
   },
   {
-    id: 'inventory',
-    label: 'Inventori',
+    id: 'reports', label: 'Laporan',
     icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <rect x="1" y="7" width="14" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
-        <path d="M4 7V5a4 4 0 018 0v2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-        <path d="M6 11h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M3 16 L7 10 L10 12 L14 6 L17 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     ),
   },
   {
-    id: 'categories',
-    label: 'Kategori',
+    id: 'categories', label: 'Kategori',
     icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M2 4h5l1.5 1.5H14v8H2V4z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M3 5h6l2 2H17v10H3V5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
       </svg>
     ),
   },
@@ -100,11 +80,13 @@ const NAV = [
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  const sidebarW = sidebarOpen ? 240 : 68;
 
   return (
     <ToastProvider>
       <style>{`
-
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
@@ -112,203 +94,228 @@ function App() {
           color: ${T.text};
           font-family: 'Syne', sans-serif;
           min-height: 100vh;
+          overflow: hidden;
         }
 
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: ${T.border2}; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: ${T.border2}; border-radius: 5px; }
+        ::-webkit-scrollbar-thumb:hover { background: ${T.muted}; }
 
-        @keyframes fadeDown {
-          from { opacity: 0; transform: translateY(-8px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to   { opacity: 1; }
-        }
-        @keyframes pulse-ring {
-          0%   { transform: scale(1);   opacity: 0.6; }
-          100% { transform: scale(1.8); opacity: 0; }
-        }
+        @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeUp  { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes spin    { to { transform: rotate(360deg); } }
 
-        .nav-btn {
+        .sidebar-item {
           display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 8px 14px;
+          gap: 12px;
+          width: 100%;
+          padding: 10px 14px;
           border-radius: 10px;
-          border: 1px solid transparent;
+          border: none;
           background: transparent;
-          color: ${T.sub};
+          color: ${T.sidebarText};
           font-family: 'Syne', sans-serif;
-          font-size: 12px;
-          font-weight: 700;
-          letter-spacing: 0.04em;
+          font-size: 13px;
+          font-weight: 600;
           cursor: pointer;
           transition: all 0.2s ease;
           white-space: nowrap;
-          position: relative;
-          text-transform: uppercase;
+          overflow: hidden;
+          text-align: left;
         }
-        .nav-btn:hover {
-          color: ${T.text};
-          background: ${T.surface};
-          border-color: ${T.border2};
+        .sidebar-item:hover {
+          background: ${T.sidebarHover};
+          color: #FFFFFF;
         }
-        .nav-btn.active {
-          color: ${T.accent};
-          background: ${T.accent}12;
-          border-color: ${T.accent}35;
-        }
-        .nav-btn.active::after {
-          content: '';
-          position: absolute;
-          bottom: -1px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 20px;
-          height: 2px;
-          border-radius: 2px;
-          background: ${T.accent};
+        .sidebar-item.active {
+          background: ${T.sidebarActive};
+          color: #FFFFFF;
+          font-weight: 700;
+          box-shadow: 0 2px 8px ${T.accent}40;
         }
 
         .page-content {
-          animation: fadeIn 0.3s ease both;
+          animation: fadeIn 0.25s ease both;
+        }
+
+        .toggle-btn {
+          width: 32px; height: 32px;
+          border-radius: 8px;
+          border: 1px solid ${T.border};
+          background: ${T.surface};
+          color: ${T.sub};
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer;
+          transition: all 0.15s;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .toggle-btn:hover {
+          background: ${T.bg};
+          color: ${T.text};
+          border-color: ${T.accent};
         }
       `}</style>
 
-      <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', height: '100vh', background: T.bg }}>
 
-        {/* ── TOPBAR ── */}
-        <header style={{
-          background: T.surface,
-          borderBottom: `1px solid ${T.border}`,
-          position: 'sticky',
-          top: 0,
-          zIndex: 50,
-          animation: 'fadeDown 0.4s ease both',
+        {/* ── SIDEBAR ── */}
+        <aside style={{
+          width: sidebarW,
+          minWidth: sidebarW,
+          background: T.sidebarBg,
+          display: 'flex',
+          flexDirection: 'column',
+          transition: 'width 0.25s cubic-bezier(0.4,0,0.2,1), min-width 0.25s cubic-bezier(0.4,0,0.2,1)',
+          overflow: 'hidden',
+          position: 'relative',
+          zIndex: 20,
         }}>
+          {/* Logo area */}
           <div style={{
-            maxWidth: 1280,
-            margin: '0 auto',
-            padding: '0 24px',
-            height: 60,
+            padding: sidebarOpen ? '20px 18px 16px' : '20px 14px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            borderBottom: `1px solid ${T.sidebarHover}`,
+            minHeight: 68,
+          }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: T.accent,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <rect x="2" y="2" width="6" height="6" rx="2" fill="#FFFFFF"/>
+                <rect x="10" y="2" width="6" height="6" rx="2" fill="#FFFFFF" opacity="0.6"/>
+                <rect x="2" y="10" width="6" height="6" rx="2" fill="#FFFFFF" opacity="0.6"/>
+                <rect x="10" y="10" width="6" height="6" rx="2" fill="#FFFFFF"/>
+              </svg>
+            </div>
+            {sidebarOpen && (
+              <div style={{ overflow: 'hidden' }}>
+                <p style={{ fontSize: 15, fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
+                  Toko Bumbu
+                </p>
+                <p style={{ fontSize: 9, color: T.sidebarText, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.1em', fontWeight: 600 }}>
+                  POS SYSTEM
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Nav items */}
+          <nav style={{ flex: 1, padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 4, overflowY: 'auto' }}>
+            {NAV.map((item) => (
+              <button
+                key={item.id}
+                className={`sidebar-item ${currentPage === item.id ? 'active' : ''}`}
+                onClick={() => setCurrentPage(item.id)}
+                title={!sidebarOpen ? item.label : undefined}
+                style={{
+                  justifyContent: sidebarOpen ? 'flex-start' : 'center',
+                  padding: sidebarOpen ? '10px 14px' : '10px 0',
+                }}
+              >
+                <span style={{ flexShrink: 0, display: 'flex' }}>{item.icon}</span>
+                {sidebarOpen && <span>{item.label}</span>}
+              </button>
+            ))}
+          </nav>
+
+          {/* Bottom: collapse toggle */}
+          <div style={{
+            padding: '12px 10px 16px',
+            borderTop: `1px solid ${T.sidebarHover}`,
+          }}>
+            <button
+              className="sidebar-item"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              style={{
+                justifyContent: sidebarOpen ? 'flex-start' : 'center',
+                padding: sidebarOpen ? '10px 14px' : '10px 0',
+                color: T.sidebarText,
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{
+                flexShrink: 0,
+                transform: sidebarOpen ? 'rotate(0deg)' : 'rotate(180deg)',
+                transition: 'transform 0.25s ease',
+              }}>
+                <path d="M13 4L7 10l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              {sidebarOpen && <span>Tutup Sidebar</span>}
+            </button>
+          </div>
+        </aside>
+
+        {/* ── MAIN AREA ── */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+          {/* Top bar */}
+          <header style={{
+            height: 56,
+            background: T.surface,
+            borderBottom: `1px solid ${T.border}`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: 16,
+            padding: '0 24px',
+            flexShrink: 0,
           }}>
-
-            {/* Logo */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-              <div style={{
-                width: 30, height: 30, borderRadius: 9,
-                background: T.accent,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-                  <rect x="1.5" y="1.5" width="5" height="5" rx="1.5" fill="#0E0F11"/>
-                  <rect x="8.5" y="1.5" width="5" height="5" rx="1.5" fill="#0E0F11"/>
-                  <rect x="1.5" y="8.5" width="5" height="5" rx="1.5" fill="#0E0F11"/>
-                  <rect x="8.5" y="8.5" width="5" height="5" rx="1.5" fill="#0E0F11"/>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <button className="toggle-btn" onClick={() => setSidebarOpen(!sidebarOpen)}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                 </svg>
-              </div>
+              </button>
               <div>
-                <span style={{ fontSize: 15, fontWeight: 800, color: T.text, letterSpacing: '-0.01em', display: 'block', lineHeight: 1.1 }}>
-                  Toko Bumbu
-                </span>
-                <span style={{ fontSize: 10, color: T.muted, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.06em' }}>
-                  POS SYSTEM
-                </span>
+                <p style={{ fontSize: 15, fontWeight: 800, color: T.text }}>
+                  {NAV.find(n => n.id === currentPage)?.label}
+                </p>
               </div>
             </div>
 
-            {/* Divider */}
-            <div style={{ width: 1, height: 28, background: T.border, flexShrink: 0 }} />
-
-            {/* Navigation */}
-            <nav style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1, overflowX: 'auto' }}>
-              {NAV.map((item) => (
-                <button
-                  key={item.id}
-                  className={`nav-btn ${currentPage === item.id ? 'active' : ''}`}
-                  onClick={() => setCurrentPage(item.id)}
-                >
-                  <span style={{ opacity: currentPage === item.id ? 1 : 0.7, flexShrink: 0 }}>
-                    {item.icon}
-                  </span>
-                  {item.label}
-                </button>
-              ))}
-            </nav>
-
-            {/* Right side — live indicator */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '5px 12px',
-              borderRadius: 100,
-              background: T.green + '12',
-              border: `1px solid ${T.green}28`,
-              flexShrink: 0,
-            }}>
-              <div style={{ position: 'relative', width: 7, height: 7 }}>
-                <div style={{ width: 7, height: 7, borderRadius: '50%', background: T.green }} />
-                <div style={{
-                  position: 'absolute', inset: 0, borderRadius: '50%',
-                  background: T.green,
-                  animation: 'pulse-ring 1.5s ease-out infinite',
-                }} />
-              </div>
-              <span style={{ fontSize: 10, fontWeight: 700, color: T.green, letterSpacing: '0.08em', fontFamily: 'JetBrains Mono, monospace' }}>
-                LIVE
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{
+                fontSize: 12, color: T.sub,
+                fontFamily: 'JetBrains Mono, monospace',
+              }}>
+                {new Date().toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
               </span>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '4px 12px', borderRadius: 100,
+                background: '#DCFCE7', border: '1px solid #BBF7D0',
+              }}>
+                <div style={{ position: 'relative', width: 7, height: 7 }}>
+                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: T.green }} />
+                </div>
+                <span style={{ fontSize: 10, fontWeight: 700, color: T.green, letterSpacing: '0.06em' }}>ONLINE</span>
+              </div>
             </div>
-          </div>
+          </header>
 
-          {/* Active page breadcrumb strip */}
-          <div style={{
-            maxWidth: 1280, margin: '0 auto', padding: '0 24px',
-            height: 28, display: 'flex', alignItems: 'center', gap: 6,
-            borderTop: `1px solid ${T.border}`,
+          {/* Page content */}
+          <main style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '24px',
+            background: T.bg,
           }}>
-            <span style={{ fontSize: 10, color: T.muted, fontFamily: 'JetBrains Mono, monospace' }}>
-              /
-            </span>
-            <span style={{ fontSize: 10, color: T.accent, fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
-              {NAV.find((n) => n.id === currentPage)?.label.toLowerCase()}
-            </span>
-          </div>
-        </header>
-
-        {/* ── MAIN CONTENT ── */}
-        <main style={{ flex: 1, maxWidth: 1280, width: '100%', margin: '0 auto', padding: '28px 24px' }}>
-          <div key={currentPage} className="page-content">
-            {currentPage === 'dashboard'   && <Dashboard />}
-            {currentPage === 'cashier'     && <Cashier />}
-            {currentPage === 'products'    && <ProductList />}
-            {currentPage === 'transactions'&& <Transactions />}
-            {currentPage === 'reports'     && <Reports />}
-            {currentPage === 'inventory'   && <InventoryList />}
-            {currentPage === 'categories'  && <CategoryList />}
-          </div>
-        </main>
-
-        {/* ── FOOTER BAR ── */}
-        <footer style={{
-          borderTop: `1px solid ${T.border}`,
-          padding: '10px 24px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-          <span style={{ fontSize: 11, color: T.muted, fontFamily: 'JetBrains Mono, monospace' }}>
-            v1.0.0
-          </span>
-          <span style={{ fontSize: 11, color: T.muted, fontFamily: 'JetBrains Mono, monospace' }}>
-            {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-          </span>
-        </footer>
-
+            <div key={currentPage} className="page-content" style={{ maxWidth: 1400, margin: '0 auto' }}>
+              {currentPage === 'dashboard'    && <Dashboard />}
+              {currentPage === 'cashier'      && <Cashier />}
+              {currentPage === 'products'     && <ProductList />}
+              {currentPage === 'transactions' && <Transactions />}
+              {currentPage === 'reports'      && <Reports />}
+              {currentPage === 'inventory'    && <InventoryList />}
+              {currentPage === 'categories'   && <CategoryList />}
+            </div>
+          </main>
+        </div>
       </div>
     </ToastProvider>
   );

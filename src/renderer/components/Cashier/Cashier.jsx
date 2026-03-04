@@ -19,6 +19,7 @@ const UNITS = [
 // Calculate how many Pcs a cart item represents
 function calcPcs(item, product) {
   if (!product) return item.quantity;
+  if (item.unit === 'kg') return 0; // Kg uses weight model, not Pcs
   const pp = product.pcs_per_pack || 1;
   const pd = product.pack_per_dus || 1;
   if (item.unit === 'pack') return item.quantity * pp;
@@ -408,16 +409,19 @@ function Cashier() {
   };
 
   const addManualToCart = (product, { price, quantity, unit }) => {
-    const pp = product.pcs_per_pack || 1;
-    const pd = product.pack_per_dus || 1;
-    let pcsNeeded = quantity;
-    if (unit === 'pack') pcsNeeded = quantity * pp;
-    else if (unit === 'dus')  pcsNeeded = quantity * pd * pp;
+    // Kg unit uses weight-based model, skip Pcs stock check
+    if (unit !== 'kg') {
+      const pp = product.pcs_per_pack || 1;
+      const pd = product.pack_per_dus || 1;
+      let pcsNeeded = quantity;
+      if (unit === 'pack') pcsNeeded = quantity * pp;
+      else if (unit === 'dus')  pcsNeeded = quantity * pd * pp;
 
-    const currentPcsInCart = calcCartPcs(product.id);
-    if (currentPcsInCart + pcsNeeded > (product.stock || 0)) {
-      showToast('error', `Stok tidak mencukupi! Tersisa: ${product.stock || 0} Pcs (di keranjang: ${currentPcsInCart} Pcs)`);
-      return;
+      const currentPcsInCart = calcCartPcs(product.id);
+      if (currentPcsInCart + pcsNeeded > (product.stock || 0)) {
+        showToast('error', `Stok tidak mencukupi! Tersisa: ${product.stock || 0} Pcs (di keranjang: ${currentPcsInCart} Pcs)`);
+        return;
+      }
     }
 
     setCart([...cart, {

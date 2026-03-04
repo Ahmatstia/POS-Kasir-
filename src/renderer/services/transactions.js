@@ -49,7 +49,8 @@ export async function createTransaction(transactionData) {
       );
 
       // Deduct stock (FIFO) only for real products (not manual items)
-      if (item.product_id) {
+      // Kg items skip stock deduction — they use weight-based model, not Pcs
+      if (item.product_id && item.unit !== 'kg') {
         // Calculate pcs to deduct based on unit
         const [productInfo] = await window.electronAPI.query(
           "SELECT pcs_per_pack, pack_per_dus FROM products WHERE id = ?",
@@ -124,6 +125,7 @@ export async function cancelTransaction(transactionId) {
 
     for (const item of items) {
       if (!item.product_id) continue;
+      if (item.unit === 'kg') continue; // Kg items were never deducted from Pcs stock
       const [productInfo] = await window.electronAPI.query(
         "SELECT pcs_per_pack, pack_per_dus FROM products WHERE id = ?",
         [item.product_id]

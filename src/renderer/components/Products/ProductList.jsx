@@ -3,7 +3,7 @@ import {
   getProducts,
   getCategories,
   deleteProduct,
-} from "../../services/products";
+} from "../../services/database";
 import ProductForm from "./ProductForm";
 import EditProductForm from "./EditProductForm";
 import ImportExcel from "./ImportExcel";

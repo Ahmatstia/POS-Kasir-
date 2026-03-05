@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
-import { getCategories, addProduct } from "../../services/products";
+import { getCategories, addProduct } from "../../services/database";
 import { addStock } from "../../services/inventory";
 import { FormModal, MODAL_CSS } from "./ProductForm";
 import { T } from "../../theme";

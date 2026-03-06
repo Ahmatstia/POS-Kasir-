@@ -382,7 +382,7 @@ function ProductList() {
               onMouseLeave={e => e.currentTarget.style.background = T.purple + '10'}
             >
               <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="11" height="11" rx="2" stroke="currentColor" strokeWidth="1.3"/><path d="M4 5h5M4 7h3M4 9h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
-              Import Excel
+              Import CSV/Excel
             </button>
             <button
               onClick={() => setShowForm(true)}
@@ -481,7 +481,7 @@ function ProductList() {
             </p>
             {products.length === 0 ? (
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-                <button onClick={() => setShowImport(true)} style={{ padding: '9px 18px', borderRadius: 10, border: `1px solid ${T.purple}35`, background: T.purple + '10', color: T.purple, fontFamily: 'Syne, sans-serif', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Import Excel</button>
+                <button onClick={() => setShowImport(true)} style={{ padding: '9px 18px', borderRadius: 10, border: `1px solid ${T.purple}35`, background: T.purple + '10', color: T.purple, fontFamily: 'Syne, sans-serif', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Import CSV / Excel</button>
                 <button onClick={() => setShowForm(true)} style={{ padding: '9px 18px', borderRadius: 10, border: `1px solid ${T.green}35`, background: T.green + '10', color: T.green, fontFamily: 'Syne, sans-serif', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Tambah Manual</button>
               </div>
             ) : (

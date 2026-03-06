@@ -1,20 +1,22 @@
 import React, { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
-import { getCategories, addProduct } from "../../services/database";
+import { addProduct } from "../../services/database";
+import { getCategories, addCategory } from "../../services/categories";
 import { addStock } from "../../services/inventory";
 import { FormModal, MODAL_CSS } from "./ProductForm";
 import { T } from "../../theme";
 
 // ─── FIELD CONFIGS ────────────────────────────────────────────────────────────
 const MAPPING_FIELDS = [
-  { key: 'name',       label: 'Nama Produk', required: true,  color: T.text   },
-  { key: 'category',   label: 'Kategori',    required: true,  color: T.text   },
-  { key: 'price_pcs',  label: 'Harga Pcs',   required: false, color: T.blue   },
-  { key: 'price_pack', label: 'Harga Pack',  required: false, color: T.green  },
-  { key: 'price_dus',  label: 'Harga Dus',   required: false, color: T.accent },
-  { key: 'price_kg',   label: 'Harga Kg',    required: false, color: T.purple },
-  { key: 'stock',      label: 'Stok Awal',   required: false, color: T.green  },
-  { key: 'min_stock',  label: 'Min Stok',    required: false, color: T.sub    },
+  { key: 'name',          label: 'Nama Produk', required: true,  color: T.text   },
+  { key: 'category',      label: 'Kategori',    required: true,  color: T.text   },
+  { key: 'sell_per_unit', label: 'Satuan Jual', required: false, color: T.text   },
+  { key: 'price_pcs',     label: 'Harga /Pcs',  required: false, color: T.blue   },
+  { key: 'price_pack',    label: 'Harga /Pack', required: false, color: T.green  },
+  { key: 'price_dus',     label: 'Harga Dus',   required: false, color: T.accent },
+  { key: 'price_kg',      label: 'Harga /Kg',   required: false, color: T.purple },
+  { key: 'stock',         label: 'Stok Awal',   required: false, color: T.green  },
+  { key: 'min_stock',     label: 'Min Stok',    required: false, color: T.sub    },
 ];
 
 const selectStyle = {
@@ -33,7 +35,7 @@ function ImportExcel({ onClose, onSuccess }) {
   const [categories, setCategories] = useState([]);
   const [result, setResult]     = useState(null); // { success, error, total }
   const [mapping, setMapping]   = useState({
-    name: '', category: '',
+    name: '', category: '', sell_per_unit: '',
     price_pcs: '', price_pack: '', price_dus: '', price_kg: '',
     stock: '', min_stock: '',
   });
@@ -62,14 +64,16 @@ function ImportExcel({ onClose, onSuccess }) {
         const m = {};
         headers.forEach((h, i) => {
           if (!h) return;
-          const hl = String(h).toLowerCase();
-          if (hl.includes('nama'))                                         m.name       = i;
-          if (hl.includes('kategori'))                                     m.category   = i;
-          if (hl.includes('harga pcs') || hl.includes('harga per pcs'))   m.price_pcs  = i;
-          if (hl.includes('harga pack') || hl.includes('harga per pack')) m.price_pack = i;
-          if (hl.includes('harga kg')  || hl.includes('harga per kg'))    m.price_kg   = i;
-          if (hl.includes('stok') && !hl.includes('min'))                 m.stock      = i;
-          if (hl.includes('min stok') || hl.includes('minimal'))          m.min_stock  = i;
+          const hl = String(h).toLowerCase().trim();
+          if (hl.includes('nama'))                                              m.name          = i;
+          if (hl.includes('kategori'))                                          m.category      = i;
+          if (hl === 'satuan' || hl.includes('satuan jual'))                    m.sell_per_unit = i;
+          if (hl.includes('harga pcs') || hl === '/pcs' || hl === 'pcs')        m.price_pcs     = i;
+          if (hl.includes('harga pack') || hl === '/pack' || hl === 'pack')     m.price_pack    = i;
+          if (hl.includes('harga kg') || hl === '/kg' || hl === 'kg')           m.price_kg      = i;
+          if (hl.includes('harga dus') || hl === '/dus' || hl === 'dus')        m.price_dus     = i;
+          if (hl.includes('stok') && !hl.includes('min'))                       m.stock         = i;
+          if (hl.includes('min stok') || hl.includes('minimal'))                m.min_stock     = i;
         });
         setMapping(prev => ({ ...prev, ...m }));
       } catch (err) {
@@ -115,14 +119,17 @@ function ImportExcel({ onClose, onSuccess }) {
         const rows = data.slice(1);
 
         const cleanPrice = (val) => {
-          if (val === undefined || val === null) return 0;
+          if (val === undefined || val === null || val === '') return 0;
           if (typeof val === 'number') return val;
-          const n = parseInt(String(val).replace(/[Rp.,\s]/g, ''));
+          // Clean "Rp", spaces, commas, quotes
+          const cleaned = String(val).replace(/rp|r|p|\s|,|\.|"|'/gi, '');
+          const n = parseInt(cleaned, 10);
           return isNaN(n) ? 0 : n;
         };
 
         let successCount = 0;
         const errors = [];
+        let localCategories = [...categories];
 
         for (let i = 0; i < rows.length; i++) {
           const row = rows[i];
@@ -130,19 +137,34 @@ function ImportExcel({ onClose, onSuccess }) {
 
           const name         = row[mapping.name]?.toString().trim() || '';
           const categoryName = row[mapping.category]?.toString().trim() || '';
-          const category_id  = findCategoryId(categoryName);
+          
+          let category_id = null;
+          if (categoryName) {
+            const formatName = String(categoryName).trim().toLowerCase();
+            category_id = localCategories.find(c => c.name.toLowerCase() === formatName)?.id ||
+                          localCategories.find(c => c.name.toLowerCase().includes(formatName) || formatName.includes(c.name.toLowerCase()))?.id || null;
+
+            if (!category_id) {
+              const res = await addCategory({ name: categoryName, color: '#A78BFA' });
+              if (res.success) {
+                category_id = res.id;
+                localCategories.push({ id: category_id, name: categoryName, color: '#A78BFA' });
+              }
+            }
+          }
 
           if (!name)        { errors.push(`Baris ${i + 2}: Nama kosong`);                              continue; }
-          if (!category_id) { errors.push(`Baris ${i + 2}: Kategori "${categoryName}" tidak ditemukan`); continue; }
+          if (!category_id) { errors.push(`Baris ${i + 2}: Kategori "${categoryName}" gagal dibuat / tidak ditemukan`); continue; }
 
           const r = await addProduct({
             name, category_id,
+            sell_per_unit: mapping.sell_per_unit !== '' ? (row[mapping.sell_per_unit]?.toString().trim().toLowerCase() || 'all') : 'all',
             price_pcs:  mapping.price_pcs  !== '' ? cleanPrice(row[mapping.price_pcs])  : 0,
             price_pack: mapping.price_pack !== '' ? cleanPrice(row[mapping.price_pack]) : 0,
             price_dus:  mapping.price_dus  !== '' ? cleanPrice(row[mapping.price_dus])  : 0,
             price_kg:   mapping.price_kg   !== '' ? cleanPrice(row[mapping.price_kg])   : 0,
             min_stock:  mapping.min_stock  !== '' ? cleanPrice(row[mapping.min_stock])  : 0,
-            notes: 'Import dari Excel',
+            notes: 'Import dari Excel / CSV',
           });
 
           if (r.success) {
@@ -150,7 +172,7 @@ function ImportExcel({ onClose, onSuccess }) {
             // Create initial stock batch if stock column is mapped
             const initStock = mapping.stock !== '' ? cleanPrice(row[mapping.stock]) : 0;
             if (initStock > 0) {
-              await addStock(r.id, { qty_pcs: initStock, notes: 'Import Excel' }, { pcs_per_pack: 1, pack_per_dus: 1 });
+              await addStock(r.id, { qty_pcs: initStock, notes: 'Import Excel / CSV' }, { pcs_per_pack: 1, pack_per_dus: 1 });
             }
           } else {
             errors.push(`Baris ${i + 2}: ${r.error || 'Gagal'}`);
@@ -174,7 +196,7 @@ function ImportExcel({ onClose, onSuccess }) {
   const step = !file ? 1 : !preview ? 1 : result ? 3 : 2;
 
   return (
-    <FormModal title="Import dari Excel" subtitle="Produk" onClose={onClose}>
+    <FormModal title="Import CSV / Excel" subtitle="Produk Baru" onClose={onClose}>
       <style>{MODAL_CSS + EXTRA_CSS}</style>
 
       {/* Step indicator */}

@@ -1,8 +1,8 @@
 {
-  "name": "pos-toko-bumbu",
-  "productName": "pos-toko-bumbu",
+  "name": "pos",
+  "productName": "POS",
   "version": "1.0.0",
-  "description": "My Electron application description",
+  "description": "Sistem Kasir toko bumbu",
   "main": ".webpack/main",
   "private": true,
   "scripts": {

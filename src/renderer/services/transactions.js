@@ -168,8 +168,8 @@ export async function cancelTransaction(transactionId) {
           [item.product_id, `RETURN-${tx.invoice_no}`, qtyReturned, `Retur transaksi ${tx.invoice_no}`]
         );
         await window.electronAPI.run(
-          `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_kg, stock_before, stock_after, reference_id, notes)
-           VALUES (?, 'RETURN', ?, 'kg', ?, ?, ?, ?, ?)`,
+          `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, quantity_kg, stock_before, stock_after, reference_id, notes)
+           VALUES (?, 'RETURN', ?, 'kg', 0, ?, ?, ?, ?, ?)`,
           [item.product_id, qtyReturned, qtyReturned, stockBefore, stockAfter, tx.invoice_no, `Retur transaksi ${tx.invoice_no}`]
         );
       } else {

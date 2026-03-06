@@ -294,8 +294,8 @@ export async function adjustStockKg(productId, newTotalKg, reason = "Koreksi man
         [productId, diff, reason]
       );
       await window.electronAPI.run(
-        `INSERT INTO inventory_log (product_id, stock_id, type, quantity_input, unit_input, quantity_kg, stock_before, stock_after, notes)
-         VALUES (?, ?, 'ADJUSTMENT', ?, 'kg', ?, ?, ?, ?)`,
+        `INSERT INTO inventory_log (product_id, stock_id, type, quantity_input, unit_input, quantity_pcs, quantity_kg, stock_before, stock_after, notes)
+         VALUES (?, ?, 'ADJUSTMENT', ?, 'kg', 0, ?, ?, ?, ?)`,
         [productId, stockResult.lastID, diff, diff, currentTotal, newTotalKg, reason]
       );
     } else {
@@ -320,8 +320,8 @@ export async function adjustStockKg(productId, newTotalKg, reason = "Koreksi man
         toRemove -= remove;
       }
       await window.electronAPI.run(
-        `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_kg, stock_before, stock_after, notes)
-         VALUES (?, 'ADJUSTMENT', ?, 'kg', ?, ?, ?, ?)`,
+        `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, quantity_kg, stock_before, stock_after, notes)
+         VALUES (?, 'ADJUSTMENT', ?, 'kg', 0, ?, ?, ?, ?)`,
         [productId, diff, diff, currentTotal, newTotalKg, reason]
       );
     }
@@ -366,8 +366,8 @@ export async function deductStockFIFOKg(productId, quantityKg, invoiceNo) {
 
   const stockAfter = stockBefore - quantityKg;
   await window.electronAPI.run(
-    `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_kg, stock_before, stock_after, reference_id)
-     VALUES (?, 'SALE', ?, 'kg', ?, ?, ?, ?)`,
+    `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, quantity_kg, stock_before, stock_after, reference_id)
+     VALUES (?, 'SALE', ?, 'kg', 0, ?, ?, ?, ?)`,
     [productId, quantityKg, quantityKg, stockBefore, stockAfter, invoiceNo]
   );
 

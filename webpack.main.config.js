@@ -9,7 +9,7 @@ module.exports = {
     rules: require('./webpack.rules'),
   },
   externals: {
-    // sqlite3 will be handled as a native module by the relocator loader
+    sqlite3: 'commonjs sqlite3',
   },
   node: {
     __dirname: false,

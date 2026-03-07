@@ -1,8 +1,8 @@
 // Fungsi untuk mendapatkan laporan penjualan berdasarkan periode
 export async function getSalesReport(startDate, endDate) {
   try {
-    // Query untuk ringkasan penjualan
-    const summary = await window.electronAPI.query(`
+    // 1. Query untuk ringkasan penjualan (Omzet, Transaksi, dll)
+    const salesSummary = await window.electronAPI.query(`
       SELECT 
         COUNT(*) as total_transactions,
         COALESCE(SUM(total_amount), 0) as total_sales,
@@ -14,6 +14,27 @@ export async function getSalesReport(startDate, endDate) {
       WHERE date(created_at) BETWEEN date(?) AND date(?)
         AND status = 'COMPLETED'
     `, [startDate, endDate]);
+
+    // 2. Query untuk total modal (HPP)
+    const costSummary = await window.electronAPI.query(`
+      SELECT COALESCE(SUM(
+        CASE 
+          WHEN il.quantity_kg > 0 THEN il.quantity_kg * COALESCE(NULLIF(il.purchase_price, 0), p.purchase_price, 0)
+          ELSE il.quantity_pcs * COALESCE(NULLIF(il.purchase_price, 0), p.purchase_price, 0)
+        END
+      ), 0) as total_purchase_cost
+      FROM inventory_log il
+      JOIN transactions t ON t.invoice_no = il.reference_id
+      LEFT JOIN products p ON p.id = il.product_id
+      WHERE il.type = 'SALE' 
+        AND t.status = 'COMPLETED'
+        AND date(t.created_at) BETWEEN date(?) AND date(?)
+    `, [startDate, endDate]);
+
+    const summary = {
+      ...(salesSummary[0] || {}),
+      total_purchase_cost: costSummary[0]?.total_purchase_cost || 0
+    };
 
     // Query untuk penjualan per hari
     const dailySales = await window.electronAPI.query(`
@@ -87,8 +108,8 @@ export async function getSalesReport(startDate, endDate) {
       ORDER BY hour ASC
     `, [startDate, endDate]);
 
-    return {
-      summary: summary[0],
+    const data = {
+      summary: summary,
       dailySales,
       paymentMethods,
       topProducts,
@@ -97,6 +118,13 @@ export async function getSalesReport(startDate, endDate) {
       startDate,
       endDate
     };
+
+    // Calculate profit in summary
+    if (data.summary) {
+      data.summary.total_profit = data.summary.total_sales - data.summary.total_purchase_cost;
+    }
+
+    return data;
   } catch (error) {
     console.error('Error getting sales report:', error);
     return null;

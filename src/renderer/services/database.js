@@ -66,8 +66,8 @@ export async function addProduct(product) {
     const sql = `
       INSERT INTO products 
         (name, category_id, sell_per_unit, price_pcs, price_pack, price_dus, price_kg,
-         pcs_per_pack, pack_per_dus, min_stock, min_stock_kg, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         pcs_per_pack, pack_per_dus, min_stock, min_stock_kg, purchase_price, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const params = [
       product.name,
@@ -81,6 +81,7 @@ export async function addProduct(product) {
       product.pack_per_dus  || 1,
       product.min_stock     || 0,
       product.min_stock_kg  || 0,
+      product.purchase_price || 0,
       product.notes         || "",
     ];
     const result = await window.electronAPI.run(sql, params);
@@ -99,7 +100,7 @@ export async function updateProduct(id, product) {
       SET name = ?, category_id = ?, sell_per_unit = ?,
           price_pcs = ?, price_pack = ?, price_dus = ?, price_kg = ?,
           pcs_per_pack = ?, pack_per_dus = ?,
-          min_stock = ?, min_stock_kg = ?, notes = ?
+          min_stock = ?, min_stock_kg = ?, purchase_price = ?, notes = ?
       WHERE id = ?
     `;
     const params = [
@@ -114,6 +115,7 @@ export async function updateProduct(id, product) {
       product.pack_per_dus  || 1,
       product.min_stock     || 0,
       product.min_stock_kg  || 0,
+      product.purchase_price || 0,
       product.notes         || "",
       id,
     ];

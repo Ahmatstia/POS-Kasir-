@@ -16,6 +16,7 @@ const MAPPING_FIELDS = [
   { key: 'price_dus',     label: 'Harga Dus',   required: false, color: T.accent },
   { key: 'price_kg',      label: 'Harga /Kg',   required: false, color: T.purple },
   { key: 'stock',         label: 'Stok Awal',   required: false, color: T.green  },
+  { key: 'purchase_price',label: 'Harga Modal', required: false, color: T.accent },
   { key: 'min_stock',     label: 'Min Stok',    required: false, color: T.sub    },
 ];
 
@@ -37,7 +38,7 @@ function ImportExcel({ onClose, onSuccess }) {
   const [mapping, setMapping]   = useState({
     name: '', category: '', sell_per_unit: '',
     price_pcs: '', price_pack: '', price_dus: '', price_kg: '',
-    stock: '', min_stock: '',
+    stock: '', min_stock: '', purchase_price: '',
   });
 
   useEffect(() => { getCategories().then(setCategories); }, []);
@@ -74,6 +75,7 @@ function ImportExcel({ onClose, onSuccess }) {
           if (hl.includes('harga dus') || hl === '/dus' || hl === 'dus')        m.price_dus     = i;
           if (hl.includes('stok') && !hl.includes('min'))                       m.stock         = i;
           if (hl.includes('min stok') || hl.includes('minimal'))                m.min_stock     = i;
+          if (hl.includes('harga beli') || hl.includes('modal') || hl === 'hpp') m.purchase_price = i;
         });
         setMapping(prev => ({ ...prev, ...m }));
       } catch (err) {
@@ -164,6 +166,7 @@ function ImportExcel({ onClose, onSuccess }) {
             price_dus:  mapping.price_dus  !== '' ? cleanPrice(row[mapping.price_dus])  : 0,
             price_kg:   mapping.price_kg   !== '' ? cleanPrice(row[mapping.price_kg])   : 0,
             min_stock:  mapping.min_stock  !== '' ? cleanPrice(row[mapping.min_stock])  : 0,
+            purchase_price: mapping.purchase_price !== '' ? cleanPrice(row[mapping.purchase_price]) : 0,
             notes: 'Import dari Excel / CSV',
           });
 
@@ -171,8 +174,14 @@ function ImportExcel({ onClose, onSuccess }) {
             successCount++;
             // Create initial stock batch if stock column is mapped
             const initStock = mapping.stock !== '' ? cleanPrice(row[mapping.stock]) : 0;
+            const initHPP   = mapping.purchase_price !== '' ? cleanPrice(row[mapping.purchase_price]) : 0;
+            
             if (initStock > 0) {
-              await addStock(r.id, { qty_pcs: initStock, notes: 'Import Excel / CSV' }, { pcs_per_pack: 1, pack_per_dus: 1 });
+              await addStock(r.id, { 
+                qty_pcs: initStock, 
+                purchase_price: initHPP,
+                notes: 'Import Excel / CSV' 
+              }, { pcs_per_pack: 1, pack_per_dus: 1 });
             }
           } else {
             errors.push(`Baris ${i + 2}: ${r.error || 'Gagal'}`);

@@ -6,7 +6,7 @@ export async function getInventorySummary() {
     const sql = `
       SELECT 
         p.id, p.name, p.category_id, p.min_stock, p.min_stock_kg, p.sell_per_unit,
-        p.pcs_per_pack, p.pack_per_dus,
+        p.pcs_per_pack, p.pack_per_dus, p.purchase_price,
         p.price_pcs, p.price_pack, p.price_dus, p.price_kg,
         c.name as category_name, c.color as category_color,
         COALESCE(SUM(s.quantity), 0) as stock,
@@ -78,6 +78,11 @@ export async function addStock(productId, {
   notes = ""
 }, product) {
   try {
+    let finalPurchasePrice = purchase_price;
+    if (finalPurchasePrice <= 0 && product?.purchase_price > 0) {
+      finalPurchasePrice = product.purchase_price;
+    }
+
     const pcsPerPack = product?.pcs_per_pack || 1;
     const packPerDus = product?.pack_per_dus || 1;
 
@@ -108,7 +113,7 @@ export async function addStock(productId, {
     const stockResult = await window.electronAPI.run(
       `INSERT INTO stocks (product_id, batch_code, quantity, qty_kg, purchase_price, expiry_date, notes)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [productId, autoCode, totalPcs, totalKg, purchase_price, expiry_date || null, notes]
+      [productId, autoCode, totalPcs, totalKg, finalPurchasePrice, expiry_date || null, notes]
     );
     const stockId = stockResult.lastID;
 
@@ -119,7 +124,7 @@ export async function addStock(productId, {
           stock_before, stock_after, purchase_price, batch_code, expiry_date, notes)
        VALUES (?, ?, 'IN', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [productId, stockId, totalKg > 0 ? totalKg : totalPcs, totalKg > 0 ? 'kg' : 'pcs', totalPcs, totalKg, stockKgBefore + stockBefore, stockKgBefore + stockBefore + totalKg + totalPcs,
-       purchase_price, autoCode, expiry_date || null, notes]
+       finalPurchasePrice, autoCode, expiry_date || null, notes]
     );
 
     await window.electronAPI.run("COMMIT");
@@ -132,8 +137,14 @@ export async function addStock(productId, {
 }
 
 // Adjust stock manually (correction)
-export async function adjustStock(productId, newTotalPcs, reason = "Koreksi manual") {
+export async function adjustStock(productId, newTotalPcs, reason = "Koreksi manual", purchasePrice = 0) {
   try {
+    let finalPurchasePrice = purchasePrice;
+    if (finalPurchasePrice <= 0) {
+      const [product] = await window.electronAPI.query("SELECT purchase_price FROM products WHERE id = ?", [productId]);
+      if (product?.purchase_price > 0) finalPurchasePrice = product.purchase_price;
+    }
+
     // Get current total
     const [beforeRow] = await window.electronAPI.query(
       "SELECT COALESCE(SUM(quantity), 0) as total FROM stocks WHERE product_id = ? AND is_active = 1",
@@ -148,13 +159,13 @@ export async function adjustStock(productId, newTotalPcs, reason = "Koreksi manu
     if (diff > 0) {
       // Add a new batch for positive adjustment
       const stockResult = await window.electronAPI.run(
-        "INSERT INTO stocks (product_id, batch_code, quantity, notes) VALUES (?, 'KOREKSI', ?, ?)",
-        [productId, diff, reason]
+        "INSERT INTO stocks (product_id, batch_code, quantity, purchase_price, notes) VALUES (?, 'KOREKSI', ?, ?, ?)",
+        [productId, diff, finalPurchasePrice, reason]
       );
       await window.electronAPI.run(
-        `INSERT INTO inventory_log (product_id, stock_id, type, quantity_input, unit_input, quantity_pcs, stock_before, stock_after, notes)
-         VALUES (?, ?, 'ADJUSTMENT', ?, 'pcs', ?, ?, ?, ?)`,
-        [productId, stockResult.lastID, diff, diff, currentTotal, newTotalPcs, reason]
+        `INSERT INTO inventory_log (product_id, stock_id, type, quantity_input, unit_input, quantity_pcs, stock_before, stock_after, purchase_price, notes)
+         VALUES (?, ?, 'ADJUSTMENT', ?, 'pcs', ?, ?, ?, ?, ?)`,
+        [productId, stockResult.lastID, diff, diff, currentTotal, newTotalPcs, finalPurchasePrice, reason]
       );
     } else {
       // Reduce from existing batches (FIFO)
@@ -231,7 +242,7 @@ export async function getProductStock(productId) {
 }
 
 // Deduct stock FIFO (used internally by transactions)
-export async function deductStockFIFO(productId, quantityPcs, invoiceNo) {
+export async function deductStockFIFO(productId, quantityPcs, invoiceNo, createdAt = null) {
   let toDeduct = quantityPcs;
   const batches = await window.electronAPI.query(
     "SELECT * FROM stocks WHERE product_id = ? AND is_active = 1 AND quantity > 0 ORDER BY created_at ASC",
@@ -244,10 +255,14 @@ export async function deductStockFIFO(productId, quantityPcs, invoiceNo) {
   );
   const stockBefore = beforeRow?.total || 0;
 
+  let totalPurchaseCost = 0;
   for (const batch of batches) {
     if (toDeduct <= 0) break;
     const deduct = Math.min(batch.quantity, toDeduct);
     const newQty = batch.quantity - deduct;
+    
+    totalPurchaseCost += (deduct * (batch.purchase_price || 0));
+
     // 1. Update quantity
     await window.electronAPI.run(
       "UPDATE stocks SET quantity = ?, is_active = ? WHERE id = ?",
@@ -265,19 +280,33 @@ export async function deductStockFIFO(productId, quantityPcs, invoiceNo) {
     toDeduct -= deduct;
   }
 
+  const avgPurchasePrice = quantityPcs > 0 ? Math.round(totalPurchaseCost / quantityPcs) : 0;
+
   const stockAfter = stockBefore - quantityPcs;
-  await window.electronAPI.run(
-    `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, stock_before, stock_after, reference_id)
-     VALUES (?, 'SALE', ?, 'pcs', ?, ?, ?, ?)`,
-    [productId, quantityPcs, quantityPcs, stockBefore, stockAfter, invoiceNo]
-  );
+  const logSql = createdAt 
+    ? `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, stock_before, stock_after, purchase_price, reference_id, created_at)
+       VALUES (?, 'SALE', ?, 'pcs', ?, ?, ?, ?, ?, ?)`
+    : `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, stock_before, stock_after, purchase_price, reference_id)
+       VALUES (?, 'SALE', ?, 'pcs', ?, ?, ?, ?, ?)`;
+  
+  const logParams = createdAt
+    ? [productId, quantityPcs, quantityPcs, stockBefore, stockAfter, avgPurchasePrice, invoiceNo, createdAt]
+    : [productId, quantityPcs, quantityPcs, stockBefore, stockAfter, avgPurchasePrice, invoiceNo];
+
+  await window.electronAPI.run(logSql, logParams);
 
   if (toDeduct > 0) throw new Error("Stok tidak mencukupi");
 }
 
 // Adjust stock manually (correction) specifically for Kg
-export async function adjustStockKg(productId, newTotalKg, reason = "Koreksi manual") {
+export async function adjustStockKg(productId, newTotalKg, reason = "Koreksi manual", purchasePrice = 0) {
   try {
+    let finalPurchasePrice = purchasePrice;
+    if (finalPurchasePrice <= 0) {
+      const [product] = await window.electronAPI.query("SELECT purchase_price FROM products WHERE id = ?", [productId]);
+      if (product?.purchase_price > 0) finalPurchasePrice = product.purchase_price;
+    }
+
     const [beforeRow] = await window.electronAPI.query(
       "SELECT COALESCE(SUM(qty_kg), 0) as total FROM stocks WHERE product_id = ? AND is_active = 1",
       [productId]
@@ -290,13 +319,13 @@ export async function adjustStockKg(productId, newTotalKg, reason = "Koreksi man
 
     if (diff > 0) {
       const stockResult = await window.electronAPI.run(
-        "INSERT INTO stocks (product_id, batch_code, qty_kg, quantity, notes) VALUES (?, 'KOREKSI', ?, 0, ?)",
-        [productId, diff, reason]
+        "INSERT INTO stocks (product_id, batch_code, qty_kg, quantity, purchase_price, notes) VALUES (?, 'KOREKSI', ?, 0, ?, ?)",
+        [productId, diff, finalPurchasePrice, reason]
       );
       await window.electronAPI.run(
-        `INSERT INTO inventory_log (product_id, stock_id, type, quantity_input, unit_input, quantity_pcs, quantity_kg, stock_before, stock_after, notes)
-         VALUES (?, ?, 'ADJUSTMENT', ?, 'kg', 0, ?, ?, ?, ?)`,
-        [productId, stockResult.lastID, diff, diff, currentTotal, newTotalKg, reason]
+        `INSERT INTO inventory_log (product_id, stock_id, type, quantity_input, unit_input, quantity_pcs, quantity_kg, stock_before, stock_after, purchase_price, notes)
+         VALUES (?, ?, 'ADJUSTMENT', ?, 'kg', 0, ?, ?, ?, ?, ?)`,
+        [productId, stockResult.lastID, diff, diff, currentTotal, newTotalKg, finalPurchasePrice, reason]
       );
     } else {
       let toRemove = Math.abs(diff);
@@ -335,7 +364,7 @@ export async function adjustStockKg(productId, newTotalKg, reason = "Koreksi man
 }
 
 // Deduct stock FIFO specifically for Kg (used by transactions)
-export async function deductStockFIFOKg(productId, quantityKg, invoiceNo) {
+export async function deductStockFIFOKg(productId, quantityKg, invoiceNo, createdAt = null) {
   let toDeduct = quantityKg;
   const batches = await window.electronAPI.query(
     "SELECT * FROM stocks WHERE product_id = ? AND is_active = 1 AND qty_kg > 0 ORDER BY created_at ASC",
@@ -348,10 +377,14 @@ export async function deductStockFIFOKg(productId, quantityKg, invoiceNo) {
   );
   const stockBefore = beforeRow?.total || 0;
 
+  let totalPurchaseCost = 0;
   for (const batch of batches) {
     if (toDeduct <= 0) break;
     const deduct = Math.min(batch.qty_kg, toDeduct);
     const newQtyKg = batch.qty_kg - deduct;
+
+    totalPurchaseCost += (deduct * (batch.purchase_price || 0));
+
     await window.electronAPI.run(
       "UPDATE stocks SET qty_kg = ?, is_active = ? WHERE id = ?",
       [newQtyKg, (newQtyKg > 0 || batch.quantity > 0) ? 1 : 0, batch.id]
@@ -364,12 +397,20 @@ export async function deductStockFIFOKg(productId, quantityKg, invoiceNo) {
     toDeduct -= deduct;
   }
 
+  const avgPurchasePrice = quantityKg > 0 ? (totalPurchaseCost / quantityKg) : 0;
+
   const stockAfter = stockBefore - quantityKg;
-  await window.electronAPI.run(
-    `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, quantity_kg, stock_before, stock_after, reference_id)
-     VALUES (?, 'SALE', ?, 'kg', 0, ?, ?, ?, ?)`,
-    [productId, quantityKg, quantityKg, stockBefore, stockAfter, invoiceNo]
-  );
+  const logSql = createdAt
+    ? `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, quantity_kg, stock_before, stock_after, purchase_price, reference_id, created_at)
+       VALUES (?, 'SALE', ?, 'kg', 0, ?, ?, ?, ?, ?, ?)`
+    : `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, quantity_kg, stock_before, stock_after, purchase_price, reference_id)
+       VALUES (?, 'SALE', ?, 'kg', 0, ?, ?, ?, ?, ?)`;
+  
+  const logParams = createdAt
+    ? [productId, quantityKg, quantityKg, stockBefore, stockAfter, avgPurchasePrice, invoiceNo, createdAt]
+    : [productId, quantityKg, quantityKg, stockBefore, stockAfter, avgPurchasePrice, invoiceNo];
+
+  await window.electronAPI.run(logSql, logParams);
 
   if (toDeduct > 0.001) throw new Error("Stok Kg tidak mencukupi"); // Use small margin for floats
 }

@@ -867,7 +867,7 @@ function Reports() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(4, 1fr)",
+                gridTemplateColumns: "repeat(5, 1fr)",
                 gap: 14,
               }}
             >
@@ -898,6 +898,13 @@ function Reports() {
                 accent={T.purple}
                 value={`${s.active_days} hari`}
                 sub="Ada transaksi"
+              />
+              <StatCard
+                index={4}
+                label="Estimasi Laba"
+                accent={T.green}
+                value={`Rp ${fmtShort(s.total_profit)}`}
+                sub="Profit bersih"
               />
             </div>
 

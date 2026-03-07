@@ -23,6 +23,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
   const [priceKg, setPriceKg]         = useState(0);
   const [pcsPerPack, setPcsPerPack]   = useState(1);
   const [packPerDus, setPackPerDus]   = useState(1);
+  const [purchasePrice, setPurchasePrice] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -42,6 +43,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
         setPriceKg(product.price_kg     || 0);
         setPcsPerPack(product.pcs_per_pack || 1);
         setPackPerDus(product.pack_per_dus || 1);
+        setPurchasePrice(product.purchase_price || 0);
       }
       setLoading(false);
     })();
@@ -74,6 +76,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
       pack_per_dus: Number(packPerDus)  || 1,
       min_stock:    Number(minStock)    || 0,
       min_stock_kg: Number(minStockKg)  || 0,
+      purchase_price: Number(purchasePrice) || 0,
       notes,
     });
     setSaving(false);
@@ -242,6 +245,17 @@ function EditProductForm({ productId, onClose, onSuccess }) {
           )}
           <Field label="Keterangan">
             <input type="text" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Opsional…" className="form-field" style={fieldStyle} />
+          </Field>
+        </div>
+
+        {/* Default HPP */}
+        <div style={{ padding: '14px', borderRadius: 14, background: T.bg, border: `1.5px dashed ${T.accent}40` }}>
+          <Field label={`Harga Modal / HPP Bawaan (per ${sellPerUnit === 'kg' ? 'Kg' : 'Pcs'})`} hint="akan digunakan otomatis jika saat input stok Anda lupa mengisi harga beli">
+            <div style={{ position: 'relative', marginTop: 8 }}>
+              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: T.muted, fontWeight: 700 }}>Rp</span>
+              <input type="number" value={purchasePrice} onChange={e => setPurchasePrice(e.target.value)}
+                placeholder="0" className="form-field" style={{ ...fieldStyle, paddingLeft: 36, fontFamily: 'JetBrains Mono, monospace', border: `1px solid ${T.accent}30` }} />
+            </div>
           </Field>
         </div>
 

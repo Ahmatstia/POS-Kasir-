@@ -2,7 +2,7 @@ const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
 const { app } = require("electron");
 
-console.log("dbManager.js is loaded!");
+// console.log("dbManager.js is loaded!");
 
 class DatabaseManager {
   constructor() {
@@ -15,7 +15,7 @@ class DatabaseManager {
   // Returns a Promise that resolves when tables are ready
   connect() {
     return new Promise((resolve, reject) => {
-      console.log("Connecting to database...");
+      // console.log("Connecting to database...");
       this.db = new sqlite3.Database(this.dbPath, async (err) => {
         if (err) {
           console.error("❌ Database connection error:", err);
@@ -29,6 +29,9 @@ class DatabaseManager {
             // Redundant check to ensure updated_at exists (critical for recent errors)
             await this._runSQL("ALTER TABLE categories ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "FIX categories.updated_at");
             await this._runSQL("ALTER TABLE products ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "FIX products.updated_at");
+            await this._runSQL("ALTER TABLE products ADD COLUMN purchase_price INTEGER DEFAULT 0", "FIX products.purchase_price");
+            await this._runSQL("ALTER TABLE stocks ADD COLUMN purchase_price INTEGER DEFAULT 0", "FIX stocks.purchase_price");
+            await this._runSQL("ALTER TABLE inventory_log ADD COLUMN purchase_price INTEGER DEFAULT 0", "FIX inventory_log.purchase_price");
             await this._runSQL("ALTER TABLE stocks ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "FIX stocks.updated_at");
             await this._runSQL("ALTER TABLE transactions ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "FIX transactions.updated_at");
             await this._runSQL("ALTER TABLE inventory_log ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "FIX inventory_log.updated_at");
@@ -106,6 +109,7 @@ class DatabaseManager {
               min_stock     INTEGER DEFAULT 0,
               notes         TEXT,
               is_active     BOOLEAN DEFAULT 1,
+              purchase_price INTEGER DEFAULT 0,
               created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
               updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
               FOREIGN KEY (category_id) REFERENCES categories(id)
@@ -123,6 +127,7 @@ class DatabaseManager {
           await this._runSQL("ALTER TABLE products ADD COLUMN created_at   DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD products.created_at");
           await this._runSQL("ALTER TABLE products ADD COLUMN updated_at   DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD products.updated_at");
           await this._runSQL("ALTER TABLE products ADD COLUMN min_stock_kg REAL DEFAULT 0", "ADD products.min_stock_kg");
+          await this._runSQL("ALTER TABLE products ADD COLUMN purchase_price INTEGER DEFAULT 0", "ADD products.purchase_price");
 
           // ── STOCKS ──────────────────────────────────────────────────────────
           await this._runSQL(`

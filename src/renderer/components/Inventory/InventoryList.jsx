@@ -14,7 +14,8 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
   const [qtyPack, setQtyPack]   = useState('');
   const [qtyPcs, setQtyPcs]     = useState('');
   const [qtyKg, setQtyKg]       = useState('');
-  const [buyPrice, setBuyPrice] = useState('');
+  const [buyPrice, setBuyPrice] = useState(''); // This is HPP / base unit
+  const [totalCost, setTotalCost] = useState(''); // For UX calculator
   const [expiry, setExpiry]     = useState('');
   const [batchCode, setBatch]   = useState('');
   const [notes, setNotes]       = useState('');
@@ -24,7 +25,6 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
   const pp = product.pcs_per_pack || 1;
   const pd = product.pack_per_dus || 1;
   const isKg = product?.sell_per_unit === 'kg';
-  const isPcsOnly = product?.sell_per_unit === 'pcs' || product?.sell_per_unit === 'pack' || product?.sell_per_unit === 'dus';
   
   const dusVal  = parseInt(qtyDus)  || 0;
   const packVal = parseInt(qtyPack) || 0;
@@ -33,6 +33,20 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
   const totalPcs = (dusVal * pd * pp) + (packVal * pp) + pcsVal;
   const totalKg  = kgVal;
   const totalDisplay = isKg ? `${totalKg > 0 ? totalKg + ' Kg' : ''} ${totalPcs > 0 ? totalPcs + ' Pcs' : ''}`.trim() : `${totalPcs} Pcs`;
+
+  // Auto-calculate HPP when Total Cost is entered
+  const handleTotalCostChange = (val) => {
+    setTotalCost(val);
+    const num = parseFloat(val);
+    if (!isNaN(num) && num > 0) {
+      const divisor = isKg ? totalKg : totalPcs;
+      if (divisor > 0) {
+        setBuyPrice(String(Math.round(num / divisor)));
+      }
+    } else {
+      setBuyPrice('');
+    }
+  };
 
   const handleSave = async () => {
     if (totalPcs <= 0 && totalKg <= 0) { setError('Masukkan jumlah stok yang valid'); return; }
@@ -68,7 +82,7 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontFamily: 'Syne, sans-serif', padding: 20,
     }}>
-      <style>{`@keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }`}</style>
+      <style>{`@keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; opacity:1; transform:translateY(0); } }`}</style>
       <div style={{
         width: '100%', maxWidth: 500,
         background: T.surface, border: `1px solid ${T.border2}`,
@@ -105,7 +119,7 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
                     {s < step ? '✓' : s}
                   </div>
                   <span style={{ fontSize: 10, fontWeight: 700, color: s <= step ? T.text : T.muted }}>
-                    {s === 1 ? 'Jumlah Stok' : 'Detail Batch'}
+                    {s === 1 ? 'Jumlah Stok' : 'Harga & Detail'}
                   </span>
                 </div>
                 {s < 2 && <div style={{ flex: 1, height: 1, background: step > s ? T.accent + '40' : T.border2 }} />}
@@ -190,11 +204,11 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
                   background: (totalPcs > 0 || totalKg > 0) ? T.accent : T.border2, 
                   color: (totalPcs > 0 || totalKg > 0) ? '#fff' : T.muted, 
                   fontFamily: 'Syne, sans-serif', fontSize: 14, fontWeight: 800, 
-                  cursor: 'pointer', border: 'none', transition: 'all 0.2s',
+                  cursor: (totalPcs > 0 || totalKg > 0) ? 'pointer' : 'not-allowed', border: 'none', transition: 'all 0.2s',
                   boxShadow: (totalPcs > 0 || totalKg > 0) ? `0 8px 20px ${T.accent}40` : 'none'
                 }}
               >
-                Lanjut ke Detail Batch →
+                Lanjut ke Input Harga →
               </button>
             </>
           )}
@@ -202,30 +216,46 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
           {step === 2 && (
             <>
               {/* Summary field */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 130px', gap: 12 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>HPP / Pcs (Rp)</label>
-                  <div style={{ position: 'relative' }}>
-                    <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: T.muted, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace' }}>Rp</span>
-                    <input type="number" value={buyPrice} onChange={e => setBuyPrice(e.target.value)}
-                      placeholder="0" style={{ ...inp, paddingLeft: 38 }} autoFocus />
+              <div style={{ padding: '16px', borderRadius: 16, background: T.accent + '08', border: `1px dashed ${T.accent}30`, marginBottom: 10 }}>
+                <p style={{ fontSize: 10, fontWeight: 800, color: T.muted, textTransform: 'uppercase', marginBottom: 12, textAlign: 'center' }}>Kalkulator Harga Modal (Opsional)</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 1.5fr', gap: 12, alignItems: 'flex-end' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 9, fontWeight: 800, color: T.sub, marginBottom: 8 }}>Total Bayar (Berdasarkan Nota)</label>
+                    <div style={{ position: 'relative' }}>
+                      <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: T.muted, fontWeight: 800 }}>Rp</span>
+                      <input type="number" value={totalCost} onChange={e => handleTotalCostChange(e.target.value)}
+                        placeholder="0" style={{ ...inp, paddingLeft: 34, fontSize: 13 }} autoFocus />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 9, fontWeight: 800, color: T.sub, marginBottom: 8 }}>{isKg ? 'Hasil Modal / Kg' : 'Hasil Modal / Pcs'}</label>
+                    <div style={{ position: 'relative' }}>
+                      <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: T.muted, fontWeight: 800 }}>Rp</span>
+                      <input type="number" value={buyPrice} onChange={e => setBuyPrice(e.target.value)}
+                        placeholder="0" style={{ ...inp, paddingLeft: 34, fontSize: 13, border: `1.5px solid ${T.accent}40`, background: T.surface }} />
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Tgl Kadaluarsa</label>
-                  <input type="date" value={expiry} onChange={e => setExpiry(e.target.value)} style={inp} />
-                </div>
+                <p style={{ fontSize: 9, color: T.muted, marginTop: 10, display: 'flex', justifyContent: 'space-between', fontStyle: 'italic' }}>
+                   <span>*Sistem membagi total bayar dengan {isKg ? `${totalKg} Kg` : `${totalPcs} Pcs`}.</span>
+                   {product.purchase_price > 0 && <span style={{ color: T.accent, fontWeight: 700 }}>HPP Default: {fmt(product.purchase_price)}</span>}
+                </p>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 12 }}>
                 <div>
+                   <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Tgl Kadaluarsa</label>
+                   <input type="date" value={expiry} onChange={e => setExpiry(e.target.value)} style={inp} />
+                </div>
+                <div>
                   <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Kode Batch</label>
                   <input value={batchCode} onChange={e => setBatch(e.target.value)} placeholder="Misal: B-001" style={inp} />
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Catatan</label>
-                  <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Diterima oleh…" style={inp} />
-                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Catatan</label>
+                <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Misal: Barang bagus, diterima oleh..." style={inp} />
               </div>
 
               {error && <div style={{ padding: '12px', borderRadius: 12, background: T.red + '0A', border: `1px solid ${T.red}20`, fontSize: 13, color: T.red, fontWeight: 700 }}>⚠ {error}</div>}
@@ -259,10 +289,11 @@ function AdjustModal({ product, onClose, onSuccess, showToast }) {
   const isKg = product?.sell_per_unit === 'kg';
   const currentBase = isKg ? (product.stock_kg || 0) : (product.stock || 0);
 
-  const [newQty, setNewQty] = useState(String(currentBase));
-  const [reason, setReason] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [error, setError]   = useState('');
+  const [newQty, setNewQty]   = useState(String(currentBase));
+  const [purchasePrice, setPurchasePrice] = useState('0');
+  const [reason, setReason]   = useState('');
+  const [saving, setSaving]   = useState(false);
+  const [error, setError]     = useState('');
 
   const pp = product.pcs_per_pack || 1;
   const pd = product.pack_per_dus || 1;
@@ -282,9 +313,10 @@ function AdjustModal({ product, onClose, onSuccess, showToast }) {
     setError('');
     setSaving(true);
     let res;
-    import('../../services/inventory').then(async ({ adjustStockKg }) => {
-       if (isKg) res = await adjustStockKg(product.id, newVal, reason);
-       else      res = await adjustStock(product.id, newVal, reason);
+    const hppVal = parseInt(purchasePrice) || 0;
+    import('../../services/inventory').then(async ({ adjustStockKg, adjustStock }) => {
+       if (isKg) res = await adjustStockKg(product.id, newVal, reason, hppVal);
+       else      res = await adjustStock(product.id, newVal, reason, hppVal);
 
        setSaving(false);
        if (res.success) {
@@ -363,6 +395,24 @@ function AdjustModal({ product, onClose, onSuccess, showToast }) {
             </div>
           </div>
 
+          {/* HPP Input (Only if stock increases) */}
+          {isPlus && (
+            <div style={{ animation: 'slideUp 0.3s ease' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 800, color: T.accent, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>
+                Harga Modal (HPP) Baru
+                <span style={{ fontSize: 9, color: T.muted, fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(Opsional - per {isKg ? 'Kg' : 'Unit'})</span>
+              </label>
+              <div style={{ position: 'relative' }}>
+                <div style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 14, fontWeight: 800, color: T.muted }}>Rp</div>
+                <input type="number" value={purchasePrice}
+                  onChange={e => setPurchasePrice(e.target.value)}
+                  style={{ ...inp, paddingLeft: 40, border: `1.5px solid ${T.accent}30`, background: T.accent + '04' }}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Reasons */}
           <div>
             <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: error ? T.red : T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
@@ -422,16 +472,31 @@ function InventoryList() {
   const [searchTerm, setSearchTerm]     = useState('');
   const [filterCat, setFilterCat]       = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [activeTab, setActiveTab]         = useState('list'); // 'list' or 'log'
+  const [logs, setLogs]                   = useState([]);
   const [stockInProduct, setStockInProduct] = useState(null);
   const [adjustProduct, setAdjustProduct]   = useState(null);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { 
+    if (activeTab === 'list') load();
+    else loadLogs();
+  }, [activeTab]);
+
   const load = async () => {
     setLoading(true);
     const [inv, cats] = await Promise.all([getInventorySummary(), getCategories()]);
     setProducts(inv);
     setCategories(cats);
     setLoading(false);
+  };
+
+  const loadLogs = async () => {
+    setLoading(true);
+    import('../../services/inventory').then(async ({ getInventoryLog }) => {
+      const data = await getInventoryLog(null, 200);
+      setLogs(data);
+      setLoading(false);
+    });
   };
 
   const filtered = products.filter(p => {
@@ -499,6 +564,18 @@ function InventoryList() {
             <p style={{ fontSize: 10, fontWeight: 700, color: T.muted, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>Manajemen</p>
             <h2 style={{ fontSize: 22, fontWeight: 800, color: T.text, letterSpacing: '-0.01em' }}>Inventori Stok</h2>
           </div>
+          <div style={{ display: 'flex', background: T.surface, padding: 4, borderRadius: 12, border: `1px solid ${T.border}` }}>
+            <button onClick={() => setActiveTab('list')} style={{ 
+              padding: '8px 16px', borderRadius: 9, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none',
+              background: activeTab === 'list' ? T.accent : 'transparent', color: activeTab === 'list' ? '#fff' : T.sub,
+              transition: 'all 0.2s'
+            }}>Daftar Produk</button>
+            <button onClick={() => setActiveTab('log')} style={{ 
+              padding: '8px 16px', borderRadius: 9, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none',
+              background: activeTab === 'log' ? T.accent : 'transparent', color: activeTab === 'log' ? '#fff' : T.sub,
+              transition: 'all 0.2s'
+            }}>Riwayat Stok (Log)</button>
+          </div>
         </div>
 
         {/* ── STAT STRIP ── */}
@@ -543,215 +620,273 @@ function InventoryList() {
           ))}
         </div>
 
-        {/* ── FILTER BAR ── */}
-        <div style={{ 
-          background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, 
-          padding: '16px', marginBottom: 20, 
-          display: 'grid', gridTemplateColumns: '1fr 180px 200px auto', gap: 12, alignItems: 'center',
-          boxShadow: '0 4px 15px rgba(0,0,0,0.05)'
-        }}>
-          <div style={{ position: 'relative' }}>
-            <svg style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', opacity: 0.5, pointerEvents: 'none', color: T.accent }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            <input 
-              type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} 
-              placeholder="Cari nama produk…" 
-              className="inv-input" 
-              style={{ padding: '12px 14px 12px 42px', backgroundColor: T.bg, border: `1px solid ${T.border2}`, borderRadius: 12, fontSize: 13 }} 
-            />
-          </div>
-          <select 
-            value={filterCat} onChange={e => setFilterCat(e.target.value)} 
-            className="inv-input" 
-            style={{ cursor: 'pointer', padding: '12px', borderRadius: 12, backgroundColor: T.bg, border: `1px solid ${T.border2}` }}
-          >
-            <option value="">Semua Kategori</option>
-            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          <select 
-            value={filterStatus} onChange={e => setFilterStatus(e.target.value)} 
-            className="inv-input" 
-            style={{ cursor: 'pointer', padding: '12px', borderRadius: 12, backgroundColor: T.bg, border: `1px solid ${T.border2}` }}
-          >
-            <option value="">Semua Status Stok</option>
-            <option value="aman">✅ Stok Aman</option>
-            <option value="menipis">⚠️ Stok Menipis</option>
-            <option value="habis">❌ Stok Habis</option>
-          </select>
-          <button 
-            onClick={() => { setSearchTerm(''); setFilterCat(''); setFilterStatus(''); }} 
-            style={{ 
-              padding: '12px 20px', borderRadius: 12, border: `1px solid ${T.border2}`, 
-              background: T.bg, color: T.sub, fontSize: 12, fontWeight: 700, 
-              cursor: 'pointer', fontFamily: 'Syne, sans-serif', transition: 'all 0.2s' 
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = T.border; e.currentTarget.style.color = T.text; }}
-            onMouseLeave={e => { e.currentTarget.style.background = T.bg; e.currentTarget.style.color = T.sub; }}
-          >
-            Bersihkan
-          </button>
-        </div>
+        {activeTab === 'list' ? (
+          <>
+            {/* ── FILTER BAR ── */}
+            <div style={{ 
+              background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, 
+              padding: '16px', marginBottom: 20, 
+              display: 'grid', gridTemplateColumns: '1fr 180px 200px auto', gap: 12, alignItems: 'center',
+              boxShadow: '0 4px 15px rgba(0,0,0,0.05)'
+            }}>
+              <div style={{ position: 'relative' }}>
+                <svg style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', opacity: 0.5, pointerEvents: 'none', color: T.accent }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input 
+                  type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} 
+                  placeholder="Cari nama produk…" 
+                  className="inv-input" 
+                  style={{ padding: '12px 14px 12px 42px', backgroundColor: T.bg, border: `1px solid ${T.border2}`, borderRadius: 12, fontSize: 13 }} 
+                />
+              </div>
+              <select 
+                value={filterCat} onChange={e => setFilterCat(e.target.value)} 
+                className="inv-input" 
+                style={{ cursor: 'pointer', padding: '12px', borderRadius: 12, backgroundColor: T.bg, border: `1px solid ${T.border2}` }}
+              >
+                <option value="">Semua Kategori</option>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <select 
+                value={filterStatus} onChange={e => setFilterStatus(e.target.value)} 
+                className="inv-input" 
+                style={{ cursor: 'pointer', padding: '12px', borderRadius: 12, backgroundColor: T.bg, border: `1px solid ${T.border2}` }}
+              >
+                <option value="">Semua Status Stok</option>
+                <option value="aman">✅ Stok Aman</option>
+                <option value="menipis">⚠️ Stok Menipis</option>
+                <option value="habis">❌ Stok Habis</option>
+              </select>
+              <button 
+                onClick={() => { setSearchTerm(''); setFilterCat(''); setFilterStatus(''); }} 
+                style={{ 
+                  padding: '12px 20px', borderRadius: 12, border: `1px solid ${T.border2}`, 
+                  background: T.bg, color: T.sub, fontSize: 12, fontWeight: 700, 
+                  cursor: 'pointer', fontFamily: 'Syne, sans-serif', transition: 'all 0.2s' 
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = T.border; e.currentTarget.style.color = T.text; }}
+                onMouseLeave={e => { e.currentTarget.style.background = T.bg; e.currentTarget.style.color = T.sub; }}
+              >
+                Bersihkan
+              </button>
+            </div>
 
-        {/* ── TABLE ── */}
-        {filtered.length === 0 ? (
-          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, padding: '48px 24px', textAlign: 'center' }}>
-            <p style={{ fontSize: 14, fontWeight: 700, color: T.muted, marginBottom: 8 }}>Tidak ada produk yang ditemukan</p>
-            <button onClick={() => { setSearchTerm(''); setFilterCat(''); setFilterStatus(''); }} style={{ padding: '8px 18px', borderRadius: 10, border: `1px solid ${T.blue}35`, background: T.blue + '10', color: T.blue, fontFamily: 'Syne, sans-serif', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Reset Filter</button>
-          </div>
+            {/* ── TABLE ── */}
+            {filtered.length === 0 ? (
+              <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, padding: '48px 24px', textAlign: 'center' }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: T.muted, marginBottom: 8 }}>Tidak ada produk yang ditemukan</p>
+                <button onClick={() => { setSearchTerm(''); setFilterCat(''); setFilterStatus(''); }} style={{ padding: '8px 18px', borderRadius: 10, border: `1px solid ${T.blue}35`, background: T.blue + '10', color: T.blue, fontFamily: 'Syne, sans-serif', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Reset Filter</button>
+              </div>
+            ) : (
+              <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, overflow: 'hidden', boxShadow: '0 8px 30px rgba(0,0,0,0.1)' }}>
+                {/* Table header */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '2.5fr 140px 120px 200px 180px',
+                  padding: '16px 24px',
+                  borderBottom: `1px solid ${T.border}`,
+                  background: `linear-gradient(to bottom, ${T.bg}, ${T.surface})`,
+                }}>
+                  {['Informasi Produk', 'Jumlah Stok', 'Ambang Batas', 'Kesehatan Stok', 'Aksi'].map(h => (
+                    <p key={h} style={{ fontSize: 10, fontWeight: 800, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{h}</p>
+                  ))}
+                </div>
+
+                {/* Rows */}
+                <div style={{ maxHeight: 'calc(100vh - 430px)', overflowY: 'auto', padding: '0 8px' }}>
+                  {filtered.map((product, idx) => {
+                    const isKg    = product.sell_per_unit === 'kg';
+                    const stock   = isKg ? (product.stock_kg || 0) : (product.stock || 0);
+                    const minSt   = isKg ? (product.min_stock_kg || 0) : (product.min_stock || 0);
+                    const outOf   = stock <= 0;
+                    const low     = !outOf && stock <= minSt;
+                    const sc      = outOf ? T.red : low ? T.accent : T.green;
+                    const label   = outOf ? 'Stok Habis' : low ? 'Hampir Habis' : 'Stok Aman';
+                    const pct     = minSt > 0 ? Math.min(100, (stock / Math.max(minSt * 2, 1)) * 100) : (stock > 0 ? 100 : 0);
+                    const pp      = product.pcs_per_pack || 1;
+                    const pd      = product.pack_per_dus || 1;
+
+                    return (
+                      <div
+                        key={product.id}
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: '2.5fr 140px 120px 200px 180px',
+                          padding: '20px 16px',
+                          margin: '8px 0',
+                          borderRadius: 16,
+                          alignItems: 'center',
+                          background: 'transparent',
+                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.background = T.border + '30';
+                          e.currentTarget.style.transform = 'scale(1.005)';
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.transform = 'scale(1)';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
+                      >
+                        {/* Product info */}
+                        <div style={{ paddingLeft: 8 }}>
+                          <p style={{ fontSize: 15, fontWeight: 800, color: outOf ? T.sub : T.text, marginBottom: 6 }}>{product.name}</p>
+                          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: T.sub, fontFamily: 'JetBrains Mono, monospace', background: T.bg, padding: '2px 8px', borderRadius: 6, border: `1px solid ${T.border2}` }}>
+                              {product.category_name || 'Tanpa Kategori'}
+                            </span>
+                            {!isKg && (pp > 1 || pd > 1) && (
+                               <span style={{ fontSize: 9, color: T.muted }}>
+                                 {pp > 1 ? `${Math.floor(stock / pp)} Pack` : ''} 
+                                 {pd > 1 && stock >= pp * pd ? ` / ${Math.floor(stock / (pp * pd))} Dus` : ''}
+                               </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Stock number */}
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                            <span style={{ fontSize: 24, fontWeight: 900, fontFamily: 'JetBrains Mono, monospace', color: sc, letterSpacing: '-0.02em' }}>
+                              {isKg ? Number(stock).toFixed(2) : numFmt(stock)}
+                            </span>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: 'uppercase' }}>{isKg ? 'Kg' : 'Pcs'}</span>
+                          </div>
+                        </div>
+
+                        {/* Min stock */}
+                        <div style={{ fontSize: 13, fontFamily: 'JetBrains Mono, monospace', color: T.sub, fontWeight: 600 }}>
+                          {minSt > 0 ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ opacity: 0.6 }}>min</span>
+                              <span>{isKg ? minSt : numFmt(minSt)}</span>
+                            </div>
+                          ) : '—'}
+                        </div>
+
+                        {/* Progress bar + status */}
+                        <div style={{ paddingRight: 20 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                            <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', color: sc, letterSpacing: '0.05em' }}>
+                              {label}
+                            </span>
+                            <span style={{ fontSize: 10, fontWeight: 800, color: T.muted, fontFamily: 'JetBrains Mono, monospace' }}>{Math.round(pct)}%</span>
+                          </div>
+                          <div style={{ height: 6, borderRadius: 10, background: T.border2, overflow: 'hidden', position: 'relative' }}>
+                            <div style={{ 
+                              height: '100%', borderRadius: 10, background: sc, width: `${pct}%`, 
+                              transition: 'width 1s cubic-bezier(0.16, 1, 0.3, 1)',
+                              boxShadow: `0 0 10px ${sc}40`
+                            }} />
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div style={{ display: 'flex', gap: 10 }}>
+                          <button
+                            onClick={() => setStockInProduct(product)}
+                            style={{
+                              padding: '10px 14px', borderRadius: 12, cursor: 'pointer',
+                              border: `1px solid ${T.green}40`, background: T.green + '14',
+                              color: T.green, fontSize: 11, fontWeight: 800,
+                              fontFamily: 'Syne, sans-serif', transition: 'all 0.2s',
+                              display: 'flex', alignItems: 'center', gap: 6,
+                              whiteSpace: 'nowrap',
+                              boxShadow: `0 4px 12px ${T.green}15`
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = T.green; e.currentTarget.style.color = '#fff'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = T.green + '14'; e.currentTarget.style.color = T.green; }}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            Stok
+                          </button>
+                          <button
+                            onClick={() => setAdjustProduct(product)}
+                            style={{
+                              padding: '10px 12px', borderRadius: 12, cursor: 'pointer',
+                              border: `1px solid ${T.border2}`, background: T.bg,
+                              color: T.sub, fontSize: 11, fontWeight: 800,
+                              fontFamily: 'Syne, sans-serif', transition: 'all 0.2s',
+                              display: 'flex', alignItems: 'center', gap: 6,
+                              whiteSpace: 'nowrap',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = T.accent; e.currentTarget.style.color = T.accent; e.currentTarget.style.background = T.accent + '10'; }}
+                            onMouseLeave={e => { e.currentTarget.style.borderColor = T.border2; e.currentTarget.style.color = T.sub; e.currentTarget.style.background = T.bg; }}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Footer */}
+                <div style={{ padding: '10px 18px', borderTop: `1px solid ${T.border}`, background: T.bg, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, color: T.muted, fontFamily: 'JetBrains Mono, monospace' }}>
+                    <span style={{ color: T.accent, fontWeight: 700 }}>{filtered.length}</span> / {products.length} produk
+                  </span>
+                  <div style={{ fontSize: 10, color: T.muted }}>
+                  Klik stat di atas untuk filter cepat
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         ) : (
+          /* ── LOG VIEW ── */
           <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, overflow: 'hidden', boxShadow: '0 8px 30px rgba(0,0,0,0.1)' }}>
-            {/* Table header */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '2.5fr 140px 120px 200px 180px',
-              padding: '16px 24px',
-              borderBottom: `1px solid ${T.border}`,
+             <div style={{
+              display: 'grid', gridTemplateColumns: '150px 1.5fr 100px 100px 1fr',
+              padding: '16px 24px', borderBottom: `1px solid ${T.border}`,
               background: `linear-gradient(to bottom, ${T.bg}, ${T.surface})`,
             }}>
-              {['Informasi Produk', 'Jumlah Stok', 'Ambang Batas', 'Kesehatan Stok', 'Aksi'].map(h => (
+              {['Waktu', 'Produk', 'Tipe', 'Perubahan', 'Keterangan'].map(h => (
                 <p key={h} style={{ fontSize: 10, fontWeight: 800, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{h}</p>
               ))}
             </div>
-
-            {/* Rows */}
-            <div style={{ maxHeight: 'calc(100vh - 430px)', overflowY: 'auto', padding: '0 8px' }}>
-              {filtered.map((product, idx) => {
-                const isKg    = product.sell_per_unit === 'kg';
-                const stock   = isKg ? (product.stock_kg || 0) : (product.stock || 0);
-                const minSt   = isKg ? (product.min_stock_kg || 0) : (product.min_stock || 0);
-                const outOf   = stock <= 0;
-                const low     = !outOf && stock <= minSt;
-                const sc      = outOf ? T.red : low ? T.accent : T.green;
-                const label   = outOf ? 'Stok Habis' : low ? 'Hampir Habis' : 'Stok Aman';
-                const pct     = minSt > 0 ? Math.min(100, (stock / Math.max(minSt * 2, 1)) * 100) : (stock > 0 ? 100 : 0);
-                const pp      = product.pcs_per_pack || 1;
-                const pd      = product.pack_per_dus || 1;
-
-                return (
-                  <div
-                    key={product.id}
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '2.5fr 140px 120px 200px 180px',
-                      padding: '20px 16px',
-                      margin: '8px 0',
-                      borderRadius: 16,
-                      border: idx < filtered.length - 1 ? 'none' : 'none', // Removed default border
-                      alignItems: 'center',
-                      background: 'transparent',
-                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.background = T.border + '30';
-                      e.currentTarget.style.transform = 'scale(1.005)';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.transform = 'scale(1)';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
-                  >
-                    {/* Product info */}
-                    <div style={{ paddingLeft: 8 }}>
-                      <p style={{ fontSize: 15, fontWeight: 800, color: outOf ? T.sub : T.text, marginBottom: 6 }}>{product.name}</p>
-                      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, color: T.sub, fontFamily: 'JetBrains Mono, monospace', background: T.bg, padding: '2px 8px', borderRadius: 6, border: `1px solid ${T.border2}` }}>
-                          {product.category_name || 'Tanpa Kategori'}
+            <div style={{ maxHeight: 'calc(100vh - 350px)', overflowY: 'auto' }}>
+              {logs.length === 0 ? (
+                <div style={{ padding: 40, textAlign: 'center', color: T.muted, fontSize: 13 }}>Belum ada riwayat pergerakan stok.</div>
+              ) : (
+                logs.map((log, i) => {
+                  const isSale = log.type === 'SALE';
+                  const isIn   = log.type === 'IN';
+                  const isAdj  = log.type === 'ADJUSTMENT';
+                  const color  = isIn ? T.green : isSale ? T.blue : isAdj ? T.accent : T.muted;
+                  
+                  return (
+                    <div key={i} style={{ 
+                      display: 'grid', gridTemplateColumns: '150px 1.5fr 100px 100px 1fr',
+                      padding: '14px 24px', borderBottom: i < logs.length-1 ? `1px solid ${T.border2}` : 'none',
+                      alignItems: 'center', fontSize: 12, color: T.sub
+                    }}>
+                      <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}>
+                        {log.created_at ? log.created_at.replace('T', ' ').split('.')[0] : '-'}
+                      </div>
+                      <div style={{ fontWeight: 700, color: T.text }}>{log.product_name}</div>
+                      <div>
+                        <span style={{ 
+                          padding: '2px 8px', borderRadius: 6, fontSize: 9, fontWeight: 800,
+                          background: color + '15', color: color, border: `1px solid ${color}30`
+                        }}>
+                          {log.type}
                         </span>
-                        {!isKg && (pp > 1 || pd > 1) && (
-                           <span style={{ fontSize: 9, color: T.muted }}>
-                             {pp > 1 ? `${Math.floor(stock / pp)} Pack` : ''} 
-                             {pd > 1 && stock >= pp * pd ? ` / ${Math.floor(stock / (pp * pd))} Dus` : ''}
-                           </span>
-                        )}
+                      </div>
+                      <div style={{ fontWeight: 800, color: isIn ? T.green : T.red, fontFamily: 'JetBrains Mono, monospace' }}>
+                        {isIn ? '+' : ''}{log.quantity_kg > 0 ? log.quantity_kg + ' Kg' : log.quantity_pcs + ' Pcs'}
+                      </div>
+                      <div style={{ fontSize: 11, color: T.muted, fontStyle: 'italic' }}>
+                        {log.notes || (log.batch_code ? `Batch: ${log.batch_code}` : (log.reference_id ? `Ref: ${log.reference_id}` : '-'))}
                       </div>
                     </div>
-
-                    {/* Stock number */}
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                        <span style={{ fontSize: 24, fontWeight: 900, fontFamily: 'JetBrains Mono, monospace', color: sc, letterSpacing: '-0.02em' }}>
-                          {isKg ? Number(stock).toFixed(2) : numFmt(stock)}
-                        </span>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: 'uppercase' }}>{isKg ? 'Kg' : 'Pcs'}</span>
-                      </div>
-                    </div>
-
-                    {/* Min stock */}
-                    <div style={{ fontSize: 13, fontFamily: 'JetBrains Mono, monospace', color: T.sub, fontWeight: 600 }}>
-                      {minSt > 0 ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{ opacity: 0.6 }}>min</span>
-                          <span>{isKg ? minSt : numFmt(minSt)}</span>
-                        </div>
-                      ) : '—'}
-                    </div>
-
-                    {/* Progress bar + status */}
-                    <div style={{ paddingRight: 20 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                        <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', color: sc, letterSpacing: '0.05em' }}>
-                          {label}
-                        </span>
-                        <span style={{ fontSize: 10, fontWeight: 800, color: T.muted, fontFamily: 'JetBrains Mono, monospace' }}>{Math.round(pct)}%</span>
-                      </div>
-                      <div style={{ height: 6, borderRadius: 10, background: T.border2, overflow: 'hidden', position: 'relative' }}>
-                        <div style={{ 
-                          height: '100%', borderRadius: 10, background: sc, width: `${pct}%`, 
-                          transition: 'width 1s cubic-bezier(0.16, 1, 0.3, 1)',
-                          boxShadow: `0 0 10px ${sc}40`
-                        }} />
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div style={{ display: 'flex', gap: 10 }}>
-                      <button
-                        onClick={() => setStockInProduct(product)}
-                        style={{
-                          padding: '10px 14px', borderRadius: 12, cursor: 'pointer',
-                          border: `1px solid ${T.green}40`, background: T.green + '14',
-                          color: T.green, fontSize: 11, fontWeight: 800,
-                          fontFamily: 'Syne, sans-serif', transition: 'all 0.2s',
-                          display: 'flex', alignItems: 'center', gap: 6,
-                          whiteSpace: 'nowrap',
-                          boxShadow: `0 4px 12px ${T.green}15`
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.background = T.green; e.currentTarget.style.color = '#fff'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = T.green + '14'; e.currentTarget.style.color = T.green; }}
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                        Stok
-                      </button>
-                      <button
-                        onClick={() => setAdjustProduct(product)}
-                        style={{
-                          padding: '10px 12px', borderRadius: 12, cursor: 'pointer',
-                          border: `1px solid ${T.border2}`, background: T.bg,
-                          color: T.sub, fontSize: 11, fontWeight: 800,
-                          fontFamily: 'Syne, sans-serif', transition: 'all 0.2s',
-                          display: 'flex', alignItems: 'center', gap: 6,
-                          whiteSpace: 'nowrap',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = T.accent; e.currentTarget.style.color = T.accent; e.currentTarget.style.background = T.accent + '10'; }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = T.border2; e.currentTarget.style.color = T.sub; e.currentTarget.style.background = T.bg; }}
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
-
-            {/* Footer */}
-            <div style={{ padding: '10px 18px', borderTop: `1px solid ${T.border}`, background: T.bg, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 11, color: T.muted, fontFamily: 'JetBrains Mono, monospace' }}>
-                <span style={{ color: T.accent, fontWeight: 700 }}>{filtered.length}</span> / {products.length} produk
-              </span>
-              <div style={{ fontSize: 10, color: T.muted }}>
-                Klik stat di atas untuk filter cepat
-              </div>
+            <div style={{ padding: '12px 24px', background: T.bg, borderTop: `1px solid ${T.border}`, fontSize: 10, color: T.muted }}>
+              Menampilkan {logs.length} riwayat terbaru.
             </div>
           </div>
         )}

@@ -303,26 +303,26 @@ export default function Dashboard() {
         </div>
 
         {/* ── STAT CARDS ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, marginBottom: 24 }}>
           <StatCard
-            index={0} label="Total Produk" accent={T.blue}
-            value={data.totalProducts || 0}
-            sub={<Chip color={T.blue}>{data.totalCategories || 0} Kategori</Chip>}
-          />
-          <StatCard
-            index={1} label="Penjualan Hari Ini" accent={T.accent}
+            index={0} label="Omzet Hari Ini" accent={T.accent}
             value={data.todaySales || 0}
             sub={<Chip color={T.accent}>{data.todayTransactions || 0} Transaksi</Chip>}
           />
           <StatCard
-            index={2} label="Penjualan Bulan Ini" accent={T.green}
+            index={1} label="Estimasi Laba Hari Ini" accent={T.green}
+            value={data.todayProfit || 0}
+            sub={<Chip color={T.green}>Profit Bersih</Chip>}
+          />
+          <StatCard
+            index={2} label="Omzet Bulan Ini" accent={T.blue}
             value={data.monthSales || 0}
             sub={<span style={{ fontSize: 12, color: T.sub }}>Target: {fmtShort((data.monthSales || 0) * 1.2)}</span>}
           />
           <StatCard
-            index={3} label="Rata-rata Transaksi" accent={T.purple}
-            value={Math.round(avgTx)}
-            sub={<span style={{ fontSize: 12, color: T.sub }}>{totalSold} item terjual bulan ini</span>}
+            index={3} label="Estimasi Laba Bulan Ini" accent={T.purple}
+            value={data.monthProfit || 0}
+            sub={<span style={{ fontSize: 12, color: T.sub }}>{totalSold} item terjual</span>}
           />
         </div>
 

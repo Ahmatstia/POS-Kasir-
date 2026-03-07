@@ -389,9 +389,35 @@ function Reports() {
         .r-scroll::-webkit-scrollbar { width:3px; height:3px; }
         .r-scroll::-webkit-scrollbar-thumb { background:${T.border2}; border-radius:3px; }
         input[type=date] { color-scheme: dark; }
+
+        @media print {
+          body { margin: 0; padding: 0; background: #fff !important; color: #000 !important; }
+          * { visibility: hidden; }
+          .report-container, .report-container * {
+            visibility: visible;
+            color: #000 !important;
+            background: #fff !important;
+            border-color: #ddd !important;
+            box-shadow: none !important;
+          }
+          .report-container {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 0 10px !important;
+            margin: 0 !important;
+          }
+          .no-print, .no-print * {
+            display: none !important;
+          }
+          /* Hide charts on print for cleaner table look */
+          .recharts-wrapper { display: none !important; }
+        }
       `}</style>
 
       <div
+        className="report-container"
         style={{
           fontFamily: "Syne, sans-serif",
           animation: "fadeUp 0.4s ease both",
@@ -430,7 +456,7 @@ function Reports() {
               Laporan
             </h1>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className="no-print" style={{ display: "flex", gap: 8 }}>
             <button
               className="action-btn"
               onClick={handleExport}

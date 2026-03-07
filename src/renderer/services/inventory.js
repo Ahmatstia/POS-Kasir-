@@ -118,12 +118,16 @@ export async function addStock(productId, {
     const stockId = stockResult.lastID;
 
     // Log the movement
+    const isKg = totalKg > 0;
+    const finalStockBefore = isKg ? stockKgBefore : stockBefore;
+    const finalStockAfter = isKg ? (stockKgBefore + totalKg) : (stockBefore + totalPcs);
+
     await window.electronAPI.run(
       `INSERT INTO inventory_log 
          (product_id, stock_id, type, quantity_input, unit_input, quantity_pcs, quantity_kg,
           stock_before, stock_after, purchase_price, batch_code, expiry_date, notes)
        VALUES (?, ?, 'IN', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [productId, stockId, totalKg > 0 ? totalKg : totalPcs, totalKg > 0 ? 'kg' : 'pcs', totalPcs, totalKg, stockKgBefore + stockBefore, stockKgBefore + stockBefore + totalKg + totalPcs,
+      [productId, stockId, isKg ? totalKg : totalPcs, isKg ? 'kg' : 'pcs', totalPcs, totalKg, finalStockBefore, finalStockAfter,
        finalPurchasePrice, autoCode, expiry_date || null, notes]
     );
 

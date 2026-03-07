@@ -409,6 +409,7 @@ function Cashier() {
   const [cart, setCart]                             = useState([]);
   const [showPayment, setShowPayment]               = useState(false);
   const [weighingProduct, setWeighingProduct]       = useState(null); // the product to weigh
+  const [reweighItem, setReweighItem]               = useState(null); // { itemId, product }
   const [loading, setLoading]                       = useState(false);
   const [loadingMore, setLoadingMore]               = useState(false);
   const [hasMore, setHasMore]                       = useState(true);
@@ -580,26 +581,12 @@ function Cashier() {
     if (!item) return;
 
     if (item.unit === 'kg') {
-       const userKgStr = window.prompt(`Masukkan berat Kg baru:`, String(item.quantity));
-       if (userKgStr === null) return;
-       const kgVal = parseFloat(userKgStr);
-       if (isNaN(kgVal) || kgVal < 0) {
-         showToast('error', 'Masukkan jumlah Kg yang valid.');
-         return;
-       }
-       if (kgVal === 0) {
-         removeFromCart(itemId);
-         return;
-       }
        const product = allProducts.find(p => p.id === item.product_id);
        if (product) {
-         const otherKg = calcCartKg(product.id, itemId);
-         if (kgVal + otherKg > (product.stock_kg || 0)) {
-            showToast('error', `Stok Kg tidak mencukupi! Tersisa: ${product.stock_kg || 0} Kg`);
-            return;
-         }
+         setReweighItem({ itemId, product });
+       } else {
+         showToast('error', 'Produk tidak ditemukan di database.');
        }
-       setCart(cart.map(i => i.id === itemId ? { ...i, quantity: kgVal, subtotal: kgVal * i.price } : i));
        return;
     }
 
@@ -708,7 +695,7 @@ function Cashier() {
                 background: T.blue + '12', border: `1px solid ${T.blue}30`,
                 fontSize: 10, fontWeight: 700, color: T.blue, letterSpacing: '0.06em',
               }}>
-                {allProducts.filter(p => (p.stock || 0) > 0).length} TERSEDIA
+                {allProducts.filter(p => p.sell_per_unit === 'kg' ? (p.stock_kg || 0) > 0 : (p.stock || 0) > 0).length} TERSEDIA
               </div>
             </div>
 
@@ -937,6 +924,7 @@ function Cashier() {
           total={total}
           onClose={() => setShowPayment(false)}
           onConfirm={handlePayment}
+          loading={loading}
         />
       )}
 
@@ -946,6 +934,30 @@ function Cashier() {
           product={weighingProduct}
           onClose={() => setWeighingProduct(null)}
           onConfirm={(kgQty) => addKgToCartConfirm(weighingProduct, kgQty)}
+        />
+      )}
+
+      {/* REWEIGH MODAL (Update Qty Kg di Keranjang) */}
+      {reweighItem && (
+        <WeighingModal 
+          product={reweighItem.product}
+          onClose={() => setReweighItem(null)}
+          onConfirm={(kgQty) => {
+            const kgVal = parseFloat(kgQty);
+            if (isNaN(kgVal) || kgVal <= 0) {
+              if (kgVal === 0) removeFromCart(reweighItem.itemId);
+              else showToast('error', 'Jumlah harus lebih besar dari 0.');
+              setReweighItem(null);
+              return;
+            }
+            const otherKg = calcCartKg(reweighItem.product.id, reweighItem.itemId);
+            if (kgVal + otherKg > (reweighItem.product.stock_kg || 0)) {
+               showToast('error', `Stok Kg tidak mencukupi! Tersisa: ${reweighItem.product.stock_kg || 0} Kg`);
+               return;
+            }
+            setCart(cart.map(i => i.id === reweighItem.itemId ? { ...i, quantity: kgVal, subtotal: kgVal * i.price } : i));
+            setReweighItem(null);
+          }}
         />
       )}
     </>

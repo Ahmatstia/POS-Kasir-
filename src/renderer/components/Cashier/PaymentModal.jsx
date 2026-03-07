@@ -44,7 +44,7 @@ const METHODS = [
   },
 ];
 
-function PaymentModal({ total, onClose, onConfirm }) {
+function PaymentModal({ total, onClose, onConfirm, loading = false }) {
   const [payment, setPayment]           = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const inputRef = useRef(null);
@@ -322,25 +322,27 @@ function PaymentModal({ total, onClose, onConfirm }) {
               </button>
               <button
                 onClick={handleConfirm}
-                disabled={!isValid}
+                disabled={!isValid || loading}
                 style={{
                   padding: '12px', borderRadius: 12,
-                  border: `1px solid ${isValid ? T.green + '50' : T.border2}`,
-                  background: isValid ? T.green + '18' : T.border,
-                  color: isValid ? T.green : T.muted,
+                  border: `1px solid ${isValid && !loading ? T.green + '50' : T.border2}`,
+                  background: isValid && !loading ? T.green + '18' : T.border,
+                  color: isValid && !loading ? T.green : T.sub,
                   fontFamily: 'Syne, sans-serif', fontSize: 13, fontWeight: 800,
-                  letterSpacing: '0.04em', cursor: isValid ? 'pointer' : 'not-allowed',
+                  letterSpacing: '0.04em', cursor: isValid && !loading ? 'pointer' : 'not-allowed',
                   transition: 'all 0.15s',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  opacity: isValid ? 1 : 0.5,
+                  opacity: isValid && !loading ? 1 : 0.5,
                 }}
-                onMouseEnter={e => { if (isValid) e.currentTarget.style.background = T.green + '28'; }}
-                onMouseLeave={e => { if (isValid) e.currentTarget.style.background = T.green + '18'; }}
+                onMouseEnter={e => { if (isValid && !loading) e.currentTarget.style.background = T.green + '28'; }}
+                onMouseLeave={e => { if (isValid && !loading) e.currentTarget.style.background = T.green + '18'; }}
               >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M3 8l3.5 3.5L13 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                Konfirmasi Bayar
+                {!loading && (
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M3 8l3.5 3.5L13 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+                {loading ? 'Memproses...' : 'Konfirmasi Bayar'}
               </button>
             </div>
 

@@ -161,8 +161,10 @@ export async function getDashboardData() {
     console.error('Error getting dashboard data:', error);
     return {
       todaySales: 0,
+      todayProfit: 0,
       todayTransactions: 0,
       monthSales: 0,
+      monthProfit: 0,
       lowStock: [],
       topProducts: [],
       dailySales: [],

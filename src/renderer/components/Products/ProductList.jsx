@@ -44,8 +44,11 @@ function StatCard({ label, value, color, icon }) {
 
 // ─── PRODUCT CARD ─────────────────────────────────────────────────────────────
 function ProductCard({ product, onEdit, onDelete, isDeleting, isConfirmingDelete, onConfirmDelete, onCancelDelete }) {
-  const outOfStock = (product.stock || 0) === 0;
-  const lowStock   = !outOfStock && (product.stock || 0) <= (product.min_stock || 0);
+  const isKg = product.sell_per_unit === 'kg';
+  const currentStock = isKg ? (product.stock_kg || 0) : (product.stock || 0);
+  const minStock = isKg ? (product.min_stock_kg || 0) : (product.min_stock || 0);
+  const outOfStock = currentStock <= 0;
+  const lowStock   = !outOfStock && currentStock <= minStock;
 
   const stockColor  = outOfStock ? T.red : lowStock ? T.accent : T.green;
   const stockLabel  = outOfStock ? 'Habis' : lowStock ? 'Menipis' : 'Aman';
@@ -114,10 +117,10 @@ function ProductCard({ product, onEdit, onDelete, isDeleting, isConfirmingDelete
           background: stockColor + '10', border: `1px solid ${stockColor}25`,
         }}>
           <p style={{ fontSize: 16, fontWeight: 800, color: stockColor, fontFamily: 'JetBrains Mono, monospace', lineHeight: 1, marginBottom: 2 }}>
-            {product.stock ?? 0}
+            {isKg ? Number(currentStock).toFixed(2) : currentStock}
           </p>
           <p style={{ fontSize: 8, fontWeight: 700, color: stockColor, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            {stockLabel}
+            {isKg ? 'Kg' : stockLabel}
           </p>
         </div>
       </div>
@@ -151,7 +154,7 @@ function ProductCard({ product, onEdit, onDelete, isDeleting, isConfirmingDelete
       )}
 
       {/* Min stock info */}
-      {(product.min_stock || 0) > 0 && (
+      {minStock > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div style={{
             flex: 1, height: 4, borderRadius: 4,
@@ -160,12 +163,12 @@ function ProductCard({ product, onEdit, onDelete, isDeleting, isConfirmingDelete
             <div style={{
               height: '100%', borderRadius: 4,
               background: stockColor,
-              width: `${Math.min(100, ((product.stock || 0) / Math.max(product.min_stock * 2, 1)) * 100)}%`,
+              width: `${Math.min(100, (currentStock / Math.max(minStock * 2, 1)) * 100)}%`,
               transition: 'width 0.4s ease',
             }} />
           </div>
           <span style={{ fontSize: 9, color: T.muted, fontFamily: 'JetBrains Mono, monospace', whiteSpace: 'nowrap' }}>
-            min {product.min_stock}
+            min {minStock}{isKg ? ' kg' : ''}
           </span>
         </div>
       )}
@@ -245,18 +248,33 @@ function ProductList() {
 
   useEffect(() => { loadData(); }, []);
 
+  // Filter logic — correct for kg products
   useEffect(() => {
     let f = [...products];
     if (searchTerm.trim())
       f = f.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
     if (filterCategory)
       f = f.filter(p => p.category_id === parseInt(filterCategory));
+
     if (filterStatus === 'habis')
-      f = f.filter(p => (p.stock || 0) === 0);
+      f = f.filter(p => {
+        const isKg = p.sell_per_unit === 'kg';
+        return isKg ? (p.stock_kg || 0) <= 0 : (p.stock || 0) === 0;
+      });
     else if (filterStatus === 'menipis')
-      f = f.filter(p => (p.stock || 0) > 0 && (p.stock || 0) <= (p.min_stock || 0));
+      f = f.filter(p => {
+        const isKg = p.sell_per_unit === 'kg';
+        const s = isKg ? (p.stock_kg || 0) : (p.stock || 0);
+        const m = isKg ? (p.min_stock_kg || 0) : (p.min_stock || 0);
+        return s > 0 && s <= m;
+      });
     else if (filterStatus === 'aman')
-      f = f.filter(p => (p.stock || 0) > (p.min_stock || 0));
+      f = f.filter(p => {
+        const isKg = p.sell_per_unit === 'kg';
+        const s = isKg ? (p.stock_kg || 0) : (p.stock || 0);
+        const m = isKg ? (p.min_stock_kg || 0) : (p.min_stock || 0);
+        return s > m;
+      });
     setFilteredProducts(f);
   }, [searchTerm, filterCategory, filterStatus, products]);
 
@@ -288,11 +306,24 @@ function ProductList() {
     }
   };
 
-  // Stats
+  // Stats — correct for kg products
   const total   = products.length;
-  const aman    = products.filter(p => (p.stock || 0) > (p.min_stock || 0)).length;
-  const menipis = products.filter(p => (p.stock || 0) > 0 && (p.stock || 0) <= (p.min_stock || 0)).length;
-  const habis   = products.filter(p => (p.stock || 0) === 0).length;
+  const aman    = products.filter(p => {
+    const isKg = p.sell_per_unit === 'kg';
+    const s = isKg ? (p.stock_kg || 0) : (p.stock || 0);
+    const m = isKg ? (p.min_stock_kg || 0) : (p.min_stock || 0);
+    return s > m;
+  }).length;
+  const menipis = products.filter(p => {
+    const isKg = p.sell_per_unit === 'kg';
+    const s = isKg ? (p.stock_kg || 0) : (p.stock || 0);
+    const m = isKg ? (p.min_stock_kg || 0) : (p.min_stock || 0);
+    return s > 0 && s <= m;
+  }).length;
+  const habis   = products.filter(p => {
+    const isKg = p.sell_per_unit === 'kg';
+    return isKg ? (p.stock_kg || 0) <= 0 : (p.stock || 0) === 0;
+  }).length;
 
   if (loading) {
     return (
@@ -518,8 +549,11 @@ function ProductList() {
                 </thead>
                 <tbody>
                   {filteredProducts.map(product => {
-                    const outOfStock = (product.stock || 0) === 0;
-                    const lowStock   = !outOfStock && (product.stock || 0) <= (product.min_stock || 0);
+                    const isKg = product.sell_per_unit === 'kg';
+                    const currentStock = isKg ? (product.stock_kg || 0) : (product.stock || 0);
+                    const minSt = isKg ? (product.min_stock_kg || 0) : (product.min_stock || 0);
+                    const outOfStock = currentStock <= 0;
+                    const lowStock   = !outOfStock && currentStock <= minSt;
                     const stockColor = outOfStock ? T.red : lowStock ? T.accent : T.green;
                     return (
                       <tr key={product.id}>
@@ -540,10 +574,10 @@ function ProductList() {
                         <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: product.price_kg ? T.text : T.muted }}>{fmt(product.price_kg) || '—'}</td>
                         <td>
                           <span style={{ padding: '2px 9px', borderRadius: 100, fontSize: 11, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace', background: stockColor + '14', border: `1px solid ${stockColor}30`, color: stockColor }}>
-                            {product.stock ?? 0}
+                            {isKg ? Number(currentStock).toFixed(2) : currentStock}
                           </span>
                         </td>
-                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: T.muted }}>{product.min_stock ?? 0}</td>
+                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: T.muted }}>{minSt ?? 0}{isKg ? ' kg' : ''}</td>
                         <td>
                           {confirmDeleteId === product.id ? (
                             <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>

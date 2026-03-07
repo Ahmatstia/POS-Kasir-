@@ -243,15 +243,78 @@ export async function deleteTransaction(transactionId) {
     );
     if (!tx) return { success: false, error: "Transaction not found" };
 
-    // Jika statusnya masih COMPLETED, batalkan (restock) dulu sebelum dihapus
-    if (tx.status === 'COMPLETED') {
-        const cancelResult = await cancelTransaction(transactionId);
-        if (!cancelResult.success) {
-            return { success: false, error: "Gagal merestore stok produk: " + cancelResult.error };
-        }
-    }
+    const items = await window.electronAPI.query(
+      "SELECT * FROM transaction_items WHERE transaction_id = ?",
+      [transactionId]
+    );
 
     await window.electronAPI.run("BEGIN TRANSACTION");
+
+    // Jika statusnya masih COMPLETED, restock dulu sebelum dihapus
+    if (tx.status === 'COMPLETED') {
+      for (const item of items) {
+        if (!item.product_id) continue;
+        
+        if (item.unit === 'kg') {
+          const qtyReturned = item.quantity;
+          const [logInfo] = await window.electronAPI.query(
+            "SELECT purchase_price FROM inventory_log WHERE reference_id = ? AND product_id = ? AND type = 'SALE' LIMIT 1",
+            [tx.invoice_no, item.product_id]
+          );
+          const originalHPP = logInfo?.purchase_price || 0;
+
+          const [stockInfo] = await window.electronAPI.query(
+            "SELECT COALESCE(SUM(qty_kg), 0) as current_stock FROM stocks WHERE product_id = ? AND is_active = 1",
+            [item.product_id]
+          );
+          const stockBefore = stockInfo?.current_stock || 0;
+          const stockAfter = stockBefore + qtyReturned;
+
+          await window.electronAPI.run(
+            "INSERT INTO stocks (product_id, batch_code, qty_kg, quantity, purchase_price, notes) VALUES (?, ?, ?, 0, ?, ?)",
+            [item.product_id, `RETURN-${tx.invoice_no}`, qtyReturned, originalHPP, `Retur hapus transaksi ${tx.invoice_no}`]
+          );
+          await window.electronAPI.run(
+            `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, quantity_kg, stock_before, stock_after, purchase_price, reference_id, notes)
+             VALUES (?, 'RETURN', ?, 'kg', 0, ?, ?, ?, ?, ?, ?)`,
+            [item.product_id, qtyReturned, qtyReturned, stockBefore, stockAfter, originalHPP, tx.invoice_no, `Retur hapus transaksi ${tx.invoice_no}`]
+          );
+        } else {
+          const [productInfo] = await window.electronAPI.query(
+            "SELECT pcs_per_pack, pack_per_dus FROM products WHERE id = ?",
+            [item.product_id]
+          );
+          const pcsPerPack = productInfo?.pcs_per_pack || 1;
+          const packPerDus = productInfo?.pack_per_dus || 1;
+          let pcsToReturn = item.quantity;
+          if (item.unit === "pack") pcsToReturn = item.quantity * pcsPerPack;
+          else if (item.unit === "dus") pcsToReturn = item.quantity * packPerDus * pcsPerPack;
+
+          const [logInfo] = await window.electronAPI.query(
+            "SELECT purchase_price FROM inventory_log WHERE reference_id = ? AND product_id = ? AND type = 'SALE' LIMIT 1",
+            [tx.invoice_no, item.product_id]
+          );
+          const originalHPP = logInfo?.purchase_price || 0;
+
+          const [stockInfo] = await window.electronAPI.query(
+            "SELECT COALESCE(SUM(quantity), 0) as current_stock FROM stocks WHERE product_id = ? AND is_active = 1",
+            [item.product_id]
+          );
+          const stockBefore = stockInfo?.current_stock || 0;
+          const stockAfter = stockBefore + pcsToReturn;
+
+          await window.electronAPI.run(
+            "INSERT INTO stocks (product_id, batch_code, quantity, purchase_price, notes) VALUES (?, ?, ?, ?, ?)",
+            [item.product_id, `RETURN-${tx.invoice_no}`, pcsToReturn, originalHPP, `Retur hapus transaksi ${tx.invoice_no}`]
+          );
+          await window.electronAPI.run(
+            `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, stock_before, stock_after, purchase_price, reference_id, notes)
+             VALUES (?, 'RETURN', ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [item.product_id, pcsToReturn, item.unit, pcsToReturn, stockBefore, stockAfter, originalHPP, tx.invoice_no, `Retur hapus transaksi ${tx.invoice_no}`]
+          );
+        }
+      }
+    }
 
     // Hapus transaction_items
     await window.electronAPI.run(
@@ -263,6 +326,12 @@ export async function deleteTransaction(transactionId) {
     await window.electronAPI.run(
       "DELETE FROM transactions WHERE id = ?",
       [transactionId]
+    );
+
+    // Secara opsional hapus juga SALE logs dari transaksi ini di inventory_log supaya bersih?
+    await window.electronAPI.run(
+      "DELETE FROM inventory_log WHERE reference_id = ? AND type = 'SALE'",
+      [tx.invoice_no]
     );
 
     await window.electronAPI.run("COMMIT");

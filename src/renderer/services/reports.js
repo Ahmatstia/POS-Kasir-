@@ -212,22 +212,30 @@ export async function getStockReport() {
 export function exportToCSV(data, filename) {
   if (!data || data.length === 0) return;
 
+  // Escape CSV value: wrap in quotes if contains comma, newline, or quote; escape inner quotes
+  const escapeCSV = (value) => {
+    if (value === null || value === undefined) return '';
+    const str = String(value);
+    if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
   // Buat header CSV
-  const headers = Object.keys(data[0]).join(',');
+  const headers = Object.keys(data[0]).map(escapeCSV).join(',');
   
   // Buat baris data
   const rows = data.map(row => 
-    Object.values(row).map(value => 
-      typeof value === 'string' && value.includes(',') 
-        ? `"${value}"` 
-        : value
-    ).join(',')
+    Object.values(row).map(escapeCSV).join(',')
   ).join('\n');
 
-  const csv = `${headers}\n${rows}`;
+  // BOM untuk kompatibilitas Excel (UTF-8)
+  const BOM = '\uFEFF';
+  const csv = `${BOM}${headers}\n${rows}`;
   
   // Download file
-  const blob = new Blob([csv], { type: 'text/csv' });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

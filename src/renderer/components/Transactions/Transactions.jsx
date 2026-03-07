@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { printReceipt, printThermalReceipt } from "../../utils/PrintUtility";
 import { T } from "../../theme";
+import { useToast } from "../Toast";
 
 const fmt = (n) => `Rp ${Number(n || 0).toLocaleString("id-ID")}`;
 const fmtDt = (str) => {
@@ -120,6 +121,7 @@ const getMethod = (m) => METHOD[m] || METHOD.cash;
 const UNIT_COLOR = { pcs: T.blue, pack: T.green, kg: T.purple };
 
 function Transactions() {
+  const { showToast } = useToast();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -183,7 +185,7 @@ function Transactions() {
       }
       loadTransactions();
     } else {
-      alert("Gagal menghapus transaksi: " + (res?.error || "Unknown"));
+      showToast('error', "Gagal menghapus transaksi: " + (res?.error || "Unknown"));
     }
   };
 
@@ -325,9 +327,10 @@ function Transactions() {
                   onClick={() => setDeleteDialog({ type: 'all' })}
                   title="Hapus Semua Data Testing"
                   style={{
+                    display: 'none', // Hidden in production — dangerous dev-only feature
                     width: 32, height: 32, borderRadius: 10, border: `1px solid ${T.border2}`,
                     background: 'transparent', color: T.red, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
+                    alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
                     marginLeft: 'auto'
                   }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = T.red; e.currentTarget.style.background = T.red + '15'; }}

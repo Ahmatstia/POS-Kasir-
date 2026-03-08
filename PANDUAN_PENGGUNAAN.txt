@@ -1,100 +1,123 @@
 ================================================================================
-PANDUAN PENGGUNAAN SISTEM POS KASIR (TOKO BUMBU)
+PANDUAN LENGKAP PENGGUNAAN SISTEM POS KASIR (TOKO BUMBU)
 ================================================================================
-Versi: 1.0.0
-Pengembang: Lexanova (Ahmatstia)
-Tanggal: 7 Maret 2026
+Versi: 1.0.1 (Production Ready)
+Status: Stabil & Terverifikasi
+Terakhir Diperbarui: 8 Maret 2026
 
-Selamat datang! Panduan ini dirancang untuk membantu Anda memahami fitur-fitur
-utama aplikasi POS Kasir agar operasional toko Anda berjalan lancar dan efisien.
-
---------------------------------------------------------------------------------
-1. INSTALASI PERTAMA KALI
---------------------------------------------------------------------------------
-- Jalankan file "POS Setup.exe".
-- Aplikasi akan terinstall secara otomatis dan muncul di Desktop/Start Menu.
+Selamat datang! Aplikasi POS (Point of Sale) ini dirancang khusus untuk toko bumbu
+nasional yang menangani penjualan campuran antara barang satuan (Pcs) dan barang
+timbangan (Kg). Panduan ini akan membimbing Anda menguasai seluruh fitur sistem.
 
 --------------------------------------------------------------------------------
-2. MANAJEMEN PRODUK (MASTER DATA)
+1. DASHBOARD (PANTAU KESEHATAN TOKO)
 --------------------------------------------------------------------------------
-Menu utama untuk mengatur barang dagangan Anda.
+Halaman utama yang muncul saat aplikasi dibuka. Digunakan untuk melihat performa.
 
-- TAMBAH PRODUK MANUAL: 
-  Klik tombol "Tambah Produk", isi nama, kategori, dan harga (Pcs, Pack, Dus, atau Kg).
-  Aplikasi mendukung konversi otomatis (Contoh: 1 Dus = 10 Pack).
-
-- FITUR IMPORT EXCEL (SANGAT PENTING):
-  Gunakan fitur ini jika Anda punya ratusan barang untuk mempercepat input.
-  1. Klik "Import CSV/Excel".
-  2. Masukkan file Excel/CSV sesuai format (No, Nama, Kategori, Satuan, Harga).
-  3. Sistem akan otomatis memetakan kolom. Jika kategori baru ditemukan, 
-     sistem akan otomatis menambahkannya.
+- TOTAL PENJUALAN: Angka kotor (Omzet) yang masuk hari ini vs bulan ini.
+- ESTIMASI LABA: Keuntungan bersih yang sudah dipotong Harga Pokok Penjualan (HPP).
+  *Penting: Laba akan akurat 100% jika Anda konsisten mengisi "Harga Modal" 
+  setiap kali menambah stok barang di menu Inventori.*
+- GRAFIK 7 HARI: Tren kenaikan/penurunan penjualan seminggu terakhir.
+- STOK MENIPIS: Daftar barang yang jumlahnya di bawah batas aman (Min. Stock).
+  Segera lakukan belanja/restock jika ada barang muncul di daftar ini.
 
 --------------------------------------------------------------------------------
-3. TRANSAKSI KASIR (POS)
+2. MASTER DATA PRODUK (PENGATURAN BARANG)
 --------------------------------------------------------------------------------
-Bagian paling penting untuk melayani pembeli.
+Tempat utama mendaftarkan barang dagangan Anda.
 
-- CARI BARANG: Ketik nama barang di kotak pencarian.
-- SATUAN JUAL: Anda bisa memilih menjual dalam satuan Pcs, Pack, Dus, atau Kg
-  untuk barang yang sama (jika harganya sudah diatur).
-- TIMBANGAN DIGITAL (KG): 
-  Untuk produk kiloan, akan muncul "Kalkulator Timbangan".
-  - Mode Cepat: Klik 1kg, 1/2kg, atau 1/4kg.
-  - Mode Ketik: Ketik berat spesifik (misal: 0.15 kg).
-  - Mode Uang: Ketik uang pembeli (misal: "Saya mau beli 5000"), sistem akan 
-    otomatis menghitung berapa Kg yang didapat (misal: 0.25kg).
-- HARGA KUSTOM: Jika ada harga tawar-menawar, klik "Harga Kustom" pada produk.
-- PEMBAYARAN: Masukkan uang tunai, sistem akan menghitung kembalian otomatis.
+- TAMBAH PRODUK:
+  1. Klik "Tambah Produk".
+  2. Pilih "Unit Jual Utama": Pilih 'Kg' untuk bumbu kiloan, atau 'Pcs' untuk kemasan.
+  3. Masukkan Satuan Konversi: Jika barang dijual dalam Pcs, Pack, dan Dus, isi 
+     jumlah isinya (Contoh: 1 Dus isi 10 Pack, 1 Pack isi 20 Pcs). Sistem akan 
+     otomatis menghitung stok secara sinkron.
+  4. Batas Stok Minimum: Isi angka (misal: 5). Sistem akan memberi peringatan 
+     warna MERAH jika stok sisa 5 atau kurang.
 
---------------------------------------------------------------------------------
-4. MANAJEMEN INVENTORI (STOK)
---------------------------------------------------------------------------------
-Memantau keluar masuknya barang di gudang.
-
-- STOK MASUK (STOCK IN): Tambahkan stok saat barang baru datang dari supplier. 
-  Anda bisa mencatat harga beli dan masa kadaluarsa (Expired Date).
-- KOREKSI STOK: Jika ada barang rusak/hilang, gunakan fitur Koreksi untuk 
-  menyesuaikan angka stok di sistem.
-- RIWAYAT (LOG): Setiap perubahan stok (Jual, Masuk, atau Koreksi) tercatat 
-  detail di "Inventory Log" lengkap dengan alasannya.
+- IMPORT DARI EXCEL:
+  Jika Anda pindah dari pembukuan manual ke digital, gunakan tombol "Import". 
+  Siapkan file Excel sesuai contoh format. Kategori baru akan dibuat otomatis
+  oleh sistem saat proses import berlangsung.
 
 --------------------------------------------------------------------------------
-5. LAPORAN & ANALITIK
+3. TRANSAKSI KASIR (PELAYANAN PEMBELI)
 --------------------------------------------------------------------------------
-Pantau kesehatan bisnis Anda di menu Laporan.
+Fitur paling sering digunakan. Fokus pada kecepatan dan akurasi.
 
-- RINGKASAN HARIAN: Lihat total omzet dan jumlah transaksi per hari.
-- GRAFIK PENJUALAN: Lihat jam-jam sibuk atau hari paling ramai pembeli.
-- PRODUK TERLARIS: Cek 5 barang yang paling banyak terjual.
-- EXPORT DATA: Semua laporan bisa di-download ke file CSV (Excel) untuk 
-  pengolahan data lebih lanjut atau laporan pajak.
+- PENCARIAN CEPAT: Cukup ketik inisial barang di kolom cari (misal: "Merica").
+- PEMILIHAN SATUAN: Untuk satu barang, Anda bisa langsung memilih mau jual 
+  eceran (Pcs) atau grosir (Dus) hanya dengan satu klik.
+
+- MODAL TIMBANGAN DIGITAL (Fitur Unggulan):
+  Khusus produk dengan unit 'Kg', sistem akan membuka kalkulator timbangan:
+  A. TAB CEPAT: Klik tombol 1kg, 0.5kg (setengah), atau 0.25kg (seperempat).
+  B. TAB KETIK BEBAS: Masukkan angka spesifik, misal pembeli beli 1 ons (0.1 kg).
+  C. TAB NOMINAL UANG: Masukkan jumlah uang pembeli, misal "Beli 2000". Sistem 
+     akan menghitung otomatis berat bumbunya (misal: dapat 0.08 kg).
+
+- UPDATE KERANJANG: Klik jumlah barang di keranjang untuk mengubah quantity. 
+  Untuk barang Kg, mengklik jumlah akan membuka kembali kalkulator timbangan.
+
+- PEMBAYARAN:
+  1. Klik "Bayar" (Atau tekan Enter).
+  2. Pilih Metode: Tunai, Debit, atau QRIS.
+  3. Masukkan Nominal Bayar: Gunakan tombol cepat (50rb, 100rb) atau ketik manual.
+  4. Klik "Konfirmasi Bayar": Struk akan otomatis tercetak (jika printer terhubung).
 
 --------------------------------------------------------------------------------
-6. PENTING: KEAMANAN DATA & BACKUP
+4. INVENTORI & STOK (GUDANG)
 --------------------------------------------------------------------------------
-Aplikasi ini bersifat "Offline" (Data tersimpan di laptop, bukan di internet).
-Ini sangat aman karena data Anda tidak bisa diintip orang luar, namun Anda 
-bertanggung jawab penuh atas keamanannya.
+Mengelola manajemen stok agar tidak ada barang yang hilang tanpa catatan.
 
-- LOKASI DATA: C:\Users\[User]\AppData\Roaming\POS\pos-toko-bumbu.db
-- TIPS: Sangat disarankan untuk menyalin file ".db" di atas ke Flashdisk atau 
-  Cloud (Google Drive) secara rutin seminggu sekali sebagai cadangan (Backup).
-- Jika laptop rusak, Anda cukup menginstall aplikasi di laptop baru dan 
-  memindahkan file cadangan tersebut ke folder yang sama.
+- TAMBAH STOK (STOCK IN): Gunakan setiap kali barang dari supplier datang.
+  * Masukkan Harga Beli terbaru agar perhitungan Laba di Dashboard tetap akurat.
+  * Masukkan Tanggal Kadaluarsa jika perlu.
+- RIWAYAT STOK (INVENTORY LOG): 
+  Fitur audit terdalam. Di sini Anda bisa melihat setiap gram atau pcs barang 
+  pernah keluar/masuk kapan saja, oleh siapa, dan lewat transaksi nomor berapa.
+- KOREKSI STOK: Digunakan hanya jika ada perbedaan stok fisik (misal barang tumpah).
 
 --------------------------------------------------------------------------------
-7. FITUR LABA & RIWAYAT STOK (PENTING!)
+5. LAPORAN & EXPORT (DATA EVALUASI)
 --------------------------------------------------------------------------------
-- RIWAYAT STOK: Setiap pergerakan barang (Masuk, Jual, Koreksi) tercatat 
-  detail di menu Inventori > Tab "Riwayat Stok". Berguna untuk audit 
-  jika ada selisih stok.
-- ESTIMASI LABA: Menampilkan keuntungan kotor Anda (Harga Jual - Harga Modal).
-  * Mengapa disebut "Estimasi"? Karena sistem hanya menghitung selisih harga 
-    beli vs jual. Biaya operasional (listrik, gaji, dll) tidak dihitung.
-  * Tips: Laba akan akurat jika Anda rutin mengisi "Harga Modal" saat 
-    menambah stok barang.
+- LAPORAN PENJUALAN: Pilih tanggal Mulai dan Selesai untuk melihat rekap omzet.
+- EXPORT CSV (EXCEL): Klik tombol Export untuk memindahkan laporan ke Excel. 
+  Data sudah diformat khusus agar rapi saat dibuka di Microsoft Excel (UTF-8).
+- CETAK LAPORAN: Gunakan tombol Cetak untuk mencetak rekap laporan ke printer A4
+  atau menyimpan sebagai PDF. Sistem akan otomatis menyembunyikan sidebar
+  agar hasil cetakan rapi dan profesional.
 
-Sistem ini dirancang untuk memudahkan operasional harian Anda. Jika ada kendala teknis, silakan hubungi pengembang.
-Lexanova - 2026
+--------------------------------------------------------------------------------
+6. KEAMANAN & PEMELIHARAAN (SANGAT PENTING!)
+--------------------------------------------------------------------------------
+Sistem ini bekerja secara OFFLINE (Data Anda tidak dikirim ke internet).
+KEUNTUNGAN: Sangat cepat, bisa tanpa kuota, dan privasi 100% terjaga.
+RESIKO: Jika laptop Anda rusak/hilang, data juga bisa hilang.
 
+TIPS PENGAMANAN DATA:
+1. Lakukan BACKUP rutin setiap minggu.
+2. Cari file bernama 'pos-toko-bumbu.db' (biasanya di folder AppData aplikasi).
+3. Copy/Salin file tersebut ke Flashdisk atau Cloud (Google Drive/Dropbox).
+4. Jangan menghapus file sistem di folder instalasi agar aplikasi tidak rusak.
+
+--------------------------------------------------------------------------------
+7. HAL-HAL YANG SERING MEMBINGUNGKAN (FAQ)
+--------------------------------------------------------------------------------
+Q: Kenapa stok barang Kg saya tidak berkurang saat saya jual di kasir?
+A: Pastikan saat input produk, Anda memilih 'Kg' sebagai unit jual utama. 
+   Sistem memisahkan perhitungan stok Kg dan stok Pcs/Dus secara otomatis.
+
+Q: Bolehkah saya menghapus transaksi yang salah input?
+A: Boleh. Pergi ke menu Transaksi, cari invoice-nya, lalu klik tombol Hapus. 
+   Sistem akan otomatis mengembalikan stok barang ke gudang secara akurat.
+
+Q: Cara mengubah Nama Toko atau Alamat di struk?
+A: Untuk saat ini, informasi Toko diatur oleh Pengembang. Hubungi kami jika ada 
+   perubahan identitas toko yang ingin ditampilkan permanen di struk.
+
+================================================================================
+Dibuat dengan dedikasi untuk efisiensi Toko Bumbu Anda.
+Lexanova (Ahmatstia) - 2026
+================================================================================

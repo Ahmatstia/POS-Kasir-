@@ -35,6 +35,10 @@ Tempat utama mendaftarkan barang dagangan Anda.
      otomatis menghitung stok secara sinkron.
   4. Batas Stok Minimum: Isi angka (misal: 5). Sistem akan memberi peringatan 
      warna MERAH jika stok sisa 5 atau kurang.
+  5. Harga Beli dari Supplier (Modal): **WAJIB DIISI**. Ini adalah harga
+     asli yang Anda bayar ke supplier. Diperlukan agar sistem bisa 
+     menghitung keuntungan (Laba) Anda secara akurat. Sistem tidak akan 
+     mengizinkan produk disimpan jika harga modal ini kosong atau Rp 0.
 
 - IMPORT DARI EXCEL:
   Jika Anda pindah dari pembukuan manual ke digital, gunakan tombol "Import". 
@@ -112,6 +116,12 @@ A: Pastikan saat input produk, Anda memilih 'Kg' sebagai unit jual utama.
 Q: Bolehkah saya menghapus transaksi yang salah input?
 A: Boleh. Pergi ke menu Transaksi, cari invoice-nya, lalu klik tombol Hapus. 
    Sistem akan otomatis mengembalikan stok barang ke gudang secara akurat.
+
+Q: Apa maksud dari "Harga Beli dari Supplier (Modal)"?
+A: Ini adalah harga asli saat Anda membeli barang dari supplier/grosir. 
+   WAJIB diisi agar Dashboard bisa menghitung **Laba Bersih** Anda.
+   Contoh: Modal 7.000, Jual 10.000 -> Laba 3.000. Tanpa angka modal, 
+   sistem tidak tahu berapa keuntungan asli Anda.
 
 Q: Cara mengubah Nama Toko atau Alamat di struk?
 A: Untuk saat ini, informasi Toko diatur oleh Pengembang. Hubungi kami jika ada 

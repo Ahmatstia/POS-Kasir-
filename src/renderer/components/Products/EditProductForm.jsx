@@ -55,6 +55,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
     if (!categoryId)    errs.category = 'Kategori harus dipilih';
     const prices = [Number(pricePcs), Number(pricePack), Number(priceDus), Number(priceKg)];
     if (prices.every(p => p <= 0)) errs.price = 'Minimal satu harga jual harus diisi';
+    if (Number(purchasePrice) <= 0) errs.purchasePrice = 'Harga modal (HPP) wajib diisi untuk akurasi laporan laba';
     return errs;
   };
 
@@ -249,12 +250,16 @@ function EditProductForm({ productId, onClose, onSuccess }) {
         </div>
 
         {/* Default HPP */}
-        <div style={{ padding: '14px', borderRadius: 14, background: T.bg, border: `1.5px dashed ${T.accent}40` }}>
-          <Field label={`Harga Modal / HPP Bawaan (per ${sellPerUnit === 'kg' ? 'Kg' : 'Pcs'})`} hint="akan digunakan otomatis jika saat input stok Anda lupa mengisi harga beli">
+        <div style={{ padding: '14px', borderRadius: 14, background: T.bg, border: `1.5px dashed ${errors.purchasePrice ? T.red : T.accent + '40'}` }}>
+          <Field 
+            label={`Harga Beli dari Supplier (Modal per ${sellPerUnit === 'kg' ? 'Kg' : 'Pcs'})`} 
+            hint={errors.purchasePrice ? null : "Harga ini akan jadi patokan awal untuk menghitung untung/laba Anda"}
+            error={errors.purchasePrice}
+          >
             <div style={{ position: 'relative', marginTop: 8 }}>
-              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: T.muted, fontWeight: 700 }}>Rp</span>
-              <input type="number" value={purchasePrice} onChange={e => setPurchasePrice(e.target.value)}
-                placeholder="0" className="form-field" style={{ ...fieldStyle, paddingLeft: 36, fontFamily: 'JetBrains Mono, monospace', border: `1px solid ${T.accent}30` }} />
+              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: errors.purchasePrice ? T.red : T.muted, fontWeight: 700 }}>Rp</span>
+              <input type="number" value={purchasePrice} onChange={e => { setPurchasePrice(e.target.value); setErrors(v => ({...v, purchasePrice: ''})); }}
+                placeholder="0" className="form-field" style={{ ...fieldStyle, paddingLeft: 36, fontFamily: 'JetBrains Mono, monospace', border: `1px solid ${errors.purchasePrice ? T.red + '60' : T.accent + '30'}` }} />
             </div>
           </Field>
         </div>

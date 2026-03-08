@@ -401,7 +401,7 @@ export async function deductStockFIFOKg(productId, quantityKg, invoiceNo, create
     toDeduct -= deduct;
   }
 
-  const avgPurchasePrice = quantityKg > 0 ? (totalPurchaseCost / quantityKg) : 0;
+  const avgPurchasePrice = quantityKg > 0 ? Math.round(totalPurchaseCost / quantityKg) : 0;
 
   const stockAfter = stockBefore - quantityKg;
   const logSql = createdAt

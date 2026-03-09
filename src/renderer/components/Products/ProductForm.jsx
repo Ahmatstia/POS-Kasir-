@@ -107,6 +107,20 @@ function ProductForm({ onClose, onSuccess }) {
   const [pcsPerPack, setPcsPerPack]   = useState(1);
   const [packPerDus, setPackPerDus]   = useState(1);
   const [purchasePrice, setPurchasePrice] = useState(0);
+  const [totalCost, setTotalCost]             = useState('');
+
+  const pp = Number(pcsPerPack) || 1;
+  const pd = Number(packPerDus) || 1;
+  const hpp = Number(purchasePrice) || 0;
+
+  const handleTotalCostChange = (val) => {
+    setTotalCost(val);
+    const num = parseFloat(val);
+    if (!isNaN(num) && num > 0) {
+      const divisor = sellPerUnit === 'kg' ? 1 : (pd * pp);
+      setPurchasePrice(String(Math.round(num / divisor)));
+    }
+  };
 
   useEffect(() => {
     getCategories().then(data => {
@@ -307,8 +321,8 @@ function ProductForm({ onClose, onSuccess }) {
           </Field>
         </div>
 
-        {/* Default HPP */}
-        <div style={{ padding: '14px', borderRadius: 14, background: T.bg, border: `1.5px dashed ${errors.purchasePrice ? T.red : T.accent + '40'}` }}>
+        {/* Default HPP + Calculator */}
+        <div style={{ padding: '16px', borderRadius: 16, background: T.bg, border: `1.5px dashed ${errors.purchasePrice ? T.red : T.accent + '40'}` }}>
           <Field 
             label={`Harga Beli dari Supplier (Modal per ${sellPerUnit === 'kg' ? 'Kg' : 'Pcs'})`} 
             hint={errors.purchasePrice ? null : "Harga ini akan jadi patokan awal untuk menghitung untung/laba Anda"}
@@ -320,7 +334,55 @@ function ProductForm({ onClose, onSuccess }) {
                 placeholder="0" className="form-field" style={{ ...fieldStyle, paddingLeft: 36, fontFamily: 'JetBrains Mono, monospace', border: `1px solid ${errors.purchasePrice ? T.red + '60' : T.accent + '30'}` }} />
             </div>
           </Field>
+
+          {/* Calculator Helper */}
+          {sellPerUnit !== 'kg' && (
+            <div style={{ marginTop: 14, padding: '12px', borderRadius: 12, background: T.accent + '08', border: `1px solid ${T.accent}15` }}>
+              <p style={{ fontSize: 9, fontWeight: 800, color: T.muted, textTransform: 'uppercase', marginBottom: 10, textAlign: 'center' }}>Kalkulator Harga Modal (Opsional)</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 10, alignItems: 'center' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 8, fontWeight: 800, color: T.sub, marginBottom: 5 }}>Total Bayar (Berdasarkan Nota)</label>
+                  <div style={{ position: 'relative' }}>
+                    <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: T.muted, fontWeight: 700 }}>Rp</span>
+                    <input type="number" value={totalCost} onChange={e => handleTotalCostChange(e.target.value)}
+                      placeholder="Contoh: 825.000" style={{ ...fieldStyle, paddingLeft: 30, fontSize: 12, height: 32 }} />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 8, fontWeight: 800, color: T.sub, marginBottom: 5 }}>Bagi per {pd * pp} Pcs</label>
+                  <div style={{ padding: '8px 10px', borderRadius: 10, background: T.surface, border: `1px solid ${T.border2}`, height: 32, display: 'flex', alignItems: 'center', fontSize: 11, fontWeight: 700, color: T.accent }}>
+                    {purchasePrice ? `Rp ${Number(purchasePrice).toLocaleString('id-ID')}` : 'Rp 0'}
+                  </div>
+                </div>
+              </div>
+              <p style={{ fontSize: 8, color: T.muted, marginTop: 8, fontStyle: 'italic' }}>*Gunakan jika Anda membeli borongan (misal 1 Dus) tapi ingin tahu harga per bijinya.</p>
+            </div>
+          )}
         </div>
+
+        {/* Profit Warnings */}
+        {hpp > 0 && sellPerUnit !== 'kg' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {[
+              { label: 'Pcs',  sell: pricePcs,  cost: hpp },
+              { label: 'Pack', sell: pricePack, cost: hpp * pp },
+              { label: 'Dus',  sell: priceDus,  cost: hpp * pp * pd }
+            ].map(item => {
+              if (item.sell > 0 && item.sell < item.cost) {
+                return (
+                  <div key={item.label} style={{ padding: '8px 12px', borderRadius: 10, background: T.red + '10', border: `1px solid ${T.red}30`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 14 }}>⚠️</span>
+                    <p style={{ fontSize: 10, color: T.red, fontWeight: 700 }}>
+                      Harga Jual {item.label} (Rp {Number(item.sell).toLocaleString('id-ID')}) lebih RENDAH dari Modal (Rp {Number(item.cost).toLocaleString('id-ID')}). Anda akan rugi!
+                    </p>
+                  </div>
+                );
+              }
+              return null;
+            })}
+          </div>
+        )}
+
 
         {/* Notice: stok diatur di Inventori */}
         <div style={{ padding: '10px 14px', borderRadius: 10, background: T.blue + '10', border: `1px solid ${T.blue}25`, display: 'flex', alignItems: 'center', gap: 8 }}>

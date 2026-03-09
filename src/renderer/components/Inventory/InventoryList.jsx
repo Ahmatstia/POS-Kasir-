@@ -242,6 +242,32 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
                 </p>
               </div>
 
+              {/* Profit Warning */}
+              {Number(buyPrice) > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {[
+                    { label: 'Pcs',  sell: product.price_pcs,  cost: Number(buyPrice) },
+                    { label: 'Pack', sell: product.price_pack, cost: Number(buyPrice) * pp },
+                    { label: 'Dus',  sell: product.price_dus,  cost: Number(buyPrice) * pp * pd },
+                    { label: 'Kg',   sell: product.price_kg,   cost: Number(buyPrice) }
+                  ].map(item => {
+                    const isRelevant = isKg ? item.label === 'Kg' : item.label !== 'Kg';
+                    if (isRelevant && item.sell > 0 && item.sell < item.cost) {
+                      return (
+                        <div key={item.label} style={{ padding: '8px 12px', borderRadius: 10, background: T.red + '10', border: `1px solid ${T.red}30`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 14 }}>⚠️</span>
+                          <p style={{ fontSize: 10, color: T.red, fontWeight: 700 }}>
+                            HPP {item.label} (Rp {Number(item.cost).toLocaleString('id-ID')}) lebih TINGGI dari Harga Jual (Rp {Number(item.sell).toLocaleString('id-ID')}).
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
+              )}
+
+
               <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 12 }}>
                 <div>
                    <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Tgl Kadaluarsa</label>

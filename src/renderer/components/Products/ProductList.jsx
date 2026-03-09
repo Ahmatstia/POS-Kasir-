@@ -3,6 +3,7 @@ import {
   getProducts,
   getCategories,
   deleteProduct,
+  deleteAllProducts,
 } from "../../services/database";
 import ProductForm from "./ProductForm";
 import EditProductForm from "./EditProductForm";
@@ -244,6 +245,8 @@ function ProductList() {
   const [searchTerm, setSearchTerm]         = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterStatus, setFilterStatus]     = useState('');
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [isDeletingAll, setIsDeletingAll]     = useState(false);
   const [viewMode, setViewMode]             = useState('grid'); // 'grid' | 'table'
 
   useEffect(() => { loadData(); }, []);
@@ -303,6 +306,19 @@ function ProductList() {
       loadData();
     } else {
       showToast('error', 'Gagal menghapus: ' + result.error);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    setIsDeletingAll(true);
+    const result = await deleteAllProducts();
+    setIsDeletingAll(false);
+    setShowBulkConfirm(false);
+    if (result.success) {
+      showToast('success', `${result.changes} produk berhasil dihapus semua`);
+      loadData();
+    } else {
+      showToast('error', 'Gagal menghapus semua: ' + result.error);
     }
   };
 
@@ -414,6 +430,21 @@ function ProductList() {
             >
               <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="11" height="11" rx="2" stroke="currentColor" strokeWidth="1.3"/><path d="M4 5h5M4 7h3M4 9h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
               Import CSV/Excel
+            </button>
+            <button
+              onClick={() => setShowBulkConfirm(true)}
+              disabled={products.length === 0}
+              style={{
+                padding: '8px 14px', borderRadius: 10, cursor: products.length === 0 ? 'not-allowed' : 'pointer',
+                fontFamily: 'Syne, sans-serif', fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
+                transition: 'all 0.15s', border: `1px solid ${T.red}35`, background: T.red + '10', color: T.red,
+                display: 'flex', alignItems: 'center', gap: 6, opacity: products.length === 0 ? 0.5 : 1
+              }}
+              onMouseEnter={e => { if(products.length > 0) e.currentTarget.style.background = T.red + '20'; }}
+              onMouseLeave={e => { if(products.length > 0) e.currentTarget.style.background = T.red + '10'; }}
+            >
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 3h9M4.5 3V2a1 1 0 012 0v1M5 5.5v3M7 5.5v3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><rect x="2.5" y="3" width="7" height="6.5" rx="1.5" stroke="currentColor" strokeWidth="1.2"/></svg>
+              Hapus Semua
             </button>
             <button
               onClick={() => setShowForm(true)}
@@ -626,6 +657,59 @@ function ProductList() {
           onClose={() => setEditingProduct(null)}
           onSuccess={() => { loadData(); setEditingProduct(null); }}
         />
+      )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {showBulkConfirm && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+          fontFamily: 'Syne, sans-serif'
+        }}>
+          <div style={{
+            background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20,
+            padding: 30, width: '100%', maxWidth: 400, textAlign: 'center',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.4)', animation: 'fadeUp 0.3s ease'
+          }}>
+            <div style={{
+              width: 50, height: 50, borderRadius: '50%', background: T.red + '15',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px',
+              border: `1px solid ${T.red}30`, color: T.red
+            }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/>
+              </svg>
+            </div>
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: T.text, marginBottom: 10 }}>Hapus Semua Produk?</h3>
+            <p style={{ fontSize: 13, color: T.sub, lineHeight: 1.5, marginBottom: 24 }}>
+              Tindakan ini akan menghapus <strong>{products.length}</strong> produk dari daftar aktif. Anda yakin ingin melanjutkan?
+            </p>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                onClick={() => setShowBulkConfirm(false)}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: 12, border: `1px solid ${T.border2}`,
+                  background: 'transparent', color: T.sub, fontSize: 13, fontWeight: 700, cursor: 'pointer'
+                }}
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={isDeletingAll}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: 12, border: 'none',
+                  background: T.red, color: '#fff', fontSize: 13, fontWeight: 700,
+                  cursor: 'pointer', boxShadow: '0 4px 12px ' + T.red + '40'
+                }}
+              >
+                {isDeletingAll ? 'Menghapus…' : 'Ya, Hapus Semua'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

@@ -146,9 +146,7 @@ export async function getStockReport() {
         c.name as category_name,
         COUNT(DISTINCT p.id) as product_count,
         COALESCE(SUM(s.quantity), 0) as total_stock,
-        COALESCE(SUM(s.qty_kg), 0) as total_stock_kg,
-        COALESCE(SUM(s.quantity * p.price_pcs), 0) as total_value_pcs,
-        COALESCE(SUM(s.qty_kg * p.price_kg), 0) as total_value_kg
+        COALESCE(SUM(s.qty_kg), 0) as total_stock_kg
       FROM products p
       JOIN categories c ON p.category_id = c.id
       LEFT JOIN stocks s ON s.product_id = p.id AND s.is_active = 1

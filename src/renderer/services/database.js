@@ -162,3 +162,26 @@ export async function deleteProduct(id) {
     return { success: false, error: error.message };
   }
 }
+
+// Soft-delete ALL products
+export async function deleteAllProducts() {
+  try {
+    const result = await window.electronAPI.run(
+      "UPDATE products SET is_active = 0 WHERE is_active = 1"
+    );
+
+    // Try to update updated_at separately
+    try {
+      await window.electronAPI.run(
+        "UPDATE products SET updated_at = CURRENT_TIMESTAMP WHERE is_active = 0"
+      );
+    } catch (e) {
+      // ignore
+    }
+
+    return { success: true, changes: result.changes };
+  } catch (error) {
+    console.error("Error deleting all products:", error);
+    return { success: false, error: error.message };
+  }
+}

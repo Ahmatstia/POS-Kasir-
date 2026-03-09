@@ -1307,32 +1307,11 @@ function Reports() {
                   "Kategori",
                   "Produk",
                   "Total Stok",
-                  "Nilai (Pcs)",
-                  "Nilai (Pack)",
-                  "Nilai (Kg)",
                 ]}
                 rows={stockReport.stockByCategory.map((c) => [
                   { label: c.category_name, bold: true, color: T.text },
                   { label: `${c.product_count}`, mono: true },
                   { label: `${c.total_stock} pcs / ${Number(c.total_stock_kg || 0).toFixed(2)} kg`, mono: true },
-                  {
-                    label: fmt(c.total_value_pcs),
-                    mono: true,
-                    highlight: !!c.total_value_pcs,
-                    color: T.blue,
-                  },
-                  {
-                    label: fmt(c.total_value_pack),
-                    mono: true,
-                    highlight: !!c.total_value_pack,
-                    color: T.green,
-                  },
-                  {
-                    label: fmt(c.total_value_kg),
-                    mono: true,
-                    highlight: !!c.total_value_kg,
-                    color: T.purple,
-                  },
                 ])}
               />
             </div>

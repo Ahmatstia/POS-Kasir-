@@ -41,39 +41,6 @@ export async function getDashboardData() {
         AND status = 'COMPLETED'
     `, [yearMonStr]);
 
-    // Query profit hari ini
-    // Kita sudah punya todaySales[0].total, jadi hanya butuh hari_ini_cost
-    const todayCostRaw = await window.electronAPI.query(`
-      SELECT COALESCE(SUM(
-        CASE 
-          WHEN il.quantity_kg > 0 THEN il.quantity_kg * COALESCE(NULLIF(il.purchase_price, 0), p.purchase_price, 0)
-          ELSE il.quantity_pcs * COALESCE(NULLIF(il.purchase_price, 0), p.purchase_price, 0)
-        END
-      ), 0) as total_cost
-      FROM inventory_log il
-      JOIN transactions t ON t.invoice_no = il.reference_id
-      LEFT JOIN products p ON p.id = il.product_id
-      WHERE il.type = 'SALE' 
-        AND t.status = 'COMPLETED'
-        AND date(t.created_at) = ?
-    `, [todayStr]);
-
-    // Query profit bulan ini
-    // Kita sudah punya monthSales[0].total, jadi hanya butuh bulan_ini_cost
-    const monthCostRaw = await window.electronAPI.query(`
-      SELECT COALESCE(SUM(
-        CASE 
-          WHEN il.quantity_kg > 0 THEN il.quantity_kg * COALESCE(NULLIF(il.purchase_price, 0), p.purchase_price, 0)
-          ELSE il.quantity_pcs * COALESCE(NULLIF(il.purchase_price, 0), p.purchase_price, 0)
-        END
-      ), 0) as total_cost
-      FROM inventory_log il
-      JOIN transactions t ON t.invoice_no = il.reference_id
-      LEFT JOIN products p ON p.id = il.product_id
-      WHERE il.type = 'SALE' 
-        AND t.status = 'COMPLETED'
-        AND strftime('%Y-%m', t.created_at) = ?
-    `, [yearMonStr]);
 
     // Query produk stok menipis
     const lowStock = await window.electronAPI.query(`
@@ -147,10 +114,10 @@ export async function getDashboardData() {
 
     return {
       todaySales: todaySales[0].total,
-      todayProfit: todaySales[0].total - todayCostRaw[0].total_cost,
+      todayProfit: 0,
       todayTransactions: todayTransactions[0].count,
       monthSales: monthSales[0].total,
-      monthProfit: monthSales[0].total - monthCostRaw[0].total_cost,
+      monthProfit: 0,
       lowStock: lowStock,
       topProducts: topProducts,
       dailySales: dailySales,

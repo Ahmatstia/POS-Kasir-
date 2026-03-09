@@ -6,12 +6,11 @@ export async function getInventorySummary() {
     const sql = `
       SELECT 
         p.id, p.name, p.category_id, p.min_stock, p.min_stock_kg, p.sell_per_unit,
-        p.pcs_per_pack, p.pack_per_dus, p.purchase_price,
+        p.pcs_per_pack, p.pack_per_dus,
         p.price_pcs, p.price_pack, p.price_dus, p.price_kg,
         c.name as category_name, c.color as category_color,
         COALESCE(SUM(s.quantity), 0) as stock,
-        COALESCE(SUM(s.qty_kg), 0) as stock_kg,
-        COALESCE(SUM(CASE WHEN p.sell_per_unit = 'kg' THEN s.qty_kg * s.purchase_price ELSE s.quantity * s.purchase_price END), 0) as total_value
+        COALESCE(SUM(s.qty_kg), 0) as stock_kg
       FROM products p
       LEFT JOIN categories c ON c.id = p.category_id
       LEFT JOIN stocks s ON s.product_id = p.id AND s.is_active = 1
@@ -78,10 +77,7 @@ export async function addStock(productId, {
   notes = ""
 }, product) {
   try {
-    let finalPurchasePrice = purchase_price;
-    if (finalPurchasePrice <= 0 && product?.purchase_price > 0) {
-      finalPurchasePrice = product.purchase_price;
-    }
+    const finalPurchasePrice = 0;
 
     const pcsPerPack = product?.pcs_per_pack || 1;
     const packPerDus = product?.pack_per_dus || 1;
@@ -143,11 +139,7 @@ export async function addStock(productId, {
 // Adjust stock manually (correction)
 export async function adjustStock(productId, newTotalPcs, reason = "Koreksi manual", purchasePrice = 0) {
   try {
-    let finalPurchasePrice = purchasePrice;
-    if (finalPurchasePrice <= 0) {
-      const [product] = await window.electronAPI.query("SELECT purchase_price FROM products WHERE id = ?", [productId]);
-      if (product?.purchase_price > 0) finalPurchasePrice = product.purchase_price;
-    }
+    const finalPurchasePrice = 0;
 
     // Get current total
     const [beforeRow] = await window.electronAPI.query(
@@ -259,14 +251,12 @@ export async function deductStockFIFO(productId, quantityPcs, invoiceNo, created
   );
   const stockBefore = beforeRow?.total || 0;
 
-  let totalPurchaseCost = 0;
+  // Deduction from batches
   for (const batch of batches) {
     if (toDeduct <= 0) break;
     const deduct = Math.min(batch.quantity, toDeduct);
     const newQty = batch.quantity - deduct;
     
-    totalPurchaseCost += (deduct * (batch.purchase_price || 0));
-
     // 1. Update quantity
     await window.electronAPI.run(
       "UPDATE stocks SET quantity = ?, is_active = ? WHERE id = ?",
@@ -284,7 +274,7 @@ export async function deductStockFIFO(productId, quantityPcs, invoiceNo, created
     toDeduct -= deduct;
   }
 
-  const avgPurchasePrice = quantityPcs > 0 ? Math.round(totalPurchaseCost / quantityPcs) : 0;
+  const avgPurchasePrice = 0;
 
   const stockAfter = stockBefore - quantityPcs;
   const logSql = createdAt 
@@ -305,11 +295,7 @@ export async function deductStockFIFO(productId, quantityPcs, invoiceNo, created
 // Adjust stock manually (correction) specifically for Kg
 export async function adjustStockKg(productId, newTotalKg, reason = "Koreksi manual", purchasePrice = 0) {
   try {
-    let finalPurchasePrice = purchasePrice;
-    if (finalPurchasePrice <= 0) {
-      const [product] = await window.electronAPI.query("SELECT purchase_price FROM products WHERE id = ?", [productId]);
-      if (product?.purchase_price > 0) finalPurchasePrice = product.purchase_price;
-    }
+    const finalPurchasePrice = 0;
 
     const [beforeRow] = await window.electronAPI.query(
       "SELECT COALESCE(SUM(qty_kg), 0) as total FROM stocks WHERE product_id = ? AND is_active = 1",
@@ -381,14 +367,13 @@ export async function deductStockFIFOKg(productId, quantityKg, invoiceNo, create
   );
   const stockBefore = beforeRow?.total || 0;
 
-  let totalPurchaseCost = 0;
+  // Deduction from batches
   for (const batch of batches) {
     if (toDeduct <= 0) break;
     const deduct = Math.min(batch.qty_kg, toDeduct);
     const newQtyKg = batch.qty_kg - deduct;
 
-    totalPurchaseCost += (deduct * (batch.purchase_price || 0));
-
+    // Update quantity
     await window.electronAPI.run(
       "UPDATE stocks SET qty_kg = ?, is_active = ? WHERE id = ?",
       [newQtyKg, (newQtyKg > 0 || batch.quantity > 0) ? 1 : 0, batch.id]
@@ -401,7 +386,7 @@ export async function deductStockFIFOKg(productId, quantityKg, invoiceNo, create
     toDeduct -= deduct;
   }
 
-  const avgPurchasePrice = quantityKg > 0 ? Math.round(totalPurchaseCost / quantityKg) : 0;
+  const avgPurchasePrice = 0;
 
   const stockAfter = stockBefore - quantityKg;
   const logSql = createdAt

@@ -14,8 +14,6 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
   const [qtyPack, setQtyPack]   = useState('');
   const [qtyPcs, setQtyPcs]     = useState('');
   const [qtyKg, setQtyKg]       = useState('');
-  const [buyPrice, setBuyPrice] = useState(''); // This is HPP / base unit
-  const [totalCost, setTotalCost] = useState(''); // For UX calculator
   const [expiry, setExpiry]     = useState('');
   const [batchCode, setBatch]   = useState('');
   const [notes, setNotes]       = useState('');
@@ -34,27 +32,13 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
   const totalKg  = kgVal;
   const totalDisplay = isKg ? `${totalKg > 0 ? totalKg + ' Kg' : ''} ${totalPcs > 0 ? totalPcs + ' Pcs' : ''}`.trim() : `${totalPcs} Pcs`;
 
-  // Auto-calculate HPP when Total Cost is entered
-  const handleTotalCostChange = (val) => {
-    setTotalCost(val);
-    const num = parseFloat(val);
-    if (!isNaN(num) && num > 0) {
-      const divisor = isKg ? totalKg : totalPcs;
-      if (divisor > 0) {
-        setBuyPrice(String(Math.round(num / divisor)));
-      }
-    } else {
-      setBuyPrice('');
-    }
-  };
-
   const handleSave = async () => {
     if (totalPcs <= 0 && totalKg <= 0) { setError('Masukkan jumlah stok yang valid'); return; }
     setError('');
     setSaving(true);
     const res = await addStock(product.id, {
       qty_dus: dusVal, qty_pack: packVal, qty_pcs: pcsVal, qty_kg: kgVal,
-      purchase_price: Number(buyPrice) || 0,
+      purchase_price: 0,
       expiry_date: expiry || null,
       batch_code: batchCode,
       notes,
@@ -215,58 +199,6 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
 
           {step === 2 && (
             <>
-              {/* Summary field */}
-              <div style={{ padding: '16px', borderRadius: 16, background: T.accent + '08', border: `1px dashed ${T.accent}30`, marginBottom: 10 }}>
-                <p style={{ fontSize: 10, fontWeight: 800, color: T.muted, textTransform: 'uppercase', marginBottom: 12, textAlign: 'center' }}>Kalkulator Harga Modal (Opsional)</p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 1.5fr', gap: 12, alignItems: 'flex-end' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: 9, fontWeight: 800, color: T.sub, marginBottom: 8 }}>Total Bayar (Berdasarkan Nota)</label>
-                    <div style={{ position: 'relative' }}>
-                      <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: T.muted, fontWeight: 800 }}>Rp</span>
-                      <input type="number" value={totalCost} onChange={e => handleTotalCostChange(e.target.value)}
-                        placeholder="0" style={{ ...inp, paddingLeft: 34, fontSize: 13 }} autoFocus />
-                    </div>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: 9, fontWeight: 800, color: T.sub, marginBottom: 8 }}>{isKg ? 'Hasil Modal / Kg' : 'Hasil Modal / Pcs'}</label>
-                    <div style={{ position: 'relative' }}>
-                      <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: T.muted, fontWeight: 800 }}>Rp</span>
-                      <input type="number" value={buyPrice} onChange={e => setBuyPrice(e.target.value)}
-                        placeholder="0" style={{ ...inp, paddingLeft: 34, fontSize: 13, border: `1.5px solid ${T.accent}40`, background: T.surface }} />
-                    </div>
-                  </div>
-                </div>
-                <p style={{ fontSize: 9, color: T.muted, marginTop: 10, display: 'flex', justifyContent: 'space-between', fontStyle: 'italic' }}>
-                   <span>*Sistem membagi total bayar dengan {isKg ? `${totalKg} Kg` : `${totalPcs} Pcs`}.</span>
-                   {product.purchase_price > 0 && <span style={{ color: T.accent, fontWeight: 700 }}>HPP Default: {fmt(product.purchase_price)}</span>}
-                </p>
-              </div>
-
-              {/* Profit Warning */}
-              {Number(buyPrice) > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {[
-                    { label: 'Pcs',  sell: product.price_pcs,  cost: Number(buyPrice) },
-                    { label: 'Pack', sell: product.price_pack, cost: Number(buyPrice) * pp },
-                    { label: 'Dus',  sell: product.price_dus,  cost: Number(buyPrice) * pp * pd },
-                    { label: 'Kg',   sell: product.price_kg,   cost: Number(buyPrice) }
-                  ].map(item => {
-                    const isRelevant = isKg ? item.label === 'Kg' : item.label !== 'Kg';
-                    if (isRelevant && item.sell > 0 && item.sell < item.cost) {
-                      return (
-                        <div key={item.label} style={{ padding: '8px 12px', borderRadius: 10, background: T.red + '10', border: `1px solid ${T.red}30`, display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontSize: 14 }}>⚠️</span>
-                          <p style={{ fontSize: 10, color: T.red, fontWeight: 700 }}>
-                            HPP {item.label} (Rp {Number(item.cost).toLocaleString('id-ID')}) lebih TINGGI dari Harga Jual (Rp {Number(item.sell).toLocaleString('id-ID')}).
-                          </p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })}
-                </div>
-              )}
-
 
               <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 12 }}>
                 <div>
@@ -316,7 +248,6 @@ function AdjustModal({ product, onClose, onSuccess, showToast }) {
   const currentBase = isKg ? (product.stock_kg || 0) : (product.stock || 0);
 
   const [newQty, setNewQty]   = useState(String(currentBase));
-  const [purchasePrice, setPurchasePrice] = useState('0');
   const [reason, setReason]   = useState('');
   const [saving, setSaving]   = useState(false);
   const [error, setError]     = useState('');
@@ -339,7 +270,7 @@ function AdjustModal({ product, onClose, onSuccess, showToast }) {
     setError('');
     setSaving(true);
     let res;
-    const hppVal = parseInt(purchasePrice) || 0;
+    const hppVal = 0;
     import('../../services/inventory').then(async ({ adjustStockKg, adjustStock }) => {
        if (isKg) res = await adjustStockKg(product.id, newVal, reason, hppVal);
        else      res = await adjustStock(product.id, newVal, reason, hppVal);
@@ -420,24 +351,6 @@ function AdjustModal({ product, onClose, onSuccess, showToast }) {
               </div>
             </div>
           </div>
-
-          {/* HPP Input (Only if stock increases) */}
-          {isPlus && (
-            <div style={{ animation: 'slideUp 0.3s ease' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 800, color: T.accent, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>
-                Harga Modal (HPP) Baru
-                <span style={{ fontSize: 9, color: T.muted, fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(Opsional - per {isKg ? 'Kg' : 'Unit'})</span>
-              </label>
-              <div style={{ position: 'relative' }}>
-                <div style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 14, fontWeight: 800, color: T.muted }}>Rp</div>
-                <input type="number" value={purchasePrice}
-                  onChange={e => setPurchasePrice(e.target.value)}
-                  style={{ ...inp, paddingLeft: 40, border: `1.5px solid ${T.accent}30`, background: T.accent + '04' }}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-          )}
 
           {/* Reasons */}
           <div>
@@ -540,7 +453,7 @@ function InventoryList() {
   });
 
   // Stats
-  const totalValue = products.reduce((sum, p) => sum + (p.total_value || 0), 0);
+
   const aman    = products.filter(p => {
     const isKg = p.sell_per_unit === 'kg';
     return isKg ? (p.stock_kg || 0) > (p.min_stock_kg || 0) : (p.stock || 0) > (p.min_stock || 0);
@@ -608,7 +521,7 @@ function InventoryList() {
         <div style={{ display: 'flex', gap: 14, marginBottom: 24, overflowX: 'auto', paddingBottom: 4 }}>
           {[
             { label: 'Total Produk', value: products.length, color: T.blue, sub: 'Item aktif' },
-            { label: 'Nilai Aset',   value: fmt(totalValue), color: T.purple, sub: 'Total valuasi', isMoney: true },
+
             { label: 'Stok Aman',    value: aman,            color: T.green, sub: 'Normal' },
             { label: 'Stok Menipis', value: menipis,         color: T.accent, sub: 'Perlu restok' },
             { label: 'Stok Habis',   value: habis,           color: T.red, sub: 'Segera beli' },

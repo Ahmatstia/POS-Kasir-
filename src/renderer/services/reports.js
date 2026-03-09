@@ -15,25 +15,10 @@ export async function getSalesReport(startDate, endDate) {
         AND status = 'COMPLETED'
     `, [startDate, endDate]);
 
-    // 2. Query untuk total modal (HPP)
-    const costSummary = await window.electronAPI.query(`
-      SELECT COALESCE(SUM(
-        CASE 
-          WHEN il.quantity_kg > 0 THEN il.quantity_kg * COALESCE(NULLIF(il.purchase_price, 0), p.purchase_price, 0)
-          ELSE il.quantity_pcs * COALESCE(NULLIF(il.purchase_price, 0), p.purchase_price, 0)
-        END
-      ), 0) as total_purchase_cost
-      FROM inventory_log il
-      JOIN transactions t ON t.invoice_no = il.reference_id
-      LEFT JOIN products p ON p.id = il.product_id
-      WHERE il.type = 'SALE' 
-        AND t.status = 'COMPLETED'
-        AND date(t.created_at) BETWEEN date(?) AND date(?)
-    `, [startDate, endDate]);
-
     const summary = {
       ...(salesSummary[0] || {}),
-      total_purchase_cost: costSummary[0]?.total_purchase_cost || 0
+      total_purchase_cost: 0,
+      total_profit: 0
     };
 
     // Query untuk penjualan per hari
@@ -119,10 +104,6 @@ export async function getSalesReport(startDate, endDate) {
       endDate
     };
 
-    // Calculate profit in summary
-    if (data.summary) {
-      data.summary.total_profit = data.summary.total_sales - data.summary.total_purchase_cost;
-    }
 
     return data;
   } catch (error) {

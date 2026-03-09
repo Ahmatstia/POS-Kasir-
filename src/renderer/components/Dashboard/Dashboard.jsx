@@ -310,19 +310,9 @@ export default function Dashboard() {
             sub={<Chip color={T.accent}>{data.todayTransactions || 0} Transaksi</Chip>}
           />
           <StatCard
-            index={1} label="Estimasi Laba Hari Ini" accent={T.green}
-            value={data.todayProfit || 0}
-            sub={<Chip color={T.green}>Profit Bersih</Chip>}
-          />
-          <StatCard
-            index={2} label="Omzet Bulan Ini" accent={T.blue}
+            index={1} label="Omzet Bulan Ini" accent={T.blue}
             value={data.monthSales || 0}
             sub={<span style={{ fontSize: 12, color: T.sub }}>Target: {fmtShort((data.monthSales || 0) * 1.2)}</span>}
-          />
-          <StatCard
-            index={3} label="Estimasi Laba Bulan Ini" accent={T.purple}
-            value={data.monthProfit || 0}
-            sub={<span style={{ fontSize: 12, color: T.sub }}>{totalSold} item terjual</span>}
           />
         </div>
 

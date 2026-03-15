@@ -65,9 +65,9 @@ export async function addProduct(product) {
   try {
     const sql = `
       INSERT INTO products 
-        (name, category_id, sell_per_unit, price_pcs, price_pack, price_dus, price_kg,
-         pcs_per_pack, pack_per_dus, min_stock, min_stock_kg, purchase_price, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (name, category_id, sell_per_unit, price_pcs, price_pack, price_dus, price_karung, price_kg,
+         pcs_per_pack, pack_per_dus, kg_per_karung, min_stock, min_stock_kg, purchase_price, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const params = [
       product.name,
@@ -76,9 +76,11 @@ export async function addProduct(product) {
       product.price_pcs     || 0,
       product.price_pack    || 0,
       product.price_dus     || 0,
+      product.price_karung  || 0,
       product.price_kg      || 0,
       product.pcs_per_pack  || 1,
       product.pack_per_dus  || 1,
+      product.kg_per_karung || 25,
       product.min_stock     || 0,
       product.min_stock_kg  || 0,
       product.purchase_price || 0,
@@ -98,8 +100,8 @@ export async function updateProduct(id, product) {
     const sql = `
       UPDATE products
       SET name = ?, category_id = ?, sell_per_unit = ?,
-          price_pcs = ?, price_pack = ?, price_dus = ?, price_kg = ?,
-          pcs_per_pack = ?, pack_per_dus = ?,
+          price_pcs = ?, price_pack = ?, price_dus = ?, price_karung = ?, price_kg = ?,
+          pcs_per_pack = ?, pack_per_dus = ?, kg_per_karung = ?,
           min_stock = ?, min_stock_kg = ?, purchase_price = ?, notes = ?
       WHERE id = ?
     `;
@@ -110,9 +112,11 @@ export async function updateProduct(id, product) {
       product.price_pcs     || 0,
       product.price_pack    || 0,
       product.price_dus     || 0,
+      product.price_karung  || 0,
       product.price_kg      || 0,
       product.pcs_per_pack  || 1,
       product.pack_per_dus  || 1,
+      product.kg_per_karung || 25,
       product.min_stock     || 0,
       product.min_stock_kg  || 0,
       product.purchase_price || 0,

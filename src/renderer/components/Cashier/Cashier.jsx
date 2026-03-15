@@ -10,16 +10,18 @@ const fmt = (n) => `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
 
 // ─── UNIT CONFIGS ─────────────────────────────────────────────────────────────
 const UNITS = [
-  { key: 'pcs',  label: 'Pcs',  priceKey: 'price_pcs',  color: T.blue   },
-  { key: 'pack', label: 'Pack', priceKey: 'price_pack', color: T.green  },
-  { key: 'dus',  label: 'Dus',  priceKey: 'price_dus',  color: T.accent },
-  { key: 'kg',   label: 'Kg',   priceKey: 'price_kg',   color: T.purple },
+  { key: 'pcs',    label: 'Pcs',    priceKey: 'price_pcs',    color: T.blue   },
+  { key: 'pack',   label: 'Pack',   priceKey: 'price_pack',   color: T.green  },
+  { key: 'dus',    label: 'Dus',    priceKey: 'price_dus',    color: T.accent },
+  { key: 'kg',     label: 'Kg',     priceKey: 'price_kg',     color: T.purple },
+  { key: 'karung', label: 'Karung', priceKey: 'price_karung', color: T.orange },
 ];
 
 // Calculate how many Pcs a cart item represents
 function calcPcs(item, product) {
   if (!product) return item.quantity;
-  if (item.unit === 'kg') return 0; // Kg uses weight model, not Pcs
+  if (item.unit === 'kg') return 0;
+  if (item.unit === 'karung') return 0; // Karung is also weight-based
   const pp = product.pcs_per_pack || 1;
   const pd = product.pack_per_dus || 1;
   if (item.unit === 'pack') return item.quantity * pp;
@@ -160,9 +162,17 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef }) {
   };
 
   const availableUnits = UNITS.filter(u => {
-    if (product.sell_per_unit === 'all') return u.key !== 'kg' && product[u.priceKey] > 0;
+    if (product.sell_per_unit === 'all') {
+      return u.key !== 'kg' && u.key !== 'karung' && product[u.priceKey] > 0;
+    }
+    if (product.sell_per_unit === 'kg') {
+      if (u.key === 'kg') return product[u.priceKey] > 0;
+      if (u.key === 'karung') return product[u.priceKey] > 0;
+      return false;
+    }
     return product.sell_per_unit === u.key && product[u.priceKey] > 0;
   });
+
 
   return (
     <div
@@ -290,6 +300,7 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef }) {
                 <option value="pack">Pack</option>
                 <option value="dus">Dus</option>
                 <option value="kg">Kg</option>
+                <option value="karung">Karung</option>
               </select>
             </div>
           </div>
@@ -479,8 +490,14 @@ function Cashier() {
   // Helper: calculate total kg already in cart for a product
   const calcCartKg = (productId, excludeItemId = null) => {
     return cart
-      .filter(item => item.product_id === productId && item.id !== excludeItemId && item.unit === 'kg')
-      .reduce((sum, item) => sum + parseFloat(item.quantity || 0), 0);
+      .filter(item => item.product_id === productId && item.id !== excludeItemId && (item.unit === 'kg' || item.unit === 'karung'))
+      .reduce((sum, item) => {
+        if (item.unit === 'kg') return sum + parseFloat(item.quantity || 0);
+        // If karung, convert to kg
+        const p = allProducts.find(x => x.id === item.product_id);
+        const kgPerKarung = p ? (p.kg_per_karung || 25) : 25;
+        return sum + (parseFloat(item.quantity || 0) * kgPerKarung);
+      }, 0);
   };
 
   const addToCart = (product, unit) => {
@@ -494,17 +511,25 @@ function Cashier() {
       return;
     }
 
-    const pp = product.pcs_per_pack || 1;
-    const pd = product.pack_per_dus || 1;
-    let pcsNeeded = 1;
-    
-    // For non-kg
-    if (unit === 'pack') pcsNeeded = pp;
-    if (unit === 'dus')  pcsNeeded = pd * pp;
-    const currentPcsInCart = calcCartPcs(product.id);
-    if (currentPcsInCart + pcsNeeded > (product.stock || 0)) {
-       showToast('error', `Stok tidak mencukupi! Tersisa: ${product.stock || 0} Pcs (di keranjang: ${currentPcsInCart} Pcs)`);
-       return;
+    if (unit === 'karung') {
+       const kgPerKarung = product.kg_per_karung || 25;
+       const currentKgInCart = calcCartKg(product.id);
+       if (currentKgInCart + kgPerKarung > (product.stock_kg || 0)) {
+          showToast('error', `Stok Kg tidak mencukupi! Tersisa: ${product.stock_kg || 0} Kg (di keranjang: ${currentKgInCart.toFixed(2)} Kg)`);
+          return;
+       }
+    } else if (unit !== 'kg') {
+      const pp = product.pcs_per_pack || 1;
+      const pd = product.pack_per_dus || 1;
+      let pcsNeeded = 1;
+      
+      if (unit === 'pack') pcsNeeded = pp;
+      if (unit === 'dus')  pcsNeeded = pd * pp;
+      const currentPcsInCart = calcCartPcs(product.id);
+      if (currentPcsInCart + pcsNeeded > (product.stock || 0)) {
+         showToast('error', `Stok tidak mencukupi! Tersisa: ${product.stock || 0} Pcs (di keranjang: ${currentPcsInCart} Pcs)`);
+         return;
+      }
     }
 
     const existing = cart.find(item => item.product_id === product.id && item.unit === unit);
@@ -592,12 +617,21 @@ function Cashier() {
 
     const product = allProducts.find(p => p.id === item.product_id);
     if (product) {
-      const fakeItem = { ...item, quantity: newQty };
-      const pcsNeeded = calcPcs(fakeItem, product);
-      const otherPcs  = calcCartPcs(product.id, itemId);
-      if (pcsNeeded + otherPcs > (product.stock || 0)) {
-        showToast('error', `Stok tidak mencukupi! Tersisa: ${product.stock || 0} Pcs`);
-        return;
+      if (item.unit === 'karung') {
+        const kgPerKarung = product.kg_per_karung || 25;
+        const otherKg = calcCartKg(product.id, itemId);
+        if ((newQty * kgPerKarung) + otherKg > (product.stock_kg || 0)) {
+          showToast('error', `Stok Kg tidak mencukupi! Tersisa: ${product.stock_kg || 0} Kg`);
+          return;
+        }
+      } else {
+        const fakeItem = { ...item, quantity: newQty };
+        const pcsNeeded = calcPcs(fakeItem, product);
+        const otherPcs  = calcCartPcs(product.id, itemId);
+        if (pcsNeeded + otherPcs > (product.stock || 0)) {
+          showToast('error', `Stok tidak mencukupi! Tersisa: ${product.stock || 0} Pcs`);
+          return;
+        }
       }
     }
 

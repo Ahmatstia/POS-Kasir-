@@ -104,8 +104,10 @@ function ProductForm({ onClose, onSuccess }) {
   const [pricePack, setPricePack]     = useState(0);
   const [priceDus, setPriceDus]       = useState(0);
   const [priceKg, setPriceKg]         = useState(0);
+  const [priceKarung, setPriceKarung] = useState(0);
   const [pcsPerPack, setPcsPerPack]   = useState(1);
   const [packPerDus, setPackPerDus]   = useState(1);
+  const [kgPerKarung, setKgPerKarung] = useState(25);
   const pp = Number(pcsPerPack) || 1;
   const pd = Number(packPerDus) || 1;
 
@@ -120,7 +122,7 @@ function ProductForm({ onClose, onSuccess }) {
     const errs = {};
     if (!name.trim())   errs.name = 'Nama produk harus diisi';
     if (!categoryId)    errs.category = 'Kategori harus dipilih';
-    const prices = [Number(pricePcs), Number(pricePack), Number(priceDus), Number(priceKg)];
+    const prices = [Number(pricePcs), Number(pricePack), Number(priceDus), Number(priceKarung), Number(priceKg)];
     if (prices.every(p => p <= 0)) errs.price = 'Minimal satu harga jual harus diisi';
     return errs;
   };
@@ -138,9 +140,11 @@ function ProductForm({ onClose, onSuccess }) {
       price_pcs:    Number(pricePcs)    || 0,
       price_pack:   Number(pricePack)   || 0,
       price_dus:    Number(priceDus)    || 0,
+      price_karung: Number(priceKarung) || 0,
       price_kg:     Number(priceKg)     || 0,
       pcs_per_pack: Number(pcsPerPack)  || 1,
       pack_per_dus: Number(packPerDus)  || 1,
+      kg_per_karung: Number(kgPerKarung) || 25,
       min_stock:    Number(minStock)    || 0,
       min_stock_kg: Number(minStockKg)  || 0,
       purchase_price: 0,
@@ -262,6 +266,33 @@ function ProductForm({ onClose, onSuccess }) {
             </p>
           </div>
         )}
+        {sellPerUnit === 'kg' && (
+          <div style={{ padding: 16, background: T.purple + '06', borderRadius: 14, border: `1px solid ${T.purple}20` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: T.purple, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Konversi Karung (Grosir)</p>
+              <div style={{ padding: '2px 8px', borderRadius: 100, background: T.purple + '14', color: T.purple, fontSize: 9, fontWeight: 700 }}>
+                Base: Kg
+              </div>
+            </div>
+            
+            <Field label="1 Karung = Isi Berapa Kg?">
+              <div style={{ position: 'relative', maxWidth: 200 }}>
+                <input type="number" step="0.1" value={kgPerKarung} onChange={e => setKgPerKarung(e.target.value)} min="1" className="form-field" style={{ ...fieldStyle, fontFamily: 'JetBrains Mono, monospace', paddingRight: 40 }} />
+                <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: T.muted, fontWeight: 700 }}>Kg</span>
+              </div>
+            </Field>
+
+            <div style={{ 
+              marginTop: 16, padding: '10px 12px', borderRadius: 10, 
+              background: T.surface, border: `1px dashed ${T.purple}40`,
+              display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center'
+            }}>
+               <span style={{ fontSize: 12, fontWeight: 700, color: T.purple }}>1 Karung</span>
+               <span style={{ fontSize: 12, color: T.muted }}>=</span>
+               <span style={{ fontSize: 14, fontWeight: 900, color: T.purple, fontFamily: 'JetBrains Mono, monospace' }}>{kgPerKarung} Kg</span>
+            </div>
+          </div>
+        )}
 
         {/* Prices */}
         <div>
@@ -269,15 +300,16 @@ function ProductForm({ onClose, onSuccess }) {
             <p style={{ fontSize: 9, fontWeight: 700, color: errors.price ? T.red : T.muted, textTransform: 'uppercase' }}>Harga Jual</p>
             {errors.price && <p style={{ fontSize: 10, color: T.red, fontWeight: 600 }}>⚠ {errors.price}</p>}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: sellPerUnit === 'kg' ? '1fr' : 'repeat(3, 1fr)', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: sellPerUnit === 'kg' ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: 8 }}>
             {[
-              { label: 'Pcs',  val: pricePcs,  set: setPricePcs,  col: T.blue   },
-              { label: 'Pack', val: pricePack, set: setPricePack, col: T.green  },
-              { label: 'Dus',  val: priceDus,  set: setPriceDus,  col: T.accent },
-              { label: 'Kg',   val: priceKg,   set: setPriceKg,   col: T.purple },
+              { label: 'Pcs',    val: pricePcs,    set: setPricePcs,    col: T.blue   },
+              { label: 'Pack',   val: pricePack,   set: setPricePack,   col: T.green  },
+              { label: 'Dus',    val: priceDus,    set: setPriceDus,    col: T.accent },
+              { label: 'Karung', val: priceKarung, set: setPriceKarung, col: T.orange },
+              { label: 'Kg',     val: priceKg,     set: setPriceKg,     col: T.purple },
             ].filter(u => {
-               if (sellPerUnit === 'kg') return u.label === 'Kg';
-               return u.label !== 'Kg';
+               if (sellPerUnit === 'kg') return u.label === 'Kg' || u.label === 'Karung';
+               return u.label !== 'Kg' && u.label !== 'Karung';
             }).map(u => (
               <div key={u.label}>
                 <label style={{ fontSize: 9, fontWeight: 700, color: u.col, display: 'block', marginBottom: 5 }}>{u.label}</label>

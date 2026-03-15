@@ -130,12 +130,27 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
               {/* Qty inputs */}
               <div style={{ display: 'grid', gridTemplateColumns: isKg ? '1fr' : 'repeat(3, 1fr)', gap: 12 }}>
                 {isKg && (
-                  <div>
-                    <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.purple, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
-                      Jumlah Masuk (Kg)
-                    </label>
-                    <input type="number" step="0.01" min="0" value={qtyKg} onChange={e => { setQtyKg(e.target.value); setError(''); }}
-                      placeholder="0.00" style={{ ...inp, fontSize: 18, padding: '14px' }} autoFocus />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.purple, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
+                        Jumlah Masuk (Kg)
+                      </label>
+                      <input type="number" step="0.01" min="0" value={qtyKg} onChange={e => { setQtyKg(e.target.value); setError(''); }}
+                        placeholder="0.00" style={{ ...inp, fontSize: 18, padding: '14px' }} autoFocus />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.orange, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
+                        Atau (Karung)
+                      </label>
+                      <input type="number" min="0" value={qtyDus} onChange={e => { 
+                          setQtyDus(e.target.value); 
+                          const val = parseInt(e.target.value) || 0;
+                          const kgPerKarung = product.kg_per_karung || 25;
+                          setQtyKg(String(val * kgPerKarung));
+                          setError(''); 
+                        }}
+                        placeholder="0" style={{ ...inp, fontSize: 18, padding: '14px', borderColor: T.orange + '40' }} />
+                    </div>
                   </div>
                 )}
                 {(!isKg) && (
@@ -675,6 +690,11 @@ function InventoryList() {
                             <span style={{ fontSize: 10, fontWeight: 700, color: T.sub, fontFamily: 'JetBrains Mono, monospace', background: T.bg, padding: '2px 8px', borderRadius: 6, border: `1px solid ${T.border2}` }}>
                               {product.category_name || 'Tanpa Kategori'}
                             </span>
+                            {isKg && (product.kg_per_karung > 0) && (
+                               <span style={{ fontSize: 10, fontWeight: 700, color: T.orange, background: T.orange + '10', padding: '2px 8px', borderRadius: 6, border: `1px solid ${T.orange}30` }}>
+                                 ± {Math.floor(stock / product.kg_per_karung)} Karung
+                               </span>
+                            )}
                             {!isKg && (pp > 1 || pd > 1) && (
                                <span style={{ fontSize: 9, color: T.muted }}>
                                  {pp > 1 ? `${Math.floor(stock / pp)} Pack` : ''} 

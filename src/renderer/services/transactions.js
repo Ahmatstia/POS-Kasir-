@@ -62,8 +62,13 @@ export async function createTransaction(transactionData) {
 
       // Deduct stock (FIFO) only for real products (not manual items)
       if (item.product_id) {
-        if (item.unit === 'kg') {
-          await deductStockFIFOKg(item.product_id, item.quantity, invoiceNo, createdAt);
+        if (item.unit === 'kg' || item.unit === 'karung') {
+          let kgToDeduct = item.quantity;
+          if (item.unit === 'karung') {
+            const [prod] = await window.electronAPI.query("SELECT kg_per_karung FROM products WHERE id = ?", [item.product_id]);
+            kgToDeduct = item.quantity * (prod?.kg_per_karung || 25);
+          }
+          await deductStockFIFOKg(item.product_id, kgToDeduct, invoiceNo, createdAt);
         } else {
           // Calculate pcs to deduct based on unit
           const [productInfo] = await window.electronAPI.query(
@@ -153,8 +158,12 @@ export async function cancelTransaction(transactionId) {
     for (const item of items) {
       if (!item.product_id) continue;
       
-      if (item.unit === 'kg') {
-        const qtyReturned = item.quantity;
+      if (item.unit === 'kg' || item.unit === 'karung') {
+        let qtyReturned = item.quantity;
+        if (item.unit === 'karung') {
+          const [prod] = await window.electronAPI.query("SELECT kg_per_karung FROM products WHERE id = ?", [item.product_id]);
+          qtyReturned = item.quantity * (prod?.kg_per_karung || 25);
+        }
 
         // Fetch original HPP from log for this invoice
         const [logInfo] = await window.electronAPI.query(
@@ -255,8 +264,12 @@ export async function deleteTransaction(transactionId) {
       for (const item of items) {
         if (!item.product_id) continue;
         
-        if (item.unit === 'kg') {
-          const qtyReturned = item.quantity;
+        if (item.unit === 'kg' || item.unit === 'karung') {
+          let qtyReturned = item.quantity;
+          if (item.unit === 'karung') {
+            const [prod] = await window.electronAPI.query("SELECT kg_per_karung FROM products WHERE id = ?", [item.product_id]);
+            qtyReturned = item.quantity * (prod?.kg_per_karung || 25);
+          }
           const [logInfo] = await window.electronAPI.query(
             "SELECT purchase_price FROM inventory_log WHERE reference_id = ? AND product_id = ? AND type = 'SALE' LIMIT 1",
             [tx.invoice_no, item.product_id]

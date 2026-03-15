@@ -110,6 +110,8 @@ class DatabaseManager {
               notes         TEXT,
               is_active     BOOLEAN DEFAULT 1,
               purchase_price INTEGER DEFAULT 0,
+              price_karung  INTEGER DEFAULT 0,
+              kg_per_karung REAL DEFAULT 25,
               created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
               updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
               FOREIGN KEY (category_id) REFERENCES categories(id)
@@ -128,6 +130,8 @@ class DatabaseManager {
           await this._runSQL("ALTER TABLE products ADD COLUMN updated_at   DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD products.updated_at");
           await this._runSQL("ALTER TABLE products ADD COLUMN min_stock_kg REAL DEFAULT 0", "ADD products.min_stock_kg");
           await this._runSQL("ALTER TABLE products ADD COLUMN purchase_price INTEGER DEFAULT 0", "ADD products.purchase_price");
+          await this._runSQL("ALTER TABLE products ADD COLUMN price_karung INTEGER DEFAULT 0", "ADD products.price_karung");
+          await this._runSQL("ALTER TABLE products ADD COLUMN kg_per_karung REAL DEFAULT 25", "ADD products.kg_per_karung");
 
           // ── STOCKS ──────────────────────────────────────────────────────────
           await this._runSQL(`

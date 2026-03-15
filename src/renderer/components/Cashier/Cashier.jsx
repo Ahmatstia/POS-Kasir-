@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { getProducts } from "../../services/database";
 import { createTransaction } from "../../services/transactions";
-import CartItem from "./CartItem";
 import PaymentModal from "./PaymentModal";
 import { useToast } from "../Toast";
 import { T } from "../../theme";
@@ -162,15 +161,23 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef }) {
   };
 
   const availableUnits = UNITS.filter(u => {
+    // Basic price availability check
+    const hasPrice = product[u.priceKey] !== undefined && product[u.priceKey] !== null && Number(product[u.priceKey]) > 0;
+
     if (product.sell_per_unit === 'all') {
-      return u.key !== 'kg' && u.key !== 'karung' && product[u.priceKey] > 0;
+      // For standard products, exclude kg and karung (bulk weight units)
+      return u.key !== 'kg' && u.key !== 'karung' && hasPrice;
     }
+    
     if (product.sell_per_unit === 'kg') {
-      if (u.key === 'kg') return product[u.priceKey] > 0;
-      if (u.key === 'karung') return product[u.priceKey] > 0;
+      // For weighing products, only show Kg and Karung options
+      if (u.key === 'kg') return hasPrice;
+      if (u.key === 'karung') return hasPrice;
       return false;
     }
-    return product.sell_per_unit === u.key && product[u.priceKey] > 0;
+
+    // Default: show if it matches the specific unit and has price
+    return product.sell_per_unit === u.key && hasPrice;
   });
 
 
@@ -375,10 +382,10 @@ function CartRow({ item, onUpdate, onRemove }) {
       {/* Qty control */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
         <button
-          onClick={() => (item.quantity <= 1 && item.unit !== 'kg') ? onRemove(item.id) : onUpdate(item.id, item.quantity - 1)}
-          style={qtyBtnStyle((item.quantity <= 1 && item.unit !== 'kg') ? T.red : T.border2, (item.quantity <= 1 && item.unit !== 'kg') ? T.red : T.sub)}
+          onClick={() => (item.quantity <= 1 && item.unit !== 'kg' && item.unit !== 'karung') ? onRemove(item.id) : onUpdate(item.id, item.quantity - 1)}
+          style={qtyBtnStyle((item.quantity <= 1 && item.unit !== 'kg' && item.unit !== 'karung') ? T.red : T.border2, (item.quantity <= 1 && item.unit !== 'kg' && item.unit !== 'karung') ? T.red : T.sub)}
         >
-          {(item.quantity <= 1 && item.unit !== 'kg') ? '×' : '−'}
+          {(item.quantity <= 1 && item.unit !== 'kg' && item.unit !== 'karung') ? '×' : '−'}
         </button>
         <span style={{ minWidth: 22, textAlign: 'center', fontSize: 13, fontWeight: 800, color: T.text, fontFamily: 'JetBrains Mono, monospace' }}>
           {item.quantity}
@@ -613,6 +620,12 @@ function Cashier() {
          showToast('error', 'Produk tidak ditemukan di database.');
        }
        return;
+    }
+
+    // Remove item if quantity drops to 0 or below
+    if (newQty <= 0) {
+      removeFromCart(itemId);
+      return;
     }
 
     const product = allProducts.find(p => p.id === item.product_id);

@@ -27,6 +27,7 @@ export const T = {
   red:      '#DC2626',     // error / danger
   blue:     '#2563EB',     // info
   purple:   '#7C3AED',     // misc
+  orange:   '#EA580C',     // karung / bulk
 
   // Sidebar
   sidebarBg:   '#1E1B4B',  // indigo-950 (dark sidebar for contrast)

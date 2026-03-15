@@ -7,7 +7,7 @@ export async function getInventorySummary() {
       SELECT 
         p.id, p.name, p.category_id, p.min_stock, p.min_stock_kg, p.sell_per_unit,
         p.pcs_per_pack, p.pack_per_dus,
-        p.price_pcs, p.price_pack, p.price_dus, p.price_kg,
+        p.price_pcs, p.price_pack, p.price_dus, p.price_kg, p.price_karung, p.kg_per_karung,
         c.name as category_name, c.color as category_color,
         COALESCE(SUM(s.quantity), 0) as stock,
         COALESCE(SUM(s.qty_kg), 0) as stock_kg

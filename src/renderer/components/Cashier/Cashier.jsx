@@ -382,10 +382,10 @@ function CartRow({ item, onUpdate, onRemove }) {
       {/* Qty control */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
         <button
-          onClick={() => (item.quantity <= 1 && item.unit !== 'kg' && item.unit !== 'karung') ? onRemove(item.id) : onUpdate(item.id, item.quantity - 1)}
-          style={qtyBtnStyle((item.quantity <= 1 && item.unit !== 'kg' && item.unit !== 'karung') ? T.red : T.border2, (item.quantity <= 1 && item.unit !== 'kg' && item.unit !== 'karung') ? T.red : T.sub)}
+          onClick={() => (item.quantity <= 1) ? onRemove(item.id) : onUpdate(item.id, item.quantity - 1)}
+          style={qtyBtnStyle((item.quantity <= 1) ? T.red : T.border2, (item.quantity <= 1) ? T.red : T.sub)}
         >
-          {(item.quantity <= 1 && item.unit !== 'kg' && item.unit !== 'karung') ? '×' : '−'}
+          {(item.quantity <= 1) ? '×' : '−'}
         </button>
         <span style={{ minWidth: 22, textAlign: 'center', fontSize: 13, fontWeight: 800, color: T.text, fontFamily: 'JetBrains Mono, monospace' }}>
           {item.quantity}
@@ -407,6 +407,7 @@ function CartRow({ item, onUpdate, onRemove }) {
     </div>
   );
 }
+
 
 const qtyBtnStyle = (borderColor, color) => ({
   width: 26, height: 26, borderRadius: 7,

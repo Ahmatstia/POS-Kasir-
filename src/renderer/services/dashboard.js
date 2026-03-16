@@ -59,11 +59,10 @@ export async function getDashboardData() {
         WHERE p.is_active = 1
         GROUP BY p.id
         HAVING 
-          (p.sell_per_unit != 'kg' AND p.min_stock > 0 AND total_stock <= p.min_stock)
-          OR (p.sell_per_unit = 'kg' AND p.min_stock_kg > 0 AND total_stock_kg <= p.min_stock_kg)
+          (p.sell_per_unit != 'kg' AND (total_stock <= 0 OR (p.min_stock > 0 AND total_stock <= p.min_stock)))
+          OR (p.sell_per_unit = 'kg' AND (total_stock_kg <= 0 OR (p.min_stock_kg > 0 AND total_stock_kg <= p.min_stock_kg)))
         ORDER BY 
           CASE WHEN p.sell_per_unit = 'kg' THEN total_stock_kg ELSE total_stock END ASC
-        LIMIT 10
       `);
     }
 

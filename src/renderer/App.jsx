@@ -49,7 +49,7 @@ function App() {
             background: T.bg,
           }}>
             <div key={currentPage} className="page-content" style={{ maxWidth: 1400, margin: '0 auto' }}>
-              {currentPage === 'dashboard'    && <Dashboard />}
+              {currentPage === 'dashboard'    && <Dashboard setCurrentPage={setCurrentPage} />}
               {currentPage === 'cashier'      && <Cashier />}
               {currentPage === 'products'     && <ProductList />}
               {currentPage === 'transactions' && <Transactions />}

@@ -139,7 +139,7 @@ function SectionTitle({ children, icon }) {
 }
 
 // ─── MAIN DASHBOARD ───────────────────────────────────────────────────────────
-export default function Dashboard() {
+export default function Dashboard({ setCurrentPage }) {
   const [data, setData] = useState(null);
   const [hideCost, setHideCost] = useState(false);
   const [stockManaged, setStockManaged] = useState(true);
@@ -434,7 +434,7 @@ export default function Dashboard() {
                 </ResponsiveContainer>
 
                 <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {pieData.slice(0, 4).map((item, i) => (
+                  {pieData.map((item, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <div style={{ width: 8, height: 8, borderRadius: 2, background: PALETTE[i % PALETTE.length], flexShrink: 0 }} />
                       <span style={{ fontSize: 11, color: T.sub, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</span>
@@ -510,7 +510,7 @@ export default function Dashboard() {
                 <p style={{ fontSize: 12, color: T.muted, textAlign: 'center', padding: '20px 0' }}>Semua stok aman ✓</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {data.lowStock.map((p) => {
+                  {data.lowStock.slice(0, 5).map((p) => {
                     const isKg = p.sell_per_unit === 'kg';
                     const current = isKg ? p.total_stock_kg : p.total_stock;
                     const min = isKg ? p.min_stock_kg : p.min_stock;
@@ -518,11 +518,11 @@ export default function Dashboard() {
                     
                     return (
                       <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 10, background: T.bg, border: `1px solid ${T.border}` }}>
-                        <div>
-                          <p style={{ fontSize: 12, fontWeight: 600, color: T.text, marginBottom: 2 }}>{p.name}</p>
+                        <div style={{ flex: 1, minWidth: 0, paddingRight: 10 }}>
+                          <p style={{ fontSize: 12, fontWeight: 600, color: T.text, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</p>
                           <p style={{ fontSize: 11, color: T.muted, fontFamily: 'JetBrains Mono, monospace' }}>min {min} {unit}</p>
                         </div>
-                        <div style={{ textAlign: 'right' }}>
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
                           <span style={{
                             display: 'block',
                             fontSize: 20, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace',
@@ -536,6 +536,21 @@ export default function Dashboard() {
                       </div>
                     );
                   })}
+                  {data.lowStock.length > 5 && (
+                    <button
+                      onClick={() => setCurrentPage && setCurrentPage('inventory')}
+                      style={{
+                        marginTop: 4, padding: '10px', borderRadius: 10,
+                        border: `1px dashed ${T.border2}`, background: 'transparent',
+                        color: T.sub, fontSize: 11, fontWeight: 700, fontFamily: 'Syne, sans-serif',
+                        cursor: 'pointer', transition: 'all 0.2s', width: '100%'
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.color = T.accent; e.currentTarget.style.borderColor = T.accent + '80'; e.currentTarget.style.background = T.accent + '08'; }}
+                      onMouseLeave={e => { e.currentTarget.style.color = T.sub; e.currentTarget.style.borderColor = T.border2; e.currentTarget.style.background = 'transparent'; }}
+                    >
+                      Lihat {data.lowStock.length - 5} stok menipis lainnya →
+                    </button>
+                  )}
                 </div>
               )}
             </div>

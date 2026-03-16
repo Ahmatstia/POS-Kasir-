@@ -103,14 +103,18 @@ export async function getSalesReport(startDate, endDate) {
     const data = {
       summary: hideCost ? {
         ...summary,
+        total_sales: 0,
+        average_sales: 0,
+        total_payment: 0,
+        total_change: 0,
         total_purchase_cost: 0,
         total_profit: 0
       } : summary,
-      dailySales,
-      paymentMethods,
-      topProducts,
-      topCategories,
-      peakHours,
+      dailySales: hideCost ? dailySales.map(d => ({ ...d, omzet: 0 })) : dailySales,
+      paymentMethods: hideCost ? paymentMethods.map(p => ({ ...p, omzet: 0 })) : paymentMethods,
+      topProducts: hideCost ? topProducts.map(p => ({ ...p, total_sales: 0 })) : topProducts,
+      topCategories: hideCost ? topCategories.map(c => ({ ...c, total_sales: 0 })) : topCategories,
+      peakHours: hideCost ? peakHours.map(h => ({ ...h, omzet: 0 })) : peakHours,
       startDate,
       endDate
     };

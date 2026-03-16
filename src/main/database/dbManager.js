@@ -135,9 +135,9 @@ class DatabaseManager {
           await this._runSQL("ALTER TABLE products ADD COLUMN created_at   DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD products.created_at");
           await this._runSQL("ALTER TABLE products ADD COLUMN updated_at   DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD products.updated_at");
           await this._runSQL("ALTER TABLE products ADD COLUMN min_stock_kg REAL DEFAULT 0", "ADD products.min_stock_kg");
-          await this._runSQL("ALTER TABLE products ADD COLUMN purchase_price INTEGER DEFAULT 0", "ADD products.purchase_price");
-          await this._runSQL("ALTER TABLE products ADD COLUMN price_karung INTEGER DEFAULT 0", "ADD products.price_karung");
-          await this._runSQL("ALTER TABLE products ADD COLUMN kg_per_karung REAL DEFAULT 25", "ADD products.kg_per_karung");
+          await this._runSQL("ALTER TABLE products ADD COLUMN purchase_price INTEGER DEFAULT 0 CHECK(purchase_price >= 0)", "ADD products.purchase_price");
+          await this._runSQL("ALTER TABLE products ADD COLUMN price_karung INTEGER DEFAULT 0 CHECK(price_karung >= 0)", "ADD products.price_karung");
+          await this._runSQL("ALTER TABLE products ADD COLUMN kg_per_karung REAL DEFAULT 25 CHECK(kg_per_karung > 0)", "ADD products.kg_per_karung");
 
           // ── STOCKS ──────────────────────────────────────────────────────────
           await this._runSQL(`
@@ -157,7 +157,7 @@ class DatabaseManager {
           
           await this._runSQL("ALTER TABLE stocks ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD stocks.created_at");
           await this._runSQL("ALTER TABLE stocks ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD stocks.updated_at");
-          await this._runSQL("ALTER TABLE stocks ADD COLUMN qty_kg REAL DEFAULT 0", "ADD stocks.qty_kg");
+          await this._runSQL("ALTER TABLE stocks ADD COLUMN qty_kg REAL DEFAULT 0 CHECK(qty_kg >= 0)", "ADD stocks.qty_kg");
 
           // ── INVENTORY LOG ────────────────────────────────────────────────────
           await this._runSQL(`
@@ -256,6 +256,7 @@ class DatabaseManager {
           await this._runSQL("CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at)", "INDEX transactions.created_at");
           await this._runSQL("CREATE INDEX IF NOT EXISTS idx_inventory_log_ref_id ON inventory_log(reference_id)", "INDEX inventory_log.reference_id");
           await this._runSQL("CREATE INDEX IF NOT EXISTS idx_stocks_product_active ON stocks(product_id, is_active)", "INDEX stocks.product_active");
+          await this._runSQL("CREATE INDEX IF NOT EXISTS idx_transaction_items_transaction_id ON transaction_items(transaction_id)", "INDEX transaction_items.transaction_id");
 
           // ── ENSURE DATA CONSISTENCY ──────────────────────────────────────────
           await this._runSQL("UPDATE transactions SET status = 'COMPLETED' WHERE status IS NULL", "FIX transactions.status");

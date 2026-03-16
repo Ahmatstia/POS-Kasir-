@@ -540,6 +540,12 @@ function InventoryList() {
         .inv-input:focus { border-color: ${T.accent}60; box-shadow: 0 0 0 2px ${T.accent}10; }
         .inv-row { transition: background 0.12s; }
         .inv-row:hover td { background: ${T.border}40; }
+        .text-truncate {
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 100%;
+        }
       `}</style>
 
       <div style={{ animation: 'fadeUp 0.4s ease both', fontFamily: 'Syne, sans-serif' }}>
@@ -725,10 +731,10 @@ function InventoryList() {
                         }}
                       >
                         {/* Product info */}
-                        <div style={{ paddingLeft: 8 }}>
-                          <p style={{ fontSize: 13, fontWeight: 700, color: outOf ? T.sub : T.text, marginBottom: 4 }}>{product.name}</p>
+                        <div style={{ paddingLeft: 8, overflow: 'hidden' }}>
+                          <p className="text-truncate" style={{ fontSize: 13, fontWeight: 700, color: outOf ? T.sub : T.text, marginBottom: 4 }} title={product.name}>{product.name}</p>
                           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: 10, fontWeight: 700, color: T.sub, fontFamily: 'JetBrains Mono, monospace', background: T.bg, padding: '2px 8px', borderRadius: 6, border: `1px solid ${T.border2}` }}>
+                            <span className="text-truncate" style={{ fontSize: 10, fontWeight: 700, color: T.sub, fontFamily: 'JetBrains Mono, monospace', background: T.bg, padding: '2px 8px', borderRadius: 6, border: `1px solid ${T.border2}`, maxWidth: 120 }} title={product.category_name}>
                               {product.category_name || 'Tanpa Kategori'}
                             </span>
                             {isKg && (product.kg_per_karung > 0) && (

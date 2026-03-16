@@ -273,8 +273,11 @@ function ReportTable({ headers, rows }) {
                     fontFamily: cell?.mono
                       ? "JetBrains Mono, monospace"
                       : "Syne, sans-serif",
-                    whiteSpace: "nowrap",
+                    whiteSpace: cell?.noWrap ? "nowrap" : "normal",
+                    maxWidth: cell?.maxWidth || "none",
                   }}
+                  className={cell?.truncate ? "text-truncate" : ""}
+                  title={cell?.truncate ? (cell?.label || cell) : ""}
                 >
                   {cell?.label ?? cell}
                 </td>
@@ -400,7 +403,11 @@ function Reports() {
         .r-scroll::-webkit-scrollbar { width:3px; height:3px; }
         .r-scroll::-webkit-scrollbar-thumb { background:${T.border2}; border-radius:3px; }
         input[type=date] { color-scheme: dark; }
-
+        .text-truncate {
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
         @media print {
           body { margin: 0; padding: 0; background: #fff !important; color: #000 !important; }
           * { visibility: hidden; }
@@ -1219,7 +1226,7 @@ function Reports() {
                 rows={salesReport.topProducts.map((p, i) => {
                   const baseRow = [
                     { label: i + 1, mono: true, color: T.muted },
-                    { label: p.product_name, bold: true, color: T.text },
+                    { label: p.product_name, bold: true, color: T.text, truncate: true, maxWidth: 200 },
                     { label: `${p.total_quantity} item`, mono: true },
                     { label: `${p.times_sold}×`, mono: true },
                   ];
@@ -1254,7 +1261,7 @@ function Reports() {
                 }
                 rows={salesReport.topCategories.map((c) => {
                   const baseRow = [
-                    { label: c.category_name, bold: true, color: T.text },
+                    { label: c.category_name, bold: true, color: T.text, truncate: true, maxWidth: 180 },
                     { label: `${c.product_count} produk`, mono: true },
                     { label: `${c.total_quantity} item`, mono: true },
                   ];
@@ -1333,7 +1340,7 @@ function Reports() {
                   "Total Stok",
                 ]}
                 rows={stockReport.stockByCategory.map((c) => [
-                  { label: c.category_name, bold: true, color: T.text },
+                  { label: c.category_name, bold: true, color: T.text, truncate: true, maxWidth: 180 },
                   { label: `${c.product_count}`, mono: true },
                   { label: `${c.total_stock} pcs / ${Number(c.total_stock_kg || 0).toFixed(2)} kg`, mono: true },
                 ])}
@@ -1391,8 +1398,8 @@ function Reports() {
                     const isOut = current <= 0;
                     
                     return [
-                      { label: p.name, bold: true, color: T.text },
-                      { label: p.category_name },
+                      { label: p.name, bold: true, color: T.text, truncate: true, maxWidth: 220 },
+                      { label: p.category_name, truncate: true, maxWidth: 150 },
                       {
                         label: `${current} ${unit}`,
                         mono: true,

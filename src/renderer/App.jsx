@@ -14,6 +14,7 @@ import Dashboard from './components/Dashboard/Dashboard';
 import Reports from './components/Reports/Reports';
 import CategoryList from './components/Categories/CategoryList';
 import InventoryList from './components/Inventory/InventoryList';
+import Settings from './components/Settings/Settings';
 
 // Constants
 import { NAV } from './constants/navigation';
@@ -55,6 +56,7 @@ function App() {
               {currentPage === 'reports'      && <Reports />}
               {currentPage === 'inventory'    && <InventoryList />}
               {currentPage === 'categories'   && <CategoryList />}
+              {currentPage === 'settings'     && <Settings />}
             </div>
           </main>
         </div>

@@ -51,6 +51,13 @@ export const CategoriesIcon = () => (
   </svg>
 );
 
+export const SettingsIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+    <circle cx="10" cy="10" r="3" stroke="currentColor" strokeWidth="1.6"/>
+    <path d="M10 2v2M10 16v2M18 10h-2M4 10H2M15.6 4.4l-1.4 1.4M5.8 14.2l-1.4 1.4M15.6 15.6l-1.4-1.4M5.8 5.8l-1.4-1.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+  </svg>
+);
+
 export const LogoIcon = () => (
   <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
     <rect x="2" y="2" width="6" height="6" rx="2" fill="#FFFFFF"/>

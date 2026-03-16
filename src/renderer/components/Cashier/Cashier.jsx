@@ -137,7 +137,7 @@ function WeighingModal({ product, onClose, onConfirm }) {
 }
 
 // ─── PRODUCT ITEM ─────────────────────────────────────────────────────────────
-function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef }) {
+function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef, ignoreStock }) {
   const [showManual, setShowManual] = useState(false);
   const [manualPrice, setManualPrice] = useState('');
   const [manualQty, setManualQty]   = useState(1);
@@ -196,19 +196,21 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
         <div style={{ flex: 1, minWidth: 0, marginRight: 10 }}>
           <p style={{
-            fontSize: 13, fontWeight: 700, color: outOfStock ? T.muted : T.text,
+            fontSize: 13, fontWeight: 700, color: (!ignoreStock && outOfStock) ? T.muted : T.text,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             marginBottom: 4,
           }}>
             {product.name}
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{
-              fontSize: 10, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
-              color: outOfStock ? T.red : lowStock ? T.accent : T.green,
-            }}>
-            {outOfStock ? 'HABIS' : `${currentStock}${isKgProduct ? ' kg' : ' stok'}`}
-            </span>
+            {!ignoreStock && (
+              <span style={{
+                fontSize: 10, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
+                color: outOfStock ? T.red : lowStock ? T.accent : T.green,
+              }}>
+              {outOfStock ? 'HABIS' : `${currentStock}${isKgProduct ? ' kg' : ' stok'}`}
+              </span>
+            )}
             <span style={{
               fontSize: 9, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
               padding: '1px 7px', borderRadius: 100,
@@ -238,27 +240,30 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef }) {
       {/* Unit buttons */}
       {!showManual && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {availableUnits.map(u => (
-            <button
-              key={u.key}
-              disabled={outOfStock}
-              onClick={() => addToCart(product, u.key)}
-              style={{
-                padding: '5px 12px', borderRadius: 8,
-                fontSize: 11, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
-                cursor: outOfStock ? 'not-allowed' : 'pointer',
-                transition: 'all 0.15s',
-                border: `1px solid ${outOfStock ? T.border2 : u.color + '40'}`,
-                background: outOfStock ? T.border : u.color + '12',
-                color: outOfStock ? T.muted : u.color,
-                opacity: outOfStock ? 0.5 : 1,
-              }}
-              onMouseEnter={e => { if (!outOfStock) e.currentTarget.style.background = u.color + '25'; }}
-              onMouseLeave={e => { if (!outOfStock) e.currentTarget.style.background = u.color + '12'; }}
-            >
-              {u.label} · {fmt(product[u.priceKey])}
-            </button>
-          ))}
+          {availableUnits.map(u => {
+            const isButtonDisabled = !ignoreStock && outOfStock;
+            return (
+              <button
+                key={u.key}
+                disabled={isButtonDisabled}
+                onClick={() => addToCart(product, u.key)}
+                style={{
+                  padding: '5px 12px', borderRadius: 8,
+                  fontSize: 11, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
+                  cursor: isButtonDisabled ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.15s',
+                  border: `1px solid ${isButtonDisabled ? T.border2 : u.color + '40'}`,
+                  background: isButtonDisabled ? T.border : u.color + '12',
+                  color: isButtonDisabled ? T.muted : u.color,
+                  opacity: isButtonDisabled ? 0.5 : 1,
+                }}
+                onMouseEnter={e => { if (!isButtonDisabled) e.currentTarget.style.background = u.color + '25'; }}
+                onMouseLeave={e => { if (!isButtonDisabled) e.currentTarget.style.background = u.color + '12'; }}
+              >
+                {u.label} · {fmt(product[u.priceKey])}
+              </button>
+            );
+          })}
 
           {availableUnits.length === 0 && !outOfStock && (
             <span style={{ fontSize: 11, color: T.muted, fontStyle: 'italic' }}>Gunakan mode Harga Kustom</span>
@@ -433,6 +438,7 @@ function Cashier() {
   const [loadingMore, setLoadingMore]               = useState(false);
   const [hasMore, setHasMore]                       = useState(true);
   const [page, setPage]                             = useState(1);
+  const [ignoreStock, setIgnoreStock]               = useState(false);
   // "Kosongkan" two-step confirm
   const [confirmClear, setConfirmClear]             = useState(false);
   const ITEMS_PER_PAGE = 30;
@@ -447,7 +453,15 @@ function Cashier() {
     if (node) observer.current.observe(node);
   }, [loadingMore, hasMore]);
 
-  useEffect(() => { loadProducts(); }, []);
+  useEffect(() => { 
+    (async () => {
+      const res = await window.electronAPI.query("SELECT value FROM settings WHERE key = 'ignore_stock'");
+      const isIgnore = (res[0]?.value === '1');
+      console.log("[Cashier] ignore_stock setting:", isIgnore);
+      setIgnoreStock(isIgnore);
+      loadProducts(); 
+    })();
+  }, []);
 
   useEffect(() => {
     if (searchTerm.trim() === '') {
@@ -519,14 +533,14 @@ function Cashier() {
       return;
     }
 
-    if (unit === 'karung') {
+    if (unit === 'karung' && !ignoreStock) {
        const kgPerKarung = product.kg_per_karung || 25;
        const currentKgInCart = calcCartKg(product.id);
        if (currentKgInCart + kgPerKarung > (product.stock_kg || 0)) {
           showToast('error', `Stok Kg tidak mencukupi! Tersisa: ${product.stock_kg || 0} Kg (di keranjang: ${currentKgInCart.toFixed(2)} Kg)`);
           return;
        }
-    } else if (unit !== 'kg') {
+    } else if (unit !== 'kg' && unit !== 'karung' && !ignoreStock) {
       const pp = product.pcs_per_pack || 1;
       const pd = product.pack_per_dus || 1;
       let pcsNeeded = 1;
@@ -560,10 +574,12 @@ function Cashier() {
   };
 
   const addKgToCartConfirm = (product, kgQty) => {
-    const currentKgInCart = calcCartKg(product.id);
-    if (currentKgInCart + kgQty > (product.stock_kg || 0)) {
-       showToast('error', `Stok Kg tidak mencukupi! Tersisa: ${product.stock_kg || 0} Kg (di keranjang: ${currentKgInCart} Kg)`);
-       return;
+    if (!ignoreStock) {
+      const currentKgInCart = calcCartKg(product.id);
+      if (currentKgInCart + kgQty > (product.stock_kg || 0)) {
+        showToast('error', `Stok Kg tidak mencukupi! Tersisa: ${product.stock_kg || 0} Kg (di keranjang: ${currentKgInCart} Kg)`);
+        return;
+      }
     }
     
     setCart([...cart, {
@@ -579,23 +595,25 @@ function Cashier() {
 
   const addManualToCart = (product, { price, quantity, unit }) => {
     // Check Kg vs Pcs
-    if (unit === 'kg') {
-      const currentKgInCart = calcCartKg(product.id);
-      if (currentKgInCart + parseFloat(quantity) > (product.stock_kg || 0)) {
-        showToast('error', `Stok Kg tidak mencukupi! Tersisa: ${product.stock_kg || 0} Kg (di keranjang: ${currentKgInCart} Kg)`);
-        return;
-      }
-    } else {
-      const pp = product.pcs_per_pack || 1;
-      const pd = product.pack_per_dus || 1;
-      let pcsNeeded = quantity;
-      if (unit === 'pack') pcsNeeded = quantity * pp;
-      else if (unit === 'dus')  pcsNeeded = quantity * pd * pp;
+    if (!ignoreStock) {
+      if (unit === 'kg') {
+        const currentKgInCart = calcCartKg(product.id);
+        if (currentKgInCart + parseFloat(quantity) > (product.stock_kg || 0)) {
+          showToast('error', `Stok Kg tidak mencukupi! Tersisa: ${product.stock_kg || 0} Kg (di keranjang: ${currentKgInCart} Kg)`);
+          return;
+        }
+      } else {
+        const pp = product.pcs_per_pack || 1;
+        const pd = product.pack_per_dus || 1;
+        let pcsNeeded = quantity;
+        if (unit === 'pack') pcsNeeded = quantity * pp;
+        else if (unit === 'dus')  pcsNeeded = quantity * pd * pp;
 
-      const currentPcsInCart = calcCartPcs(product.id);
-      if (currentPcsInCart + pcsNeeded > (product.stock || 0)) {
-        showToast('error', `Stok tidak mencukupi! Tersisa: ${product.stock || 0} Pcs (di keranjang: ${currentPcsInCart} Pcs)`);
-        return;
+        const currentPcsInCart = calcCartPcs(product.id);
+        if (currentPcsInCart + pcsNeeded > (product.stock || 0)) {
+          showToast('error', `Stok tidak mencukupi! Tersisa: ${product.stock || 0} Pcs (di keranjang: ${currentPcsInCart} Pcs)`);
+          return;
+        }
       }
     }
 
@@ -630,7 +648,7 @@ function Cashier() {
     }
 
     const product = allProducts.find(p => p.id === item.product_id);
-    if (product) {
+    if (product && !ignoreStock) {
       if (item.unit === 'karung') {
         const kgPerKarung = product.kg_per_karung || 25;
         const otherKg = calcCartKg(product.id, itemId);
@@ -789,6 +807,7 @@ function Cashier() {
                     product={product}
                     addToCart={addToCart}
                     addManualToCart={addManualToCart}
+                    ignoreStock={ignoreStock}
                     isLast={!searchTerm && index === displayedProducts.length - 1}
                     lastRef={lastProductRef}
                   />

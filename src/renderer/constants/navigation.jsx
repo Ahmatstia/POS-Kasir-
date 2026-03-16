@@ -6,7 +6,8 @@ import {
   InventoryIcon, 
   TransactionsIcon, 
   ReportsIcon, 
-  CategoriesIcon 
+  CategoriesIcon,
+  SettingsIcon
 } from '../components/Icons/AppIcons';
 
 export const NAV = [
@@ -17,4 +18,5 @@ export const NAV = [
   { id: 'transactions', label: 'Transaksi', icon: <TransactionsIcon /> },
   { id: 'reports', label: 'Laporan', icon: <ReportsIcon /> },
   { id: 'categories', label: 'Kategori', icon: <CategoriesIcon /> },
+  { id: 'settings', label: 'Pengaturan', icon: <SettingsIcon /> },
 ];

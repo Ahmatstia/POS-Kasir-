@@ -38,6 +38,10 @@ class DatabaseManager {
             await this._runSQL("ALTER TABLE transaction_items ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "FIX transaction_items.updated_at");
             await this._runSQL("ALTER TABLE transaction_items ADD COLUMN cost_price INTEGER DEFAULT 0", "FIX transaction_items.cost_price");
 
+            // EXTRA FAIL-SAFE for settings table
+            await this._runSQL("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)", "EXTRA CREATE settings");
+            await this._runSQL("INSERT OR IGNORE INTO settings (key, value) VALUES ('ignore_stock', '0')", "EXTRA SEED settings");
+
             this.ready = true;
             console.log("✅ Database fully ready");
             resolve();
@@ -77,7 +81,7 @@ class DatabaseManager {
         try {
           // ── CATEGORIES ──────────────────────────────────────────────────────
           await this._runSQL(`
-            CREATE TABLE IF NOT EXISTS categories (
+            CR  EATE TABLE IF NOT EXISTS categories (
               id          INTEGER PRIMARY KEY AUTOINCREMENT,
               name        TEXT NOT NULL UNIQUE,
               description TEXT,
@@ -231,6 +235,19 @@ class DatabaseManager {
           await this._runSQL("ALTER TABLE transaction_items ADD COLUMN cost_price INTEGER DEFAULT 0", "ADD transaction_items.cost_price");
           await this._runSQL("ALTER TABLE transaction_items ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD transaction_items.created_at");
           await this._runSQL("ALTER TABLE transaction_items ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD transaction_items.updated_at");
+
+          // ── SETTINGS ─────────────────────────────────────────────────────────
+          await this._runSQL(`
+            CREATE TABLE IF NOT EXISTS settings (
+              key TEXT PRIMARY KEY,
+              value TEXT
+            )`, "CREATE settings");
+          
+          await this._runSQL("INSERT OR IGNORE INTO settings (key, value) VALUES ('ignore_stock', '0')", "SEED settings.ignore_stock");
+
+          // EXTRA FAIL-SAFE for settings table
+          await this._runSQL("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)", "EXTRA CREATE settings");
+          await this._runSQL("INSERT OR IGNORE INTO settings (key, value) VALUES ('ignore_stock', '0')", "EXTRA SEED ignore_stock");
 
           // ── INDEXES ──────────────────────────────────────────────────────────
           await this._runSQL("CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at)", "INDEX transactions.created_at");

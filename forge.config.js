@@ -3,7 +3,9 @@ const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 
 module.exports = {
   packagerConfig: {
-    asar: true,
+    asar: {
+      unpack: "*.{node,dll}"
+    },
     icon: './assets/icon' // Forge will look for .ico on Windows and .icns on macOS
   },
   rebuildConfig: {},

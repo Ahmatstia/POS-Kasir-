@@ -244,6 +244,7 @@ function ProductList() {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [searchTerm, setSearchTerm]         = useState('');
   const [filterCategory, setFilterCategory] = useState('');
+  const [filterUnit, setFilterUnit]         = useState('');
   const [filterStatus, setFilterStatus]     = useState('');
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [isDeletingAll, setIsDeletingAll]     = useState(false);
@@ -258,6 +259,10 @@ function ProductList() {
       f = f.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
     if (filterCategory)
       f = f.filter(p => p.category_id === parseInt(filterCategory));
+    if (filterUnit) {
+      if (filterUnit === 'kemasan') f = f.filter(p => p.sell_per_unit !== 'kg');
+      if (filterUnit === 'timbangan') f = f.filter(p => p.sell_per_unit === 'kg');
+    }
 
     if (filterStatus === 'habis')
       f = f.filter(p => {
@@ -279,7 +284,7 @@ function ProductList() {
         return s > m;
       });
     setFilteredProducts(f);
-  }, [searchTerm, filterCategory, filterStatus, products]);
+  }, [searchTerm, filterCategory, filterUnit, filterStatus, products]);
 
   const loadData = async () => {
     setLoading(true);
@@ -476,7 +481,7 @@ function ProductList() {
 
         {/* ── FILTER BAR ── */}
         <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, padding: '14px 16px', marginBottom: 16 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 180px auto', gap: 10, alignItems: 'center' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px 140px 150px auto', gap: 10, alignItems: 'center' }}>
             {/* Search */}
             <div style={{ position: 'relative' }}>
               <svg style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', opacity: 0.35, pointerEvents: 'none' }} width="13" height="13" viewBox="0 0 13 13" fill="none">
@@ -501,6 +506,13 @@ function ProductList() {
               {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
 
+            {/* Unit */}
+            <select value={filterUnit} onChange={e => setFilterUnit(e.target.value)} className="filter-input" style={{ cursor: 'pointer' }}>
+              <option value="">Semua Satuan</option>
+              <option value="kemasan">Pcs/Pack/Dus</option>
+              <option value="timbangan">Kg/Karung</option>
+            </select>
+
             {/* Status */}
             <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="filter-input" style={{ cursor: 'pointer' }}>
               <option value="">Semua Status</option>
@@ -511,7 +523,7 @@ function ProductList() {
 
             {/* Reset */}
             <button
-              onClick={() => { setSearchTerm(''); setFilterCategory(''); setFilterStatus(''); }}
+              onClick={() => { setSearchTerm(''); setFilterCategory(''); setFilterUnit(''); setFilterStatus(''); }}
               style={{ padding: '9px 12px', borderRadius: 10, cursor: 'pointer', border: `1px solid ${T.border2}`, background: 'transparent', color: T.sub, fontSize: 11, fontWeight: 700, fontFamily: 'Syne, sans-serif', transition: 'all 0.15s', whiteSpace: 'nowrap' }}
               onMouseEnter={e => { e.currentTarget.style.background = T.border; e.currentTarget.style.color = T.text; }}
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.sub; }}
@@ -547,7 +559,7 @@ function ProductList() {
                 <button onClick={() => setShowForm(true)} style={{ padding: '9px 18px', borderRadius: 10, border: `1px solid ${T.green}35`, background: T.green + '10', color: T.green, fontFamily: 'Syne, sans-serif', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Tambah Manual</button>
               </div>
             ) : (
-              <button onClick={() => { setSearchTerm(''); setFilterCategory(''); setFilterStatus(''); }} style={{ padding: '9px 18px', borderRadius: 10, border: `1px solid ${T.blue}35`, background: T.blue + '10', color: T.blue, fontFamily: 'Syne, sans-serif', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Reset Filter</button>
+              <button onClick={() => { setSearchTerm(''); setFilterCategory(''); setFilterUnit(''); setFilterStatus(''); }} style={{ padding: '9px 18px', borderRadius: 10, border: `1px solid ${T.blue}35`, background: T.blue + '10', color: T.blue, fontFamily: 'Syne, sans-serif', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Reset Filter</button>
             )}
           </div>
         ) : viewMode === 'grid' ? (

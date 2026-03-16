@@ -446,6 +446,7 @@ function InventoryList() {
   const [loading, setLoading]           = useState(true);
   const [searchTerm, setSearchTerm]     = useState('');
   const [filterCat, setFilterCat]       = useState('');
+  const [filterUnit, setFilterUnit]     = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [activeTab, setActiveTab]         = useState('list'); // 'list' or 'log'
   const [logs, setLogs]                   = useState([]);
@@ -483,6 +484,10 @@ function InventoryList() {
   const filtered = products.filter(p => {
     if (searchTerm && !p.name?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     if (filterCat && p.category_id !== parseInt(filterCat)) return false;
+    if (filterUnit) {
+      if (filterUnit === 'kemasan' && p.sell_per_unit === 'kg') return false;
+      if (filterUnit === 'timbangan' && p.sell_per_unit !== 'kg') return false;
+    }
     
     const isKg = p.sell_per_unit === 'kg';
     const cStock = isKg ? (p.stock_kg || 0) : (p.stock || 0);
@@ -607,7 +612,7 @@ function InventoryList() {
             <div style={{ 
               background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, 
               padding: '16px', marginBottom: 20, 
-              display: 'grid', gridTemplateColumns: '1fr 180px 200px auto', gap: 12, alignItems: 'center',
+              display: 'grid', gridTemplateColumns: '1fr 140px 140px 160px auto', gap: 12, alignItems: 'center',
               boxShadow: '0 4px 15px rgba(0,0,0,0.05)'
             }}>
               <div style={{ position: 'relative' }}>
@@ -628,6 +633,15 @@ function InventoryList() {
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
               <select 
+                value={filterUnit} onChange={e => setFilterUnit(e.target.value)} 
+                className="inv-input" 
+                style={{ cursor: 'pointer', padding: '12px', borderRadius: 12, backgroundColor: T.bg, border: `1px solid ${T.border2}` }}
+              >
+                <option value="">Semua Satuan</option>
+                <option value="kemasan">Pcs/Pack/Dus</option>
+                <option value="timbangan">Kg/Karung</option>
+              </select>
+              <select 
                 value={filterStatus} onChange={e => setFilterStatus(e.target.value)} 
                 className="inv-input" 
                 style={{ cursor: 'pointer', padding: '12px', borderRadius: 12, backgroundColor: T.bg, border: `1px solid ${T.border2}` }}
@@ -638,7 +652,7 @@ function InventoryList() {
                 <option value="habis">❌ Stok Habis</option>
               </select>
               <button 
-                onClick={() => { setSearchTerm(''); setFilterCat(''); setFilterStatus(''); }} 
+                onClick={() => { setSearchTerm(''); setFilterCat(''); setFilterUnit(''); setFilterStatus(''); }} 
                 style={{ 
                   padding: '12px 20px', borderRadius: 12, border: `1px solid ${T.border2}`, 
                   background: T.bg, color: T.sub, fontSize: 12, fontWeight: 700, 
@@ -655,25 +669,25 @@ function InventoryList() {
             {filtered.length === 0 ? (
               <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, padding: '48px 24px', textAlign: 'center' }}>
                 <p style={{ fontSize: 14, fontWeight: 700, color: T.muted, marginBottom: 8 }}>Tidak ada produk yang ditemukan</p>
-                <button onClick={() => { setSearchTerm(''); setFilterCat(''); setFilterStatus(''); }} style={{ padding: '8px 18px', borderRadius: 10, border: `1px solid ${T.blue}35`, background: T.blue + '10', color: T.blue, fontFamily: 'Syne, sans-serif', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Reset Filter</button>
+                <button onClick={() => { setSearchTerm(''); setFilterCat(''); setFilterUnit(''); setFilterStatus(''); }} style={{ padding: '8px 18px', borderRadius: 10, border: `1px solid ${T.blue}35`, background: T.blue + '10', color: T.blue, fontFamily: 'Syne, sans-serif', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Reset Filter</button>
               </div>
             ) : (
               <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, overflow: 'hidden', boxShadow: '0 8px 30px rgba(0,0,0,0.1)' }}>
                 {/* Table header */}
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: '2.5fr 140px 120px 200px 180px',
-                  padding: '16px 24px',
+                  gridTemplateColumns: '1.5fr 110px 100px 150px 140px',
+                  padding: '12px 20px',
                   borderBottom: `1px solid ${T.border}`,
                   background: `linear-gradient(to bottom, ${T.bg}, ${T.surface})`,
                 }}>
                   {['Informasi Produk', 'Jumlah Stok', 'Ambang Batas', 'Kesehatan Stok', 'Aksi'].map(h => (
-                    <p key={h} style={{ fontSize: 10, fontWeight: 800, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{h}</p>
+                    <p key={h} style={{ fontSize: 9, fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{h}</p>
                   ))}
                 </div>
 
                 {/* Rows */}
-                <div style={{ maxHeight: 'calc(100vh - 430px)', overflowY: 'auto', padding: '0 8px' }}>
+                <div style={{ padding: '0 8px' }}>
                   {filtered.map((product, idx) => {
                     const isKg    = product.sell_per_unit === 'kg';
                     const stock   = isKg ? (product.stock_kg || 0) : (product.stock || 0);
@@ -691,10 +705,10 @@ function InventoryList() {
                         key={product.id}
                         style={{
                           display: 'grid',
-                          gridTemplateColumns: '2.5fr 140px 120px 200px 180px',
-                          padding: '20px 16px',
-                          margin: '8px 0',
-                          borderRadius: 16,
+                          gridTemplateColumns: '1.5fr 110px 100px 150px 140px',
+                          padding: '14px 16px',
+                          margin: '4px 0',
+                          borderRadius: 12,
                           alignItems: 'center',
                           background: 'transparent',
                           transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -712,7 +726,7 @@ function InventoryList() {
                       >
                         {/* Product info */}
                         <div style={{ paddingLeft: 8 }}>
-                          <p style={{ fontSize: 15, fontWeight: 800, color: outOf ? T.sub : T.text, marginBottom: 6 }}>{product.name}</p>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: outOf ? T.sub : T.text, marginBottom: 4 }}>{product.name}</p>
                           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                             <span style={{ fontSize: 10, fontWeight: 700, color: T.sub, fontFamily: 'JetBrains Mono, monospace', background: T.bg, padding: '2px 8px', borderRadius: 6, border: `1px solid ${T.border2}` }}>
                               {product.category_name || 'Tanpa Kategori'}
@@ -734,15 +748,15 @@ function InventoryList() {
                         {/* Stock number */}
                         <div>
                           <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                            <span style={{ fontSize: 24, fontWeight: 900, fontFamily: 'JetBrains Mono, monospace', color: sc, letterSpacing: '-0.02em' }}>
+                            <span style={{ fontSize: 16, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace', color: sc, letterSpacing: '-0.02em' }}>
                               {isKg ? Number(stock).toFixed(2) : numFmt(stock)}
                             </span>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: 'uppercase' }}>{isKg ? 'Kg' : 'Pcs'}</span>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: 'uppercase' }}>{isKg ? 'Kg' : 'Pcs'}</span>
                           </div>
                         </div>
 
                         {/* Min stock */}
-                        <div style={{ fontSize: 13, fontFamily: 'JetBrains Mono, monospace', color: T.sub, fontWeight: 600 }}>
+                        <div style={{ fontSize: 12, fontFamily: 'JetBrains Mono, monospace', color: T.sub, fontWeight: 600 }}>
                           {minSt > 0 ? (
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                               <span style={{ opacity: 0.6 }}>min</span>
@@ -773,9 +787,9 @@ function InventoryList() {
                           <button
                             onClick={() => setStockInProduct(product)}
                             style={{
-                              padding: '10px 14px', borderRadius: 12, cursor: 'pointer',
+                              padding: '8px 12px', borderRadius: 9, cursor: 'pointer',
                               border: `1px solid ${T.green}40`, background: T.green + '14',
-                              color: T.green, fontSize: 11, fontWeight: 800,
+                              color: T.green, fontSize: 10, fontWeight: 800,
                               fontFamily: 'Syne, sans-serif', transition: 'all 0.2s',
                               display: 'flex', alignItems: 'center', gap: 6,
                               whiteSpace: 'nowrap',
@@ -790,9 +804,9 @@ function InventoryList() {
                           <button
                             onClick={() => setAdjustProduct(product)}
                             style={{
-                              padding: '10px 12px', borderRadius: 12, cursor: 'pointer',
+                              padding: '8px 10px', borderRadius: 9, cursor: 'pointer',
                               border: `1px solid ${T.border2}`, background: T.bg,
-                              color: T.sub, fontSize: 11, fontWeight: 800,
+                              color: T.sub, fontSize: 10, fontWeight: 800,
                               fontFamily: 'Syne, sans-serif', transition: 'all 0.2s',
                               display: 'flex', alignItems: 'center', gap: 6,
                               whiteSpace: 'nowrap',
@@ -832,7 +846,7 @@ function InventoryList() {
                 <p key={h} style={{ fontSize: 10, fontWeight: 800, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{h}</p>
               ))}
             </div>
-            <div style={{ maxHeight: 'calc(100vh - 350px)', overflowY: 'auto' }}>
+            <div style={{}}>
               {logs.length === 0 ? (
                 <div style={{ padding: 40, textAlign: 'center', color: T.muted, fontSize: 13 }}>Belum ada riwayat pergerakan stok.</div>
               ) : (

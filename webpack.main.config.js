@@ -10,7 +10,6 @@ module.exports = {
   },
   externals: {
     sqlite3: 'commonjs sqlite3',
-    // sqlite3 is removed from here to allow webpack-asset-relocator-loader to bundle it
   },
   node: {
     __dirname: false,

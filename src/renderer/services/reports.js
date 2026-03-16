@@ -11,10 +11,10 @@ export async function getSalesReport(startDate, endDate) {
         COALESCE(AVG(total_amount), 0) as average_sales,
         COALESCE(SUM(payment_amount), 0) as total_payment,
         COALESCE(SUM(change_amount), 0) as total_change,
-        COUNT(DISTINCT strftime('%Y-%m-%d', created_at)) as active_days,
-        (SELECT COALESCE(SUM(cost_price), 0) FROM transaction_items ti JOIN transactions t2 ON ti.transaction_id = t2.id WHERE date(t2.created_at) BETWEEN date(?) AND date(?) AND t2.status = 'COMPLETED') as total_cost
+        COUNT(DISTINCT substr(created_at, 1, 10)) as active_days,
+        (SELECT COALESCE(SUM(cost_price), 0) FROM transaction_items ti JOIN transactions t2 ON ti.transaction_id = t2.id WHERE substr(t2.created_at, 1, 10) BETWEEN ? AND ? AND t2.status = 'COMPLETED') as total_cost
       FROM transactions 
-      WHERE date(created_at) BETWEEN date(?) AND date(?)
+      WHERE substr(created_at, 1, 10) BETWEEN ? AND ?
         AND status = 'COMPLETED'
     `, [startDate, endDate, startDate, endDate]);
 
@@ -30,13 +30,13 @@ export async function getSalesReport(startDate, endDate) {
     // Query untuk penjualan per hari
     const dailySales = await window.electronAPI.query(`
       SELECT 
-        date(created_at) as date,
+        substr(created_at, 1, 10) as date,
         COUNT(*) as transaction_count,
-        COALESCE(SUM(total_amount), 0) as total
+        COALESCE(SUM(total_amount), 0) as omzet
       FROM transactions 
-      WHERE date(created_at) BETWEEN date(?) AND date(?)
+      WHERE substr(created_at, 1, 10) BETWEEN ? AND ?
         AND status = 'COMPLETED'
-      GROUP BY date(created_at)
+      GROUP BY substr(created_at, 1, 10)
       ORDER BY date ASC
     `, [startDate, endDate]);
 
@@ -45,9 +45,9 @@ export async function getSalesReport(startDate, endDate) {
       SELECT 
         payment_method AS name,
         COUNT(*) as count,
-        COALESCE(SUM(total_amount), 0) as total
+        COALESCE(SUM(total_amount), 0) as omzet
       FROM transactions 
-      WHERE date(created_at) BETWEEN date(?) AND date(?)
+      WHERE substr(created_at, 1, 10) BETWEEN ? AND ?
         AND status = 'COMPLETED'
       GROUP BY payment_method
     `, [startDate, endDate]);
@@ -62,7 +62,7 @@ export async function getSalesReport(startDate, endDate) {
         COUNT(DISTINCT ti.transaction_id) as times_sold
       FROM transaction_items ti
       JOIN transactions t ON ti.transaction_id = t.id
-      WHERE date(t.created_at) BETWEEN date(?) AND date(?)
+      WHERE substr(t.created_at, 1, 10) BETWEEN ? AND ?
         AND t.status = 'COMPLETED'
       GROUP BY ti.product_id, ti.product_name
       ORDER BY total_quantity DESC
@@ -80,7 +80,7 @@ export async function getSalesReport(startDate, endDate) {
       JOIN transactions t ON ti.transaction_id = t.id
       JOIN products p ON ti.product_id = p.id
       JOIN categories c ON p.category_id = c.id
-      WHERE date(t.created_at) BETWEEN date(?) AND date(?)
+      WHERE substr(t.created_at, 1, 10) BETWEEN ? AND ?
         AND t.status = 'COMPLETED'
       GROUP BY c.id, c.name
       ORDER BY total_sales DESC
@@ -89,11 +89,11 @@ export async function getSalesReport(startDate, endDate) {
     // Query untuk jam sibuk
     const peakHours = await window.electronAPI.query(`
       SELECT 
-        strftime('%H', created_at) as hour,
+        substr(created_at, 12, 2) as hour,
         COUNT(*) as transaction_count,
-        COALESCE(SUM(total_amount), 0) as total
+        COALESCE(SUM(total_amount), 0) as omzet
       FROM transactions 
-      WHERE date(created_at) BETWEEN date(?) AND date(?)
+      WHERE substr(created_at, 1, 10) BETWEEN ? AND ?
         AND status = 'COMPLETED'
       GROUP BY hour
       ORDER BY hour ASC
@@ -104,13 +104,12 @@ export async function getSalesReport(startDate, endDate) {
       summary: hideCost ? {
         ...summary,
         total_purchase_cost: 0,
-        total_profit: 0,
-        average_sales: 0
+        total_profit: 0
       } : summary,
-      dailySales: hideCost ? dailySales.map(d => ({ ...d, total: 0 })) : dailySales,
+      dailySales,
       paymentMethods,
-      topProducts: hideCost ? topProducts.map(p => ({ ...p, total_sales: 0 })) : topProducts,
-      topCategories: hideCost ? topCategories.map(c => ({ ...c, total_sales: 0 })) : topCategories,
+      topProducts,
+      topCategories,
       peakHours,
       startDate,
       endDate

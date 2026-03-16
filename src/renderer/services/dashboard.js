@@ -21,9 +21,9 @@ export async function getDashboardData() {
 
     // Query total penjualan hari ini
     const todaySales = await window.electronAPI.query(`
-      SELECT COALESCE(SUM(total_amount), 0) as total 
+      SELECT COALESCE(SUM(total_amount), 0) as omzet 
       FROM transactions 
-      WHERE date(created_at) = ?
+      WHERE substr(created_at, 1, 10) = ?
         AND status = 'COMPLETED'
     `, [todayStr]);
 
@@ -31,15 +31,15 @@ export async function getDashboardData() {
     const todayTransactions = await window.electronAPI.query(`
       SELECT COUNT(*) as count 
       FROM transactions 
-      WHERE date(created_at) = ?
+      WHERE substr(created_at, 1, 10) = ?
         AND status = 'COMPLETED'
     `, [todayStr]);
 
     // Query total penjualan bulan ini
     const monthSales = await window.electronAPI.query(`
-      SELECT COALESCE(SUM(total_amount), 0) as total 
+      SELECT COALESCE(SUM(total_amount), 0) as omzet 
       FROM transactions 
-      WHERE strftime('%Y-%m', created_at) = ?
+      WHERE substr(created_at, 1, 7) = ?
         AND status = 'COMPLETED'
     `, [yearMonStr]);
 
@@ -75,7 +75,7 @@ export async function getDashboardData() {
         SUM(ti.subtotal) as total_omzet
       FROM transaction_items ti
       JOIN transactions t ON ti.transaction_id = t.id
-      WHERE strftime('%Y-%m', t.created_at) = ?
+      WHERE substr(t.created_at, 1, 7) = ?
         AND t.status = 'COMPLETED'
       GROUP BY ti.product_id, ti.product_name
       ORDER BY total_terjual DESC
@@ -85,12 +85,12 @@ export async function getDashboardData() {
     // Query penjualan 7 hari terakhir
     const dailySalesRaw = await window.electronAPI.query(`
       SELECT 
-        date(created_at) as date,
-        COALESCE(SUM(total_amount), 0) as total
+        substr(created_at, 1, 10) as date,
+        COALESCE(SUM(total_amount), 0) as omzet
       FROM transactions 
-      WHERE date(created_at) >= ?
+      WHERE substr(created_at, 1, 10) >= ?
         AND status = 'COMPLETED'
-      GROUP BY date(created_at)
+      GROUP BY substr(created_at, 1, 10)
       ORDER BY date ASC
     `, [sevenDaysAgo]);
 
@@ -106,7 +106,7 @@ export async function getDashboardData() {
 
     const dailySales = last7Days.map(dateStr => {
       const match = dailySalesRaw.find(r => r.date === dateStr);
-      return { date: dateStr, total: match ? match.total : 0 };
+      return { date: dateStr, omzet: match ? match.omzet : 0 };
     });
 
     // Query untuk total produk
@@ -124,7 +124,7 @@ export async function getDashboardData() {
       SELECT COALESCE(SUM(ti.subtotal - ti.cost_price), 0) as profit
       FROM transaction_items ti
       JOIN transactions t ON ti.transaction_id = t.id
-      WHERE date(t.created_at) = ? AND t.status = 'COMPLETED'
+      WHERE substr(t.created_at, 1, 10) = ? AND t.status = 'COMPLETED'
     `, [todayStr]);
 
     // Profit calculation month
@@ -132,14 +132,14 @@ export async function getDashboardData() {
       SELECT COALESCE(SUM(ti.subtotal - ti.cost_price), 0) as profit
       FROM transaction_items ti
       JOIN transactions t ON ti.transaction_id = t.id
-      WHERE strftime('%Y-%m', t.created_at) = ? AND t.status = 'COMPLETED'
+      WHERE substr(t.created_at, 1, 7) = ? AND t.status = 'COMPLETED'
     `, [yearMonStr]);
 
     return {
-      todaySales: todaySales[0].total,
+      todaySales: todaySales[0].omzet,
       todayProfit: profitToday[0].profit,
       todayTransactions: todayTransactions[0].count,
-      monthSales: monthSales[0].total,
+      monthSales: monthSales[0].omzet,
       monthProfit: profitMonth[0].profit,
       lowStock: lowStock,
       topProducts: topProducts,

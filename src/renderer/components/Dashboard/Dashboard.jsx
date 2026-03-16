@@ -368,7 +368,7 @@ export default function Dashboard({ setCurrentPage }) {
               <div>
                 <SectionTitle icon="〰">Tren Penjualan</SectionTitle>
                 <p style={{ fontSize: 28, fontWeight: 800, color: T.text, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
-                  Rp {fmtShort((data.dailySales || []).reduce((s, d) => s + (d.total || 0), 0))}
+                  Rp {fmtShort((data.dailySales || []).reduce((s, d) => s + (d.omzet || 0), 0))}
                 </p>
                 <p style={{ fontSize: 12, color: T.sub, marginTop: 4 }}>Total 7 hari terakhir</p>
               </div>
@@ -401,7 +401,7 @@ export default function Dashboard({ setCurrentPage }) {
                   <XAxis dataKey="date" tickFormatter={fmtDate} tick={{ fill: T.muted, fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }} axisLine={false} tickLine={false} />
                   <YAxis tickFormatter={(v) => `${(v/1000000).toFixed(1)}M`} tick={{ fill: T.muted, fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }} axisLine={false} tickLine={false} />
                   <Tooltip content={<CustomTooltip />} cursor={{ stroke: T.accent, strokeWidth: 1, strokeDasharray: '4 4' }} />
-                  <Area type="monotone" dataKey="total" stroke={T.accent} strokeWidth={2.5} fill="url(#gSales)" dot={false} activeDot={{ r: 5, fill: T.accent, stroke: T.bg, strokeWidth: 2 }} />
+                  <Area type="monotone" dataKey="omzet" stroke={T.accent} strokeWidth={2.5} fill="url(#gSales)" dot={false} activeDot={{ r: 5, fill: T.accent, stroke: T.bg, strokeWidth: 2 }} />
                 </AreaChart>
               </ResponsiveContainer>
             )}

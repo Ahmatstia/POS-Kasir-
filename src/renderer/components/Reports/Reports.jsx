@@ -173,7 +173,7 @@ const ChartTooltip = ({ active, payload, label }) => {
           fontFamily: "JetBrains Mono, monospace",
         }}
       >
-        {fmt(payload[0].value)}
+        {fmt(payload[0].payload.omzet || payload[0].value)}
       </p>
     </div>
   );
@@ -299,24 +299,28 @@ const DATE_PRESETS = [
 
 function applyPreset(key) {
   const today = new Date();
-  let start = today,
-    end = today;
+  
+  // Create a helper to return a Date with only the local year, month, and day info
+  // and set time to noon to avoid daylight saving or timezone edge cases when doing math
+  const getLocalMidnight = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0);
+
+  let start = getLocalMidnight(today);
+  let end = getLocalMidnight(today);
+
   if (key === "yesterday") {
-    start = new Date(today);
-    start.setDate(today.getDate() - 1);
+    start.setDate(start.getDate() - 1);
     end = new Date(start);
   } else if (key === "7d") {
-    start = new Date(today);
-    start.setDate(today.getDate() - 7);
+    start.setDate(start.getDate() - 6);
   } else if (key === "30d") {
-    start = new Date(today);
-    start.setDate(today.getDate() - 30);
+    start.setDate(start.getDate() - 29);
   } else if (key === "month") {
-    start = new Date(today.getFullYear(), today.getMonth(), 1);
+    start = new Date(today.getFullYear(), today.getMonth(), 1, 12, 0, 0);
   } else if (key === "lastMonth") {
-    start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    end = new Date(today.getFullYear(), today.getMonth(), 0);
+    start = new Date(today.getFullYear(), today.getMonth() - 1, 1, 12, 0, 0);
+    end = new Date(today.getFullYear(), today.getMonth(), 0, 12, 0, 0);
   }
+  
   return {
     startDate: format(start, "yyyy-MM-dd"),
     endDate: format(end, "yyyy-MM-dd"),
@@ -1010,7 +1014,7 @@ function Reports() {
                     />
                     <Area
                       type="monotone"
-                      dataKey="total"
+                      dataKey="omzet"
                       stroke={T.accent}
                       strokeWidth={2.5}
                       fill="url(#gS)"
@@ -1186,7 +1190,7 @@ function Reports() {
                   {!hideCost && (
                     <Bar
                       yAxisId="r"
-                      dataKey="total"
+                      dataKey="omzet"
                       name="Total"
                       fill={T.accent}
                       radius={[4, 4, 0, 0]}

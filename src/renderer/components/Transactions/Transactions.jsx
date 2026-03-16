@@ -130,6 +130,7 @@ function Transactions() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(null); // { type: 'single'|'all', id?: number }
   const [hideCost, setHideCost] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
 
   // Date filters
   const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -154,6 +155,7 @@ function Transactions() {
 
   const viewDetail = async (id) => {
     setDetailLoading(true);
+    setShowDetail(true);
     setSelected(await getTransactionDetail(id));
     setDetailLoading(false);
   };
@@ -261,11 +263,12 @@ function Transactions() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 420px",
+          gridTemplateColumns: showDetail ? "1fr 420px" : "1fr",
           gap: 16,
           height: "calc(100vh - 140px)",
           fontFamily: "Syne, sans-serif",
           animation: "fadeUp 0.4s ease both",
+          transition: "grid-template-columns 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
         }}
       >
         {/* ── LEFT: TRANSACTION LIST ── */}
@@ -349,7 +352,7 @@ function Transactions() {
             </div>
 
             {/* Filters Row */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: 10, marginBottom: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: 10, padding: '0 10px', marginBottom: 14 }}>
               <div style={{ position: 'relative' }}>
                 <label style={{ display: 'block', fontSize: 8, fontWeight: 800, color: T.muted, marginBottom: 4, textTransform: 'uppercase' }}>Mulai</label>
                 <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} 
@@ -500,38 +503,75 @@ function Transactions() {
         </div>
 
         {/* ── RIGHT: DETAIL ── */}
-        <div
-          style={{
-            background: T.surface,
-            border: `1px solid ${T.border}`,
-            borderRadius: 16,
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-          }}
-        >
+        {showDetail && (
+          <div
+            style={{
+              background: T.surface,
+              border: `1px solid ${T.border}`,
+              borderRadius: 16,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
           {/* Header */}
           <div
             style={{
               padding: "18px 20px 14px",
               borderBottom: `1px solid ${T.border}`,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
             }}
           >
-            <p
+            <div>
+              <p
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  color: T.muted,
+                  marginBottom: 2,
+                }}
+              >
+                Detail
+              </p>
+              <p style={{ fontSize: 14, fontWeight: 800, color: T.text }}>
+                Transaksi
+              </p>
+            </div>
+            {/* Close detail button */}
+            <button
+              onClick={() => {
+                setShowDetail(false);
+                setSelected(null);
+              }}
+              title="Tutup Panel"
               style={{
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
+                width: 30,
+                height: 30,
+                borderRadius: 10,
+                background: "transparent",
+                border: "none",
                 color: T.muted,
-                marginBottom: 2,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.2s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = T.border;
+                e.currentTarget.style.color = T.text;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.color = T.muted;
               }}
             >
-              Detail
-            </p>
-            <p style={{ fontSize: 14, fontWeight: 800, color: T.text }}>
-              Transaksi
-            </p>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
           </div>
 
           {detailLoading ? (
@@ -1035,50 +1075,10 @@ function Transactions() {
                 ))}
               </div>
             </div>
-          ) : (
-            <div
-              style={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 10,
-              }}
-            >
-              <svg
-                width="52"
-                height="52"
-                viewBox="0 0 52 52"
-                fill="none"
-                opacity="0.18"
-              >
-                <rect
-                  x="10"
-                  y="6"
-                  width="32"
-                  height="40"
-                  rx="3"
-                  stroke={T.sub}
-                  strokeWidth="2"
-                />
-                <path
-                  d="M18 18h16M18 26h12M18 34h8"
-                  stroke={T.sub}
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
-              <p style={{ fontSize: 13, fontWeight: 700, color: T.muted }}>
-                Pilih transaksi
-              </p>
-              <p style={{ fontSize: 11, color: T.muted + "80" }}>
-                Klik item di sebelah kiri untuk melihat detail
-              </p>
-            </div>
-          )}
+          ) : <></>}
         </div>
-      </div>
+      )}
+    </div>
 
       {/* ── DELETE CONFIRMATION DIALOG ── */}
       {deleteDialog && (

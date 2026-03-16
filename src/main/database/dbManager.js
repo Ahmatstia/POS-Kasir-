@@ -82,7 +82,7 @@ class DatabaseManager {
         try {
           // ── CATEGORIES ──────────────────────────────────────────────────────
           await this._runSQL(`
-            CR  EATE TABLE IF NOT EXISTS categories (
+            CREATE TABLE IF NOT EXISTS categories (
               id          INTEGER PRIMARY KEY AUTOINCREMENT,
               name        TEXT NOT NULL UNIQUE,
               description TEXT,

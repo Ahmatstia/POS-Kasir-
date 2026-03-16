@@ -153,31 +153,28 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef, ign
   const handleManualAdd = () => {
     const price = parseFloat(manualPrice);
     const qty   = parseFloat(manualQty);
-    if (isNaN(price) || price <= 0 || isNaN(qty) || qty <= 0) return;
-    addManualToCart(product, { price, quantity: qty, unit: manualUnit });
-    setShowManual(false);
-    setManualPrice('');
-    setManualQty(1);
+    
+    if (!manualPrice || isNaN(price) || price <= 0) {
+      showToast('error', 'Harga tidak boleh kosong atau Rp 0');
+      return;
+    }
+    if (isNaN(qty) || qty <= 0) {
+      showToast('error', 'Jumlah/Qty tidak boleh kosong atau 0');
+      return;
+    }
+
+    const result = addManualToCart(product, { price, quantity: qty, unit: manualUnit });
+    if (result) {
+      setShowManual(false);
+      setManualPrice('');
+      setManualQty(1);
+    }
   };
 
   const availableUnits = UNITS.filter(u => {
-    // Basic price availability check
-    const hasPrice = product[u.priceKey] !== undefined && product[u.priceKey] !== null && Number(product[u.priceKey]) > 0;
-
-    if (product.sell_per_unit === 'all') {
-      // For standard products, exclude kg and karung (bulk weight units)
-      return u.key !== 'kg' && u.key !== 'karung' && hasPrice;
-    }
-    
-    if (product.sell_per_unit === 'kg') {
-      // For weighing products, only show Kg and Karung options
-      if (u.key === 'kg') return hasPrice;
-      if (u.key === 'karung') return hasPrice;
-      return false;
-    }
-
-    // Default: show if it matches the specific unit and has price
-    return product.sell_per_unit === u.key && hasPrice;
+    // Show all units that have a price registered (> 0)
+    // This allows "Hybrid" products (e.g. sold by Pack AND Kg)
+    return product[u.priceKey] !== undefined && product[u.priceKey] !== null && Number(product[u.priceKey]) > 0;
   });
 
 
@@ -326,15 +323,6 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef, ign
 
           <button
             onClick={handleManualAdd}
-            disabled={
-              !manualPrice || 
-              parseFloat(manualPrice) <= 0 || 
-              (!ignoreStock && (
-                manualUnit === 'kg' ? 
-                (product.stock_kg <= 0) : 
-                (product.stock <= 0)
-              ))
-            }
             style={{
               width: '100%', padding: '8px', borderRadius: 8,
               background: T.accent + '18', border: `1px solid ${T.accent}40`,
@@ -608,8 +596,8 @@ function Cashier() {
         const qtyKg = parseFloat(quantity) * kgPerUnit;
         const currentKgInCart = calcCartKg(product.id);
         if (currentKgInCart + qtyKg > (product.stock_kg || 0)) {
-          showToast('error', `Stok Kg tidak mencukupi! Tersisa: ${product.stock_kg || 0} Kg (di keranjang: ${currentKgInCart.toFixed(2)} Kg)`);
-          return;
+          showToast('error', `Gagal: Stok Kg tidak mencukupi! Tersisa: ${product.stock_kg || 0} Kg (di keranjang: ${currentKgInCart.toFixed(2)} Kg)`);
+          return false;
         }
       } else {
         const pp = product.pcs_per_pack || 1;
@@ -620,8 +608,8 @@ function Cashier() {
 
         const currentPcsInCart = calcCartPcs(product.id);
         if (currentPcsInCart + pcsNeeded > (product.stock || 0)) {
-          showToast('error', `Stok tidak mencukupi! Tersisa: ${product.stock || 0} Pcs (di keranjang: ${currentPcsInCart} Pcs)`);
-          return;
+          showToast('error', `Gagal: Stok Pcs tidak mencukupi! Tersisa: ${product.stock || 0} Pcs (di keranjang: ${currentPcsInCart} Pcs)`);
+          return false;
         }
       }
     }
@@ -633,7 +621,7 @@ function Cashier() {
       unit, price, quantity,
       subtotal: price * quantity,
     }]);
-    // Do NOT reset searchTerm
+    return true;
   };
 
   const updateQuantity = (itemId, newQty) => {

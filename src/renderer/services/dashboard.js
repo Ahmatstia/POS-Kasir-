@@ -1,4 +1,6 @@
 // Fungsi untuk mendapatkan data dashboard
+import { isStockManaged } from './settings';
+
 export async function getDashboardData() {
   try {
     // Hitung tanggal lokal (WIB) sebagai string untuk dipakai di query
@@ -42,22 +44,28 @@ export async function getDashboardData() {
     `, [yearMonStr]);
 
 
-    // Query produk stok menipis
-    const lowStock = await window.electronAPI.query(`
-      SELECT p.id, p.name, p.min_stock, p.min_stock_kg, p.sell_per_unit,
-             COALESCE(SUM(s.quantity), 0) as total_stock,
-             COALESCE(SUM(s.qty_kg), 0) as total_stock_kg
-      FROM products p
-      LEFT JOIN stocks s ON s.product_id = p.id AND s.is_active = 1
-      WHERE p.is_active = 1
-      GROUP BY p.id
-      HAVING 
-        (p.sell_per_unit != 'kg' AND p.min_stock > 0 AND total_stock <= p.min_stock)
-        OR (p.sell_per_unit = 'kg' AND p.min_stock_kg > 0 AND total_stock_kg <= p.min_stock_kg)
-      ORDER BY 
-        CASE WHEN p.sell_per_unit = 'kg' THEN total_stock_kg ELSE total_stock END ASC
-      LIMIT 10
-    `);
+    // Cek apakah stok dikelola (abaikan_stok mati)
+    const stockManaged = await isStockManaged();
+
+    // Query produk stok menipis (hanya jika stok dikelola)
+    let lowStock = [];
+    if (stockManaged) {
+      lowStock = await window.electronAPI.query(`
+        SELECT p.id, p.name, p.min_stock, p.min_stock_kg, p.sell_per_unit,
+               COALESCE(SUM(s.quantity), 0) as total_stock,
+               COALESCE(SUM(s.qty_kg), 0) as total_stock_kg
+        FROM products p
+        LEFT JOIN stocks s ON s.product_id = p.id AND s.is_active = 1
+        WHERE p.is_active = 1
+        GROUP BY p.id
+        HAVING 
+          (p.sell_per_unit != 'kg' AND p.min_stock > 0 AND total_stock <= p.min_stock)
+          OR (p.sell_per_unit = 'kg' AND p.min_stock_kg > 0 AND total_stock_kg <= p.min_stock_kg)
+        ORDER BY 
+          CASE WHEN p.sell_per_unit = 'kg' THEN total_stock_kg ELSE total_stock END ASC
+        LIMIT 10
+      `);
+    }
 
     // Query 5 produk terlaris bulan ini
     const topProducts = await window.electronAPI.query(`

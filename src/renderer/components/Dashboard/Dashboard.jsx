@@ -4,7 +4,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import { getDashboardData } from '../../services/dashboard';
-import { isPrivacyModeEnabled } from '../../services/settings';
+import { isPrivacyModeEnabled, isStockManaged } from '../../services/settings';
 import { T } from '../../theme';
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
@@ -142,6 +142,7 @@ function SectionTitle({ children, icon }) {
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [hideCost, setHideCost] = useState(false);
+  const [stockManaged, setStockManaged] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -153,12 +154,14 @@ export default function Dashboard() {
     setLoading(true);
     setError(null);
     try {
-      const [result, isPrivacy] = await Promise.all([
+      const [result, isPrivacy, isManaged] = await Promise.all([
         getDashboardData(),
-        isPrivacyModeEnabled()
+        isPrivacyModeEnabled(),
+        isStockManaged()
       ]);
       setData(result);
       setHideCost(isPrivacy);
+      setStockManaged(isManaged);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -204,10 +207,30 @@ export default function Dashboard() {
   const totalSold = (data.topProducts || []).reduce((s, p) => s + (p.total_terjual || 0), 0);
   const avgTx = data.todayTransactions > 0 ? data.todaySales / data.todayTransactions : 0;
 
-  const pieData = (data.topProducts || []).map((p) => ({
-    name: p.product_name.length > 12 ? p.product_name.slice(0, 12) + '…' : p.product_name,
-    value: p.total_terjual,
-  }));
+  const topN = 5;
+  const pieData = [];
+  if (data.topProducts && data.topProducts.length > 0) {
+    const sorted = [...data.topProducts].sort((a, b) => b.total_terjual - a.total_terjual);
+    const topItems = sorted.slice(0, topN);
+    const otherItems = sorted.slice(topN);
+
+    topItems.forEach(p => {
+      pieData.push({
+        name: p.product_name.length > 12 ? p.product_name.slice(0, 12) + '…' : p.product_name,
+        value: p.total_terjual,
+      });
+    });
+
+    if (otherItems.length > 0) {
+      const otherTotal = otherItems.reduce((sum, p) => sum + (p.total_terjual || 0), 0);
+      if (otherTotal > 0) {
+        pieData.push({
+          name: 'Lainnya',
+          value: otherTotal,
+        });
+      }
+    }
+  }
 
   return (
     <>
@@ -478,7 +501,12 @@ export default function Dashboard() {
             {/* Low Stock */}
             <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: '24px', animation: 'fadeUp 0.5s ease 0.6s both' }}>
               <SectionTitle icon="⚠">Stok Menipis</SectionTitle>
-              {(data.lowStock || []).length === 0 ? (
+              {!stockManaged ? (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: T.accent, marginBottom: 4 }}>Mode Abaikan Stok Aktif</p>
+                  <p style={{ fontSize: 11, color: T.muted }}>Peringatan stok saat ini dinonaktifkan.</p>
+                </div>
+              ) : (data.lowStock || []).length === 0 ? (
                 <p style={{ fontSize: 12, color: T.muted, textAlign: 'center', padding: '20px 0' }}>Semua stok aman ✓</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

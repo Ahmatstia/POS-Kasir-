@@ -256,7 +256,7 @@ function ProductList() {
   useEffect(() => {
     let f = [...products];
     if (searchTerm.trim())
-      f = f.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+      f = f.filter(p => (p.name || "").toLowerCase().includes(searchTerm.toLowerCase()));
     if (filterCategory)
       f = f.filter(p => p.category_id === parseInt(filterCategory));
     if (filterUnit) {

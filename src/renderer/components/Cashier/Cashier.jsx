@@ -603,10 +603,12 @@ function Cashier() {
   const addManualToCart = (product, { price, quantity, unit }) => {
     // Check Kg vs Pcs
     if (!ignoreStock) {
-      if (unit === 'kg') {
+      if (unit === 'kg' || unit === 'karung') {
+        const kgPerUnit = unit === 'karung' ? (product.kg_per_karung || 25) : 1;
+        const qtyKg = parseFloat(quantity) * kgPerUnit;
         const currentKgInCart = calcCartKg(product.id);
-        if (currentKgInCart + parseFloat(quantity) > (product.stock_kg || 0)) {
-          showToast('error', `Stok Kg tidak mencukupi! Tersisa: ${product.stock_kg || 0} Kg (di keranjang: ${currentKgInCart} Kg)`);
+        if (currentKgInCart + qtyKg > (product.stock_kg || 0)) {
+          showToast('error', `Stok Kg tidak mencukupi! Tersisa: ${product.stock_kg || 0} Kg (di keranjang: ${currentKgInCart.toFixed(2)} Kg)`);
           return;
         }
       } else {

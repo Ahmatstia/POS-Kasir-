@@ -63,28 +63,36 @@ export async function getProductById(id) {
 // Add product (NO stock input — stock managed via Inventory)
 export async function addProduct(product) {
   try {
+    // Validation & Sanitization
+    const name = (product.name || "").trim();
+    if (!name) throw new Error("Nama produk tidak boleh kosong");
+
+    const pcs_per_pack = Math.max(1, Number(product.pcs_per_pack) || 1);
+    const pack_per_dus = Math.max(1, Number(product.pack_per_dus) || 1);
+    const kg_per_karung = Math.max(0.1, Number(product.kg_per_karung) || 25);
+
     const sql = `
       INSERT INTO products 
-        (name, category_id, sell_per_unit, price_pcs, price_pack, price_dus, price_karung, price_kg,
-         pcs_per_pack, pack_per_dus, kg_per_karung, min_stock, min_stock_kg, purchase_price, notes)
+        (name, category_id, sell_per_unit, price_pcs, price_pack, price_dus, price_kg,
+         pcs_per_pack, pack_per_dus, min_stock, min_stock_kg, purchase_price, notes, price_karung, kg_per_karung)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const params = [
-      product.name,
+      name,
       product.category_id,
       product.sell_per_unit || "all",
-      product.price_pcs     || 0,
-      product.price_pack    || 0,
-      product.price_dus     || 0,
-      product.price_karung  || 0,
-      product.price_kg      || 0,
-      product.pcs_per_pack  || 1,
-      product.pack_per_dus  || 1,
-      product.kg_per_karung || 25,
-      product.min_stock     || 0,
-      product.min_stock_kg  || 0,
-      product.purchase_price || 0,
-      product.notes         || "",
+      Math.max(0, Number(product.price_pcs) || 0),
+      Math.max(0, Number(product.price_pack) || 0),
+      Math.max(0, Number(product.price_dus) || 0),
+      Math.max(0, Number(product.price_kg) || 0),
+      pcs_per_pack,
+      pack_per_dus,
+      Math.max(0, Number(product.min_stock) || 0),
+      Math.max(0, Number(product.min_stock_kg) || 0),
+      Math.max(0, Number(product.purchase_price) || 0),
+      (product.notes || "").trim(),
+      Math.max(0, Number(product.price_karung) || 0),
+      kg_per_karung
     ];
     const result = await window.electronAPI.run(sql, params);
     return { success: true, id: result.lastID };
@@ -97,30 +105,39 @@ export async function addProduct(product) {
 // Update product data only (no stock)
 export async function updateProduct(id, product) {
   try {
+    // Validation & Sanitization
+    const name = (product.name || "").trim();
+    if (!name) throw new Error("Nama produk tidak boleh kosong");
+
+    const pcs_per_pack = Math.max(1, Number(product.pcs_per_pack) || 1);
+    const pack_per_dus = Math.max(1, Number(product.pack_per_dus) || 1);
+    const kg_per_karung = Math.max(0.1, Number(product.kg_per_karung) || 25);
+
     const sql = `
       UPDATE products
       SET name = ?, category_id = ?, sell_per_unit = ?,
-          price_pcs = ?, price_pack = ?, price_dus = ?, price_karung = ?, price_kg = ?,
-          pcs_per_pack = ?, pack_per_dus = ?, kg_per_karung = ?,
-          min_stock = ?, min_stock_kg = ?, purchase_price = ?, notes = ?
+          price_pcs = ?, price_pack = ?, price_dus = ?, price_kg = ?,
+          pcs_per_pack = ?, pack_per_dus = ?,
+          min_stock = ?, min_stock_kg = ?, purchase_price = ?, notes = ?,
+          price_karung = ?, kg_per_karung = ?
       WHERE id = ?
     `;
     const params = [
-      product.name,
+      name,
       product.category_id,
       product.sell_per_unit || "all",
-      product.price_pcs     || 0,
-      product.price_pack    || 0,
-      product.price_dus     || 0,
-      product.price_karung  || 0,
-      product.price_kg      || 0,
-      product.pcs_per_pack  || 1,
-      product.pack_per_dus  || 1,
-      product.kg_per_karung || 25,
-      product.min_stock     || 0,
-      product.min_stock_kg  || 0,
-      product.purchase_price || 0,
-      product.notes         || "",
+      Math.max(0, Number(product.price_pcs) || 0),
+      Math.max(0, Number(product.price_pack) || 0),
+      Math.max(0, Number(product.price_dus) || 0),
+      Math.max(0, Number(product.price_kg) || 0),
+      pcs_per_pack,
+      pack_per_dus,
+      Math.max(0, Number(product.min_stock) || 0),
+      Math.max(0, Number(product.min_stock_kg) || 0),
+      Math.max(0, Number(product.purchase_price) || 0),
+      (product.notes || "").trim(),
+      Math.max(0, Number(product.price_karung) || 0),
+      kg_per_karung,
       id,
     ];
     const result = await window.electronAPI.run(sql, params);

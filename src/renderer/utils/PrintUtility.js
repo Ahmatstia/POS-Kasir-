@@ -18,6 +18,16 @@ export const printReceipt = (transaction, items) => {
     return `Rp ${price.toLocaleString('id-ID')}`;
   };
 
+  const escapeHtml = (text) => {
+    if (!text) return "";
+    return String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  };
+
   // Buat konten struk HTML
   const receiptContent = `
     <!DOCTYPE html>
@@ -111,9 +121,9 @@ export const printReceipt = (transaction, items) => {
       
       <div class="invoice">
         <h3>STRUK PEMBAYARAN</h3>
-        <p>No. ${transaction.invoice_no}</p>
-        <p>${formattedDate}</p>
-        <p>Kasir: ${transaction.created_by || 'Admin'}</p>
+        <p>No. ${escapeHtml(transaction.invoice_no)}</p>
+        <p>${escapeHtml(formattedDate)}</p>
+        <p>Kasir: ${escapeHtml(transaction.created_by || 'Admin')}</p>
       </div>
 
       <table class="items">
@@ -128,8 +138,8 @@ export const printReceipt = (transaction, items) => {
         <tbody>
           ${items.map(item => `
             <tr>
-              <td>${item.product_name}</td>
-              <td>${item.quantity} ${item.unit}</td>
+              <td>${escapeHtml(item.product_name)}</td>
+              <td>${item.quantity} ${escapeHtml(item.unit)}</td>
               <td>${formatPrice(item.price_per_unit)}</td>
               <td>${formatPrice(item.subtotal)}</td>
             </tr>
@@ -200,6 +210,16 @@ export const printThermalReceipt = (transaction, items) => {
     return `Rp${price.toLocaleString('id-ID')}`;
   };
 
+  const escapeHtml = (text) => {
+    if (!text) return "";
+    return String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  };
+
   // Untuk printer thermal 58mm
   const receiptContent = `
     <!DOCTYPE html>
@@ -240,10 +260,10 @@ export const printThermalReceipt = (transaction, items) => {
       <table>
         ${items.map(item => `
           <tr>
-            <td colspan="2">${item.product_name}</td>
+            <td colspan="2">${escapeHtml(item.product_name)}</td>
           </tr>
           <tr>
-            <td>${item.quantity} ${item.unit} x ${formatPrice(item.price_per_unit)}</td>
+            <td>${item.quantity} ${escapeHtml(item.unit)} x ${formatPrice(item.price_per_unit)}</td>
             <td>${formatPrice(item.subtotal)}</td>
           </tr>
         `).join('')}

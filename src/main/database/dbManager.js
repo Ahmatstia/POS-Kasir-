@@ -41,6 +41,7 @@ class DatabaseManager {
             // EXTRA FAIL-SAFE for settings table
             await this._runSQL("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)", "EXTRA CREATE settings");
             await this._runSQL("INSERT OR IGNORE INTO settings (key, value) VALUES ('ignore_stock', '0')", "EXTRA SEED settings");
+            await this._runSQL("INSERT OR IGNORE INTO settings (key, value) VALUES ('hide_cost', '0')", "EXTRA SEED hide_cost");
 
             this.ready = true;
             console.log("✅ Database fully ready");
@@ -244,10 +245,12 @@ class DatabaseManager {
             )`, "CREATE settings");
           
           await this._runSQL("INSERT OR IGNORE INTO settings (key, value) VALUES ('ignore_stock', '0')", "SEED settings.ignore_stock");
+          await this._runSQL("INSERT OR IGNORE INTO settings (key, value) VALUES ('hide_cost', '0')", "SEED settings.hide_cost");
 
           // EXTRA FAIL-SAFE for settings table
           await this._runSQL("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)", "EXTRA CREATE settings");
           await this._runSQL("INSERT OR IGNORE INTO settings (key, value) VALUES ('ignore_stock', '0')", "EXTRA SEED ignore_stock");
+          await this._runSQL("INSERT OR IGNORE INTO settings (key, value) VALUES ('hide_cost', '0')", "EXTRA SEED hide_cost");
 
           // ── INDEXES ──────────────────────────────────────────────────────────
           await this._runSQL("CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at)", "INDEX transactions.created_at");

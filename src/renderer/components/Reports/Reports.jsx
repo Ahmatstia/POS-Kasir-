@@ -4,6 +4,7 @@ import {
   getStockReport,
   exportToCSV,
 } from "../../services/reports";
+import { isPrivacyModeEnabled } from "../../services/settings";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import {
@@ -333,6 +334,7 @@ function Reports() {
     startDate: format(new Date(new Date().setDate(1)), "yyyy-MM-dd"),
     endDate: format(new Date(), "yyyy-MM-dd"),
   });
+  const [hideCost, setHideCost] = useState(false);
 
   const loadSalesReport = async (range = dateRange) => {
     setLoading(true);
@@ -342,7 +344,12 @@ function Reports() {
 
   useEffect(() => {
     loadSalesReport();
+    checkPrivacy();
   }, []);
+
+  const checkPrivacy = async () => {
+    setHideCost(await isPrivacyModeEnabled());
+  };
 
   const loadStockReport = async () => {
     setLoading(true);
@@ -893,7 +900,7 @@ function Reports() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(4, 1fr)",
+                gridTemplateColumns: hideCost ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
                 gap: 14,
               }}
             >
@@ -911,20 +918,24 @@ function Reports() {
                 value={fmtNum(s.total_transactions)}
                 sub="Transaksi selesai"
               />
-              <StatCard
-                index={2}
-                label="Rata-rata Transaksi"
-                accent={T.blue}
-                value={`Rp ${fmtShort(s.average_sales)}`}
-                sub="Per transaksi"
-              />
-              <StatCard
-                index={3}
-                label="Hari Aktif"
-                accent={T.purple}
-                value={`${s.active_days} hari`}
-                sub="Ada transaksi"
-              />
+              {!hideCost && (
+                <>
+                  <StatCard
+                    index={2}
+                    label="Rata-rata Transaksi"
+                    accent={T.blue}
+                    value={`Rp ${fmtShort(s.average_sales)}`}
+                    sub="Per transaksi"
+                  />
+                  <StatCard
+                    index={3}
+                    label="Hari Aktif"
+                    accent={T.purple}
+                    value={`${s.active_days} hari`}
+                    sub="Ada transaksi"
+                  />
+                </>
+              )}
             </div>
 
             {/* Area chart + Pie chart */}
@@ -1172,13 +1183,15 @@ function Reports() {
                     fill={T.blue}
                     radius={[4, 4, 0, 0]}
                   />
-                  <Bar
-                    yAxisId="r"
-                    dataKey="total"
-                    name="Total"
-                    fill={T.accent}
-                    radius={[4, 4, 0, 0]}
-                  />
+                  {!hideCost && (
+                    <Bar
+                      yAxisId="r"
+                      dataKey="total"
+                      name="Total"
+                      fill={T.accent}
+                      radius={[4, 4, 0, 0]}
+                    />
+                  )}
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -1194,25 +1207,28 @@ function Reports() {
             >
               <SectionTitle>10 Produk Terlaris</SectionTitle>
               <ReportTable
-                headers={[
-                  "#",
-                  "Produk",
-                  "Terjual",
-                  "Frekuensi",
-                  "Total Penjualan",
-                ]}
-                rows={salesReport.topProducts.map((p, i) => [
-                  { label: i + 1, mono: true, color: T.muted },
-                  { label: p.product_name, bold: true, color: T.text },
-                  { label: `${p.total_quantity} item`, mono: true },
-                  { label: `${p.times_sold}×`, mono: true },
-                  {
-                    label: fmt(p.total_sales),
-                    highlight: true,
-                    mono: true,
-                    bold: true,
-                  },
-                ])}
+                headers={
+                  hideCost
+                    ? ["#", "Produk", "Terjual", "Frekuensi"]
+                    : ["#", "Produk", "Terjual", "Frekuensi", "Total Penjualan"]
+                }
+                rows={salesReport.topProducts.map((p, i) => {
+                  const baseRow = [
+                    { label: i + 1, mono: true, color: T.muted },
+                    { label: p.product_name, bold: true, color: T.text },
+                    { label: `${p.total_quantity} item`, mono: true },
+                    { label: `${p.times_sold}×`, mono: true },
+                  ];
+                  if (!hideCost) {
+                    baseRow.push({
+                      label: fmt(p.total_sales),
+                      highlight: true,
+                      mono: true,
+                      bold: true,
+                    });
+                  }
+                  return baseRow;
+                })}
               />
             </div>
 
@@ -1227,23 +1243,27 @@ function Reports() {
             >
               <SectionTitle>Penjualan per Kategori</SectionTitle>
               <ReportTable
-                headers={[
-                  "Kategori",
-                  "Produk",
-                  "Item Terjual",
-                  "Total Penjualan",
-                ]}
-                rows={salesReport.topCategories.map((c) => [
-                  { label: c.category_name, bold: true, color: T.text },
-                  { label: `${c.product_count} produk`, mono: true },
-                  { label: `${c.total_quantity} item`, mono: true },
-                  {
-                    label: fmt(c.total_sales),
-                    highlight: true,
-                    mono: true,
-                    bold: true,
-                  },
-                ])}
+                headers={
+                  hideCost
+                    ? ["Kategori", "Produk", "Item Terjual"]
+                    : ["Kategori", "Produk", "Item Terjual", "Total Penjualan"]
+                }
+                rows={salesReport.topCategories.map((c) => {
+                  const baseRow = [
+                    { label: c.category_name, bold: true, color: T.text },
+                    { label: `${c.product_count} produk`, mono: true },
+                    { label: `${c.total_quantity} item`, mono: true },
+                  ];
+                  if (!hideCost) {
+                    baseRow.push({
+                      label: fmt(c.total_sales),
+                      highlight: true,
+                      mono: true,
+                      bold: true,
+                    });
+                  }
+                  return baseRow;
+                })}
               />
             </div>
           </div>

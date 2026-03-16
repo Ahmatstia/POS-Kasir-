@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getCategories, addProduct } from '../../services/database';
+import { isPrivacyModeEnabled } from '../../services/settings';
 import { useToast } from '../Toast';
 import { T } from '../../theme';
 
@@ -91,6 +92,7 @@ export const SELL_UNIT_OPTIONS = [
 function ProductForm({ onClose, onSuccess }) {
   const { showToast } = useToast();
   const [categories, setCategories] = useState([]);
+  const [hideCost, setHideCost] = useState(false);
   const [loading, setLoading]       = useState(false);
   const [errors, setErrors]         = useState({});
 
@@ -113,9 +115,13 @@ function ProductForm({ onClose, onSuccess }) {
   const pd = Number(packPerDus) || 1;
 
   useEffect(() => {
-    getCategories().then(data => {
-      setCategories(data);
-      if (data.length > 0) setCategoryId(data[0].id);
+    Promise.all([
+      getCategories(),
+      isPrivacyModeEnabled()
+    ]).then(([cats, isPrivacy]) => {
+      setCategories(cats);
+      setHideCost(isPrivacy);
+      if (cats.length > 0) setCategoryId(cats[0].id);
     });
   }, []);
 
@@ -297,14 +303,16 @@ function ProductForm({ onClose, onSuccess }) {
 
         {/* Prices Section */}
         <div style={{ padding: '16px', borderRadius: 16, background: T.bg2, border: `1px solid ${T.border2}`, marginTop: 4 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-            <Field label="Harga Beli (HPP) / Unit Utama" hint="Harga modal beli ke supplier">
-              <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 11, fontWeight: 700, color: T.muted }}>Rp</span>
-                <input type="number" value={purchasePrice} onChange={e => setPurchasePrice(e.target.value)} className="form-field" style={{ ...fieldStyle, paddingLeft: 32 }} placeholder="0" />
-              </div>
-            </Field>
-          </div>
+          {!hideCost && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <Field label="Harga Beli (HPP) / Unit Utama" hint="Harga modal beli ke supplier">
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 11, fontWeight: 700, color: T.muted }}>Rp</span>
+                  <input type="number" value={purchasePrice} onChange={e => setPurchasePrice(e.target.value)} className="form-field" style={{ ...fieldStyle, paddingLeft: 32 }} placeholder="0" />
+                </div>
+              </Field>
+            </div>
+          )}
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
             <p style={{ fontSize: 9, fontWeight: 700, color: errors.price ? T.red : T.muted, textTransform: 'uppercase' }}>Harga Jual Produk</p>

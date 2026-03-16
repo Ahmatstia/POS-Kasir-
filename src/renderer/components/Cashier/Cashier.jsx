@@ -326,7 +326,15 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef, ign
 
           <button
             onClick={handleManualAdd}
-            disabled={!manualPrice || parseFloat(manualPrice) <= 0}
+            disabled={
+              !manualPrice || 
+              parseFloat(manualPrice) <= 0 || 
+              (!ignoreStock && (
+                manualUnit === 'kg' ? 
+                (product.stock_kg <= 0) : 
+                (product.stock <= 0)
+              ))
+            }
             style={{
               width: '100%', padding: '8px', borderRadius: 8,
               background: T.accent + '18', border: `1px solid ${T.accent}40`,
@@ -457,7 +465,6 @@ function Cashier() {
     (async () => {
       const res = await window.electronAPI.query("SELECT value FROM settings WHERE key = 'ignore_stock'");
       const isIgnore = (res[0]?.value === '1');
-      console.log("[Cashier] ignore_stock setting:", isIgnore);
       setIgnoreStock(isIgnore);
       loadProducts(); 
     })();

@@ -185,69 +185,81 @@ export async function cancelTransaction(transactionId) {
       [transactionId]
     );
 
-    for (const item of items) {
-      if (!item.product_id) continue;
-      
-      if (item.unit === 'kg' || item.unit === 'karung') {
-        let qtyReturned = item.quantity;
-        if (item.unit === 'karung') {
-          const [prod] = await window.electronAPI.query("SELECT kg_per_karung FROM products WHERE id = ?", [item.product_id]);
-          qtyReturned = item.quantity * (prod?.kg_per_karung || 25);
+    // FIX: Only restore stock if there was a physical deduction (SALE log exists)
+    // This prevents phantom stock if the transaction was made while ignore_stock was ON
+    const saleLogs = await window.electronAPI.query(
+      "SELECT * FROM inventory_log WHERE reference_id = ? AND type = 'SALE'",
+      [tx.invoice_no]
+    );
+    const hasPhysicalDeduction = saleLogs.length > 0;
+
+    if (hasPhysicalDeduction) {
+      for (const item of items) {
+        if (!item.product_id) continue;
+        
+        if (item.unit === 'kg' || item.unit === 'karung') {
+          let qtyReturned = item.quantity;
+          if (item.unit === 'karung') {
+            const [prod] = await window.electronAPI.query("SELECT kg_per_karung FROM products WHERE id = ?", [item.product_id]);
+            qtyReturned = item.quantity * (prod?.kg_per_karung || 25);
+          }
+
+          const originalHPP = item.cost_price || 0;
+          const unitHPP = Math.round(originalHPP / (qtyReturned || 1));
+
+          // Get current stock before return
+          const [stockInfo] = await window.electronAPI.query(
+            "SELECT COALESCE(SUM(qty_kg), 0) as current_stock FROM stocks WHERE product_id = ? AND is_active = 1",
+            [item.product_id]
+          );
+          const stockBefore = stockInfo?.current_stock || 0;
+          const stockAfter = stockBefore + qtyReturned;
+
+          await window.electronAPI.run(
+            "INSERT INTO stocks (product_id, batch_code, qty_kg, quantity, purchase_price, notes) VALUES (?, ?, ?, 0, ?, ?)",
+            [item.product_id, `RETURN-${tx.invoice_no}`, qtyReturned, unitHPP, `Retur transaksi ${tx.invoice_no}`]
+          );
+          await window.electronAPI.run(
+            `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, quantity_kg, stock_before, stock_after, purchase_price, reference_id, notes)
+             VALUES (?, 'RETURN', ?, 'kg', 0, ?, ?, ?, ?, ?, ?)`,
+            [item.product_id, qtyReturned, qtyReturned, stockBefore, stockAfter, unitHPP, tx.invoice_no, `Retur transaksi ${tx.invoice_no}`]
+          );
+        } else {
+          const [productInfo] = await window.electronAPI.query(
+            "SELECT pcs_per_pack, pack_per_dus FROM products WHERE id = ?",
+            [item.product_id]
+          );
+          const pcsPerPack = productInfo?.pcs_per_pack || 1;
+          const packPerDus = productInfo?.pack_per_dus || 1;
+          let pcsToReturn = item.quantity;
+          if (item.unit === "pack") pcsToReturn = item.quantity * pcsPerPack;
+          else if (item.unit === "dus") pcsToReturn = item.quantity * packPerDus * pcsPerPack;
+
+          const originalHPP = item.cost_price || 0;
+          const unitHPP = Math.round(originalHPP / (pcsToReturn || 1));
+
+          // Add stock back (create a RETURN batch)
+          // Get current stock before return
+          const [stockInfo] = await window.electronAPI.query(
+            "SELECT COALESCE(SUM(quantity), 0) as current_stock FROM stocks WHERE product_id = ? AND is_active = 1",
+            [item.product_id]
+          );
+          const stockBefore = stockInfo?.current_stock || 0;
+          const stockAfter = stockBefore + pcsToReturn;
+
+          await window.electronAPI.run(
+            "INSERT INTO stocks (product_id, batch_code, quantity, purchase_price, notes) VALUES (?, ?, ?, ?, ?)",
+            [item.product_id, `RETURN-${tx.invoice_no}`, pcsToReturn, unitHPP, `Retur transaksi ${tx.invoice_no}`]
+          );
+          await window.electronAPI.run(
+            `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, stock_before, stock_after, purchase_price, reference_id, notes)
+             VALUES (?, 'RETURN', ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [item.product_id, pcsToReturn, item.unit, pcsToReturn, stockBefore, stockAfter, unitHPP, tx.invoice_no, `Retur transaksi ${tx.invoice_no}`]
+          );
         }
-
-        const originalHPP = item.cost_price || 0;
-        const unitHPP = Math.round(originalHPP / (qtyReturned || 1));
-
-        // Get current stock before return
-        const [stockInfo] = await window.electronAPI.query(
-          "SELECT COALESCE(SUM(qty_kg), 0) as current_stock FROM stocks WHERE product_id = ? AND is_active = 1",
-          [item.product_id]
-        );
-        const stockBefore = stockInfo?.current_stock || 0;
-        const stockAfter = stockBefore + qtyReturned;
-
-        await window.electronAPI.run(
-          "INSERT INTO stocks (product_id, batch_code, qty_kg, quantity, purchase_price, notes) VALUES (?, ?, ?, 0, ?, ?)",
-          [item.product_id, `RETURN-${tx.invoice_no}`, qtyReturned, unitHPP, `Retur transaksi ${tx.invoice_no}`]
-        );
-        await window.electronAPI.run(
-          `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, quantity_kg, stock_before, stock_after, purchase_price, reference_id, notes)
-           VALUES (?, 'RETURN', ?, 'kg', 0, ?, ?, ?, ?, ?, ?)`,
-          [item.product_id, qtyReturned, qtyReturned, stockBefore, stockAfter, unitHPP, tx.invoice_no, `Retur transaksi ${tx.invoice_no}`]
-        );
-      } else {
-        const [productInfo] = await window.electronAPI.query(
-          "SELECT pcs_per_pack, pack_per_dus FROM products WHERE id = ?",
-          [item.product_id]
-        );
-        const pcsPerPack = productInfo?.pcs_per_pack || 1;
-        const packPerDus = productInfo?.pack_per_dus || 1;
-        let pcsToReturn = item.quantity;
-        if (item.unit === "pack") pcsToReturn = item.quantity * pcsPerPack;
-        else if (item.unit === "dus") pcsToReturn = item.quantity * packPerDus * pcsPerPack;
-
-        const originalHPP = item.cost_price || 0;
-        const unitHPP = Math.round(originalHPP / (pcsToReturn || 1));
-
-        // Add stock back (create a RETURN batch)
-        // Get current stock before return
-        const [stockInfo] = await window.electronAPI.query(
-          "SELECT COALESCE(SUM(quantity), 0) as current_stock FROM stocks WHERE product_id = ? AND is_active = 1",
-          [item.product_id]
-        );
-        const stockBefore = stockInfo?.current_stock || 0;
-        const stockAfter = stockBefore + pcsToReturn;
-
-        await window.electronAPI.run(
-          "INSERT INTO stocks (product_id, batch_code, quantity, purchase_price, notes) VALUES (?, ?, ?, ?, ?)",
-          [item.product_id, `RETURN-${tx.invoice_no}`, pcsToReturn, unitHPP, `Retur transaksi ${tx.invoice_no}`]
-        );
-        await window.electronAPI.run(
-          `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, stock_before, stock_after, purchase_price, reference_id, notes)
-           VALUES (?, 'RETURN', ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [item.product_id, pcsToReturn, item.unit, pcsToReturn, stockBefore, stockAfter, unitHPP, tx.invoice_no, `Retur transaksi ${tx.invoice_no}`]
-        );
       }
+    } else {
+      console.log(`[cancelTransaction] Skipping restock for ${tx.invoice_no} as no physical deduction occurred (Ignore Stock mode was likely ON).`);
     }
 
     await window.electronAPI.run(
@@ -283,65 +295,76 @@ export async function deleteTransaction(transactionId) {
 
     // Jika statusnya masih COMPLETED, restock dulu sebelum dihapus
     if (tx.status === 'COMPLETED') {
-      for (const item of items) {
-        if (!item.product_id) continue;
-        
-        if (item.unit === 'kg' || item.unit === 'karung') {
-          let qtyReturned = item.quantity;
-          if (item.unit === 'karung') {
-            const [prod] = await window.electronAPI.query("SELECT kg_per_karung FROM products WHERE id = ?", [item.product_id]);
-            qtyReturned = item.quantity * (prod?.kg_per_karung || 25);
+      // FIX: Only restore stock if there was a physical deduction (SALE log exists)
+      const saleLogs = await window.electronAPI.query(
+        "SELECT * FROM inventory_log WHERE reference_id = ? AND type = 'SALE'",
+        [tx.invoice_no]
+      );
+      const hasPhysicalDeduction = saleLogs.length > 0;
+
+      if (hasPhysicalDeduction) {
+        for (const item of items) {
+          if (!item.product_id) continue;
+          
+          if (item.unit === 'kg' || item.unit === 'karung') {
+            let qtyReturned = item.quantity;
+            if (item.unit === 'karung') {
+              const [prod] = await window.electronAPI.query("SELECT kg_per_karung FROM products WHERE id = ?", [item.product_id]);
+              qtyReturned = item.quantity * (prod?.kg_per_karung || 25);
+            }
+            const originalHPP = item.cost_price || 0;
+            const unitHPP = Math.round(originalHPP / (qtyReturned || 1));
+
+            const [stockInfo] = await window.electronAPI.query(
+              "SELECT COALESCE(SUM(qty_kg), 0) as current_stock FROM stocks WHERE product_id = ? AND is_active = 1",
+              [item.product_id]
+            );
+            const stockBefore = stockInfo?.current_stock || 0;
+            const stockAfter = stockBefore + qtyReturned;
+
+            await window.electronAPI.run(
+              "INSERT INTO stocks (product_id, batch_code, qty_kg, quantity, purchase_price, notes) VALUES (?, ?, ?, 0, ?, ?)",
+              [item.product_id, `RETURN-${tx.invoice_no}`, qtyReturned, unitHPP, `Retur hapus transaksi ${tx.invoice_no}`]
+            );
+            await window.electronAPI.run(
+              `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, quantity_kg, stock_before, stock_after, purchase_price, reference_id, notes)
+               VALUES (?, 'RETURN', ?, 'kg', 0, ?, ?, ?, ?, ?, ?)`,
+              [item.product_id, qtyReturned, qtyReturned, stockBefore, stockAfter, unitHPP, tx.invoice_no, `Retur hapus transaksi ${tx.invoice_no}`]
+            );
+          } else {
+            const [productInfo] = await window.electronAPI.query(
+              "SELECT pcs_per_pack, pack_per_dus FROM products WHERE id = ?",
+              [item.product_id]
+            );
+            const pcsPerPack = productInfo?.pcs_per_pack || 1;
+            const packPerDus = productInfo?.pack_per_dus || 1;
+            let pcsToReturn = item.quantity;
+            if (item.unit === "pack") pcsToReturn = item.quantity * pcsPerPack;
+            else if (item.unit === "dus") pcsToReturn = item.quantity * packPerDus * pcsPerPack;
+
+            const originalHPP = item.cost_price || 0;
+            const unitHPP = Math.round(originalHPP / (pcsToReturn || 1));
+
+            const [stockInfo] = await window.electronAPI.query(
+              "SELECT COALESCE(SUM(quantity), 0) as current_stock FROM stocks WHERE product_id = ? AND is_active = 1",
+              [item.product_id]
+            );
+            const stockBefore = stockInfo?.current_stock || 0;
+            const stockAfter = stockBefore + pcsToReturn;
+
+            await window.electronAPI.run(
+              "INSERT INTO stocks (product_id, batch_code, quantity, purchase_price, notes) VALUES (?, ?, ?, ?, ?)",
+              [item.product_id, `RETURN-${tx.invoice_no}`, pcsToReturn, unitHPP, `Retur hapus transaksi ${tx.invoice_no}`]
+            );
+            await window.electronAPI.run(
+              `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, stock_before, stock_after, purchase_price, reference_id, notes)
+               VALUES (?, 'RETURN', ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [item.product_id, pcsToReturn, item.unit, pcsToReturn, stockBefore, stockAfter, unitHPP, tx.invoice_no, `Retur hapus transaksi ${tx.invoice_no}`]
+            );
           }
-          const originalHPP = item.cost_price || 0;
-          const unitHPP = Math.round(originalHPP / (qtyReturned || 1));
-
-          const [stockInfo] = await window.electronAPI.query(
-            "SELECT COALESCE(SUM(qty_kg), 0) as current_stock FROM stocks WHERE product_id = ? AND is_active = 1",
-            [item.product_id]
-          );
-          const stockBefore = stockInfo?.current_stock || 0;
-          const stockAfter = stockBefore + qtyReturned;
-
-          await window.electronAPI.run(
-            "INSERT INTO stocks (product_id, batch_code, qty_kg, quantity, purchase_price, notes) VALUES (?, ?, ?, 0, ?, ?)",
-            [item.product_id, `RETURN-${tx.invoice_no}`, qtyReturned, unitHPP, `Retur hapus transaksi ${tx.invoice_no}`]
-          );
-          await window.electronAPI.run(
-            `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, quantity_kg, stock_before, stock_after, purchase_price, reference_id, notes)
-             VALUES (?, 'RETURN', ?, 'kg', 0, ?, ?, ?, ?, ?, ?)`,
-            [item.product_id, qtyReturned, qtyReturned, stockBefore, stockAfter, unitHPP, tx.invoice_no, `Retur hapus transaksi ${tx.invoice_no}`]
-          );
-        } else {
-          const [productInfo] = await window.electronAPI.query(
-            "SELECT pcs_per_pack, pack_per_dus FROM products WHERE id = ?",
-            [item.product_id]
-          );
-          const pcsPerPack = productInfo?.pcs_per_pack || 1;
-          const packPerDus = productInfo?.pack_per_dus || 1;
-          let pcsToReturn = item.quantity;
-          if (item.unit === "pack") pcsToReturn = item.quantity * pcsPerPack;
-          else if (item.unit === "dus") pcsToReturn = item.quantity * packPerDus * pcsPerPack;
-
-          const originalHPP = item.cost_price || 0;
-          const unitHPP = Math.round(originalHPP / (pcsToReturn || 1));
-
-          const [stockInfo] = await window.electronAPI.query(
-            "SELECT COALESCE(SUM(quantity), 0) as current_stock FROM stocks WHERE product_id = ? AND is_active = 1",
-            [item.product_id]
-          );
-          const stockBefore = stockInfo?.current_stock || 0;
-          const stockAfter = stockBefore + pcsToReturn;
-
-          await window.electronAPI.run(
-            "INSERT INTO stocks (product_id, batch_code, quantity, purchase_price, notes) VALUES (?, ?, ?, ?, ?)",
-            [item.product_id, `RETURN-${tx.invoice_no}`, pcsToReturn, unitHPP, `Retur hapus transaksi ${tx.invoice_no}`]
-          );
-          await window.electronAPI.run(
-            `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, stock_before, stock_after, purchase_price, reference_id, notes)
-             VALUES (?, 'RETURN', ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [item.product_id, pcsToReturn, item.unit, pcsToReturn, stockBefore, stockAfter, unitHPP, tx.invoice_no, `Retur hapus transaksi ${tx.invoice_no}`]
-          );
         }
+      } else {
+        console.log(`[deleteTransaction] Skipping restock for ${tx.invoice_no} as no physical deduction occurred.`);
       }
     }
 

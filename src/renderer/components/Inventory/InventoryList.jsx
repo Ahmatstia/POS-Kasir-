@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { getInventorySummary, getLowStockProducts, addStock, adjustStock } from "../../services/inventory";
 import { getCategories } from "../../services/database";
+import { isPrivacyModeEnabled } from "../../services/settings";
 import { useToast } from "../Toast";
 import { T } from "../../theme";
 
@@ -8,7 +9,7 @@ const fmt    = n => `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
 const numFmt = n => Number(n || 0).toLocaleString('id-ID');
 
 // ─── STOCK IN MODAL ──────────────────────────────────────────────────────────
-function StockInModal({ product, onClose, onSuccess, showToast }) {
+function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
   const [step, setStep]         = useState(1); // 1 = quantity, 2 = details
   const [qtyDus, setQtyDus]     = useState('');
   const [qtyPack, setQtyPack]   = useState('');
@@ -215,24 +216,25 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
 
           {step === 2 && (
             <>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginBottom: 4 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.green, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
-                    Harga Beli / {isKg ? 'Kg' : 'Pcs'} (HPP)
-                  </label>
-                  <div style={{ position: 'relative' }}>
-                    <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 13, fontWeight: 700, color: T.muted }}>Rp</span>
-                    <input
-                      type="number" min="0" step="1" value={purchasePrice}
-                      onChange={e => setPurchasePrice(e.target.value)}
-                      placeholder="0"
-                      style={{ ...inp, paddingLeft: 34 }}
-                    />
+              {!hideCost && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginBottom: 4 }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.green, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
+                      Harga Beli / {isKg ? 'Kg' : 'Pcs'} (HPP)
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 13, fontWeight: 700, color: T.muted }}>Rp</span>
+                      <input
+                        type="number" min="0" step="1" value={purchasePrice}
+                        onChange={e => setPurchasePrice(e.target.value)}
+                        placeholder="0"
+                        style={{ ...inp, paddingLeft: 34 }}
+                      />
+                    </div>
+                    <p style={{ fontSize: 10, color: T.muted, marginTop: 6 }}>Opsional — untuk menghitung margin keuntungan</p>
                   </div>
-                  <p style={{ fontSize: 10, color: T.muted, marginTop: 6 }}>Opsional — untuk menghitung margin keuntungan</p>
                 </div>
-              </div>
+              )}
 
               <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 12 }}>
                 <div>
@@ -447,6 +449,7 @@ function InventoryList() {
   const [filterStatus, setFilterStatus] = useState('');
   const [activeTab, setActiveTab]         = useState('list'); // 'list' or 'log'
   const [logs, setLogs]                   = useState([]);
+  const [hideCost, setHideCost]           = useState(false);
   const [stockInProduct, setStockInProduct] = useState(null);
   const [adjustProduct, setAdjustProduct]   = useState(null);
 
@@ -457,9 +460,14 @@ function InventoryList() {
 
   const load = async () => {
     setLoading(true);
-    const [inv, cats] = await Promise.all([getInventorySummary(), getCategories()]);
+    const [inv, cats, isPrivacy] = await Promise.all([
+      getInventorySummary(), 
+      getCategories(),
+      isPrivacyModeEnabled()
+    ]);
     setProducts(inv);
     setCategories(cats);
+    setHideCost(isPrivacy);
     setLoading(false);
   };
 
@@ -870,7 +878,7 @@ function InventoryList() {
         )}
       </div>
 
-      {stockInProduct && <StockInModal product={stockInProduct} onClose={() => setStockInProduct(null)} onSuccess={load} showToast={showToast} />}
+      {stockInProduct && <StockInModal product={stockInProduct} hideCost={hideCost} onClose={() => setStockInProduct(null)} onSuccess={load} showToast={showToast} />}
       {adjustProduct  && <AdjustModal  product={adjustProduct}  onClose={() => setAdjustProduct(null)}  onSuccess={load} showToast={showToast} />}
     </>
   );

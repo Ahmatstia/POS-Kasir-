@@ -4,6 +4,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import { getDashboardData } from '../../services/dashboard';
+import { isPrivacyModeEnabled } from '../../services/settings';
 import { T } from '../../theme';
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
@@ -140,6 +141,7 @@ function SectionTitle({ children, icon }) {
 // ─── MAIN DASHBOARD ───────────────────────────────────────────────────────────
 export default function Dashboard() {
   const [data, setData] = useState(null);
+  const [hideCost, setHideCost] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -151,8 +153,12 @@ export default function Dashboard() {
     setLoading(true);
     setError(null);
     try {
-      const result = await getDashboardData();
+      const [result, isPrivacy] = await Promise.all([
+        getDashboardData(),
+        isPrivacyModeEnabled()
+      ]);
       setData(result);
+      setHideCost(isPrivacy);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -314,6 +320,20 @@ export default function Dashboard() {
             value={data.monthSales || 0}
             sub={<span style={{ fontSize: 12, color: T.sub }}>Target: {fmtShort((data.monthSales || 0) * 1.2)}</span>}
           />
+          {!hideCost && (
+            <>
+              <StatCard
+                index={2} label="Laba Hari Ini" accent={T.green}
+                value={data.todayProfit || 0}
+                sub={<Chip color={T.green}>Gross Profit</Chip>}
+              />
+              <StatCard
+                index={3} label="Laba Bulan Ini" accent={T.purple}
+                value={data.monthProfit || 0}
+                sub={<span style={{ fontSize: 12, color: T.sub }}>Net Estimasi</span>}
+              />
+            </>
+          )}
         </div>
 
         {/* ── CHARTS ROW ── */}

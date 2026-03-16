@@ -10,6 +10,7 @@ import { id } from "date-fns/locale";
 import { printReceipt, printThermalReceipt } from "../../utils/PrintUtility";
 import { T } from "../../theme";
 import { useToast } from "../Toast";
+import { isPrivacyModeEnabled } from "../../services/settings";
 
 const fmt = (n) => `Rp ${Number(n || 0).toLocaleString("id-ID")}`;
 const fmtDt = (str) => {
@@ -128,6 +129,7 @@ function Transactions() {
   const [selected, setSelected] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(null); // { type: 'single'|'all', id?: number }
+  const [hideCost, setHideCost] = useState(false);
 
   // Date filters
   const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -136,7 +138,12 @@ function Transactions() {
 
   useEffect(() => {
     loadTransactions();
+    checkPrivacy();
   }, [startDate, endDate]);
+
+  const checkPrivacy = async () => {
+    setHideCost(await isPrivacyModeEnabled());
+  };
 
   const loadTransactions = async () => {
     setLoading(true);

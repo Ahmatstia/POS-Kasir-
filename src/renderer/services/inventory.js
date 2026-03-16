@@ -1,3 +1,5 @@
+import { isPrivacyModeEnabled } from "./settings";
+
 // ─── INVENTORY SERVICE ───────────────────────────────────────────────────────
 
 // Get all products with their TOTAL aggregated stock across all batches
@@ -18,7 +20,17 @@ export async function getInventorySummary() {
       GROUP BY p.id
       ORDER BY p.name ASC
     `;
-    return await window.electronAPI.query(sql);
+    const hideCost = await isPrivacyModeEnabled();
+    const result = await window.electronAPI.query(sql);
+    
+    if (hideCost) {
+      return result.map(p => ({
+        ...p,
+        price_pcs: 0, price_pack: 0, price_dus: 0, price_kg: 0, price_karung: 0,
+        purchase_price: 0
+      }));
+    }
+    return result;
   } catch (error) {
     console.error("Error getting inventory:", error);
     return [];

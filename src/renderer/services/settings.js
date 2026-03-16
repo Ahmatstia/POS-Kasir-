@@ -28,3 +28,8 @@ export async function isStockManaged() {
   const val = await getSetting('ignore_stock', '0');
   return val === '0'; // If ignore_stock is '0', then we ARE managing/restricting stock
 }
+
+export async function isPrivacyModeEnabled() {
+  const val = await getSetting('hide_cost', '0');
+  return val === '1';
+}

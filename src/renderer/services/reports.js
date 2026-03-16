@@ -1,3 +1,5 @@
+import { isPrivacyModeEnabled } from "./settings";
+
 // Fungsi untuk mendapatkan laporan penjualan berdasarkan periode
 export async function getSalesReport(startDate, endDate) {
   try {
@@ -97,12 +99,18 @@ export async function getSalesReport(startDate, endDate) {
       ORDER BY hour ASC
     `, [startDate, endDate]);
 
+    const hideCost = await isPrivacyModeEnabled();
     const data = {
-      summary: summary,
-      dailySales,
+      summary: hideCost ? {
+        ...summary,
+        total_purchase_cost: 0,
+        total_profit: 0,
+        average_sales: 0
+      } : summary,
+      dailySales: hideCost ? dailySales.map(d => ({ ...d, total: 0 })) : dailySales,
       paymentMethods,
-      topProducts,
-      topCategories,
+      topProducts: hideCost ? topProducts.map(p => ({ ...p, total_sales: 0 })) : topProducts,
+      topCategories: hideCost ? topCategories.map(c => ({ ...c, total_sales: 0 })) : topCategories,
       peakHours,
       startDate,
       endDate
@@ -181,8 +189,12 @@ export async function getStockReport() {
              ELSE (total_stock * 1.0 / MAX(p.min_stock, 1)) END ASC
     `);
 
+    const hideCost = await isPrivacyModeEnabled();
     return {
-      summary: summary[0],
+      summary: hideCost ? {
+        ...summary[0],
+        total_inventory_value: 0
+      } : summary[0],
       stockByCategory,
       lowStock
     };

@@ -112,12 +112,28 @@ export async function getDashboardData() {
       SELECT COUNT(*) as count FROM categories
     `);
 
+    // Profit calculation today
+    const profitToday = await window.electronAPI.query(`
+      SELECT COALESCE(SUM(ti.subtotal - ti.cost_price), 0) as profit
+      FROM transaction_items ti
+      JOIN transactions t ON ti.transaction_id = t.id
+      WHERE date(t.created_at) = ? AND t.status = 'COMPLETED'
+    `, [todayStr]);
+
+    // Profit calculation month
+    const profitMonth = await window.electronAPI.query(`
+      SELECT COALESCE(SUM(ti.subtotal - ti.cost_price), 0) as profit
+      FROM transaction_items ti
+      JOIN transactions t ON ti.transaction_id = t.id
+      WHERE strftime('%Y-%m', t.created_at) = ? AND t.status = 'COMPLETED'
+    `, [yearMonStr]);
+
     return {
       todaySales: todaySales[0].total,
-      todayProfit: 0,
+      todayProfit: profitToday[0].profit,
       todayTransactions: todayTransactions[0].count,
       monthSales: monthSales[0].total,
-      monthProfit: 0,
+      monthProfit: profitMonth[0].profit,
       lowStock: lowStock,
       topProducts: topProducts,
       dailySales: dailySales,

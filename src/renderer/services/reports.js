@@ -9,16 +9,20 @@ export async function getSalesReport(startDate, endDate) {
         COALESCE(AVG(total_amount), 0) as average_sales,
         COALESCE(SUM(payment_amount), 0) as total_payment,
         COALESCE(SUM(change_amount), 0) as total_change,
-        COUNT(DISTINCT strftime('%Y-%m-%d', created_at)) as active_days
+        COUNT(DISTINCT strftime('%Y-%m-%d', created_at)) as active_days,
+        (SELECT COALESCE(SUM(cost_price), 0) FROM transaction_items ti JOIN transactions t2 ON ti.transaction_id = t2.id WHERE date(t2.created_at) BETWEEN date(?) AND date(?) AND t2.status = 'COMPLETED') as total_cost
       FROM transactions 
       WHERE date(created_at) BETWEEN date(?) AND date(?)
         AND status = 'COMPLETED'
-    `, [startDate, endDate]);
+    `, [startDate, endDate, startDate, endDate]);
+
+    const totalSales = salesSummary[0]?.total_sales || 0;
+    const totalCost = salesSummary[0]?.total_cost || 0;
 
     const summary = {
       ...(salesSummary[0] || {}),
-      total_purchase_cost: 0,
-      total_profit: 0
+      total_purchase_cost: totalCost,
+      total_profit: totalSales - totalCost
     };
 
     // Query untuk penjualan per hari
@@ -121,6 +125,7 @@ export async function getStockReport() {
         COUNT(DISTINCT p.id) as total_products,
         COALESCE(SUM(s.quantity), 0) as total_stock,
         COALESCE(SUM(s.qty_kg), 0) as total_stock_kg,
+        COALESCE(SUM(s.quantity * s.purchase_price) + SUM(s.qty_kg * s.purchase_price), 0) as total_inventory_value,
         COALESCE(AVG(stock_agg.stock), 0) as average_stock,
         COUNT(CASE 
           WHEN (p.sell_per_unit != 'kg' AND COALESCE(stock_agg.stock, 0) <= p.min_stock AND p.min_stock > 0)

@@ -52,13 +52,7 @@ export async function createTransaction(transactionData) {
 
     // Process each item
     for (const item of items) {
-      // Insert transaction item
-      await window.electronAPI.run(
-        `INSERT INTO transaction_items
-           (transaction_id, product_id, product_name, quantity, unit, price_per_unit, subtotal)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [transactionId, item.product_id, item.name, item.quantity, item.unit, item.price, item.subtotal]
-      );
+      let costPrice = 0;
 
       // Deduct stock (FIFO) only for real products (not manual items)
       if (item.product_id) {
@@ -68,7 +62,7 @@ export async function createTransaction(transactionData) {
             const [prod] = await window.electronAPI.query("SELECT kg_per_karung FROM products WHERE id = ?", [item.product_id]);
             kgToDeduct = item.quantity * (prod?.kg_per_karung || 25);
           }
-          await deductStockFIFOKg(item.product_id, kgToDeduct, invoiceNo, createdAt);
+          costPrice = await deductStockFIFOKg(item.product_id, kgToDeduct, invoiceNo, createdAt);
         } else {
           // Calculate pcs to deduct based on unit
           const [productInfo] = await window.electronAPI.query(
@@ -83,9 +77,17 @@ export async function createTransaction(transactionData) {
           else if (item.unit === "dus") pcsToDeduct = item.quantity * packPerDus * pcsPerPack;
 
           // FIFO deduction from stocks table
-          await deductStockFIFO(item.product_id, pcsToDeduct, invoiceNo, createdAt);
+          costPrice = await deductStockFIFO(item.product_id, pcsToDeduct, invoiceNo, createdAt);
         }
       }
+
+      // Insert transaction item with cost_price
+      await window.electronAPI.run(
+        `INSERT INTO transaction_items
+           (transaction_id, product_id, product_name, quantity, unit, price_per_unit, subtotal, cost_price)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [transactionId, item.product_id, item.name, item.quantity, item.unit, item.price, item.subtotal, costPrice]
+      );
     }
 
     await window.electronAPI.run("COMMIT");
@@ -165,12 +167,7 @@ export async function cancelTransaction(transactionId) {
           qtyReturned = item.quantity * (prod?.kg_per_karung || 25);
         }
 
-        // Fetch original HPP from log for this invoice
-        const [logInfo] = await window.electronAPI.query(
-          "SELECT purchase_price FROM inventory_log WHERE reference_id = ? AND product_id = ? AND type = 'SALE' LIMIT 1",
-          [tx.invoice_no, item.product_id]
-        );
-        const originalHPP = logInfo?.purchase_price || 0;
+        const originalHPP = item.cost_price || 0;
 
         // Get current stock before return
         const [stockInfo] = await window.electronAPI.query(
@@ -200,12 +197,7 @@ export async function cancelTransaction(transactionId) {
         if (item.unit === "pack") pcsToReturn = item.quantity * pcsPerPack;
         else if (item.unit === "dus") pcsToReturn = item.quantity * packPerDus * pcsPerPack;
 
-        // Fetch original HPP from log for this invoice
-        const [logInfo] = await window.electronAPI.query(
-          "SELECT purchase_price FROM inventory_log WHERE reference_id = ? AND product_id = ? AND type = 'SALE' LIMIT 1",
-          [tx.invoice_no, item.product_id]
-        );
-        const originalHPP = logInfo?.purchase_price || 0;
+        const originalHPP = item.cost_price || 0;
 
         // Add stock back (create a RETURN batch)
         // Get current stock before return
@@ -270,11 +262,7 @@ export async function deleteTransaction(transactionId) {
             const [prod] = await window.electronAPI.query("SELECT kg_per_karung FROM products WHERE id = ?", [item.product_id]);
             qtyReturned = item.quantity * (prod?.kg_per_karung || 25);
           }
-          const [logInfo] = await window.electronAPI.query(
-            "SELECT purchase_price FROM inventory_log WHERE reference_id = ? AND product_id = ? AND type = 'SALE' LIMIT 1",
-            [tx.invoice_no, item.product_id]
-          );
-          const originalHPP = logInfo?.purchase_price || 0;
+          const originalHPP = item.cost_price || 0;
 
           const [stockInfo] = await window.electronAPI.query(
             "SELECT COALESCE(SUM(qty_kg), 0) as current_stock FROM stocks WHERE product_id = ? AND is_active = 1",
@@ -303,11 +291,7 @@ export async function deleteTransaction(transactionId) {
           if (item.unit === "pack") pcsToReturn = item.quantity * pcsPerPack;
           else if (item.unit === "dus") pcsToReturn = item.quantity * packPerDus * pcsPerPack;
 
-          const [logInfo] = await window.electronAPI.query(
-            "SELECT purchase_price FROM inventory_log WHERE reference_id = ? AND product_id = ? AND type = 'SALE' LIMIT 1",
-            [tx.invoice_no, item.product_id]
-          );
-          const originalHPP = logInfo?.purchase_price || 0;
+          const originalHPP = item.cost_price || 0;
 
           const [stockInfo] = await window.electronAPI.query(
             "SELECT COALESCE(SUM(quantity), 0) as current_stock FROM stocks WHERE product_id = ? AND is_active = 1",

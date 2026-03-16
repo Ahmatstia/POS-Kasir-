@@ -36,6 +36,7 @@ class DatabaseManager {
             await this._runSQL("ALTER TABLE transactions ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "FIX transactions.updated_at");
             await this._runSQL("ALTER TABLE inventory_log ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "FIX inventory_log.updated_at");
             await this._runSQL("ALTER TABLE transaction_items ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "FIX transaction_items.updated_at");
+            await this._runSQL("ALTER TABLE transaction_items ADD COLUMN cost_price INTEGER DEFAULT 0", "FIX transaction_items.cost_price");
 
             this.ready = true;
             console.log("✅ Database fully ready");
@@ -219,6 +220,7 @@ class DatabaseManager {
               unit           TEXT,
               price_per_unit INTEGER,
               subtotal       INTEGER,
+              cost_price     INTEGER DEFAULT 0,
               created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
               updated_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
               FOREIGN KEY (transaction_id) REFERENCES transactions(id),
@@ -226,6 +228,7 @@ class DatabaseManager {
             )`, "CREATE transaction_items");
 
           await this._runSQL("ALTER TABLE transaction_items ADD COLUMN stock_id INTEGER", "ADD transaction_items.stock_id");
+          await this._runSQL("ALTER TABLE transaction_items ADD COLUMN cost_price INTEGER DEFAULT 0", "ADD transaction_items.cost_price");
           await this._runSQL("ALTER TABLE transaction_items ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD transaction_items.created_at");
           await this._runSQL("ALTER TABLE transaction_items ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD transaction_items.updated_at");
 

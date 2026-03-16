@@ -77,7 +77,7 @@ export async function addStock(productId, {
   notes = ""
 }, product) {
   try {
-    const finalPurchasePrice = 0;
+    const finalPurchasePrice = Number(purchase_price) || 0;
 
     const pcsPerPack = product?.pcs_per_pack || 1;
     const packPerDus = product?.pack_per_dus || 1;
@@ -139,7 +139,7 @@ export async function addStock(productId, {
 // Adjust stock manually (correction)
 export async function adjustStock(productId, newTotalPcs, reason = "Koreksi manual", purchasePrice = 0) {
   try {
-    const finalPurchasePrice = 0;
+    const finalPurchasePrice = Number(purchasePrice) || 0;
 
     // Get current total
     const [beforeRow] = await window.electronAPI.query(
@@ -274,7 +274,17 @@ export async function deductStockFIFO(productId, quantityPcs, invoiceNo, created
     toDeduct -= deduct;
   }
 
-  const avgPurchasePrice = 0;
+  // Calculate total cost (HPP)
+  let totalCost = 0;
+  let remainingToCalculate = quantityPcs;
+  for (const batch of batches) {
+    if (remainingToCalculate <= 0) break;
+    const taken = Math.min(batch.quantity, remainingToCalculate);
+    totalCost += taken * (batch.purchase_price || 0);
+    remainingToCalculate -= taken;
+  }
+
+  const avgPurchasePrice = quantityPcs > 0 ? totalCost / quantityPcs : 0;
 
   const stockAfter = stockBefore - quantityPcs;
   const logSql = createdAt 
@@ -290,12 +300,14 @@ export async function deductStockFIFO(productId, quantityPcs, invoiceNo, created
   await window.electronAPI.run(logSql, logParams);
 
   if (toDeduct > 0) throw new Error("Stok tidak mencukupi");
+
+  return totalCost;
 }
 
 // Adjust stock manually (correction) specifically for Kg
 export async function adjustStockKg(productId, newTotalKg, reason = "Koreksi manual", purchasePrice = 0) {
   try {
-    const finalPurchasePrice = 0;
+    const finalPurchasePrice = Number(purchasePrice) || 0;
 
     const [beforeRow] = await window.electronAPI.query(
       "SELECT COALESCE(SUM(qty_kg), 0) as total FROM stocks WHERE product_id = ? AND is_active = 1",
@@ -386,7 +398,17 @@ export async function deductStockFIFOKg(productId, quantityKg, invoiceNo, create
     toDeduct -= deduct;
   }
 
-  const avgPurchasePrice = 0;
+  // Calculate total cost (HPP)
+  let totalCost = 0;
+  let remainingToCalculate = quantityKg;
+  for (const batch of batches) {
+    if (remainingToCalculate <= 0) break;
+    const taken = Math.min(batch.qty_kg, remainingToCalculate);
+    totalCost += taken * (batch.purchase_price || 0);
+    remainingToCalculate -= taken;
+  }
+
+  const avgPurchasePrice = quantityKg > 0 ? totalCost / quantityKg : 0;
 
   const stockAfter = stockBefore - quantityKg;
   const logSql = createdAt
@@ -402,4 +424,6 @@ export async function deductStockFIFOKg(productId, quantityKg, invoiceNo, create
   await window.electronAPI.run(logSql, logParams);
 
   if (toDeduct > 0.001) throw new Error("Stok Kg tidak mencukupi"); // Use small margin for floats
+
+  return Math.round(totalCost);
 }

@@ -108,6 +108,7 @@ function ProductForm({ onClose, onSuccess }) {
   const [pcsPerPack, setPcsPerPack]   = useState(1);
   const [packPerDus, setPackPerDus]   = useState(1);
   const [kgPerKarung, setKgPerKarung] = useState(25);
+  const [purchasePrice, setPurchasePrice] = useState(0);
   const pp = Number(pcsPerPack) || 1;
   const pd = Number(packPerDus) || 1;
 
@@ -147,7 +148,7 @@ function ProductForm({ onClose, onSuccess }) {
       kg_per_karung: Number(kgPerKarung) || 25,
       min_stock:    Number(minStock)    || 0,
       min_stock_kg: Number(minStockKg)  || 0,
-      purchase_price: 0,
+      purchase_price: Number(purchasePrice) || 0,
       notes,
     });
     setLoading(false);
@@ -294,10 +295,19 @@ function ProductForm({ onClose, onSuccess }) {
           </div>
         )}
 
-        {/* Prices */}
-        <div>
+        {/* Prices Section */}
+        <div style={{ padding: '16px', borderRadius: 16, background: T.bg2, border: `1px solid ${T.border2}`, marginTop: 4 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+            <Field label="Harga Beli (HPP) / Unit Utama" hint="Harga modal beli ke supplier">
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 11, fontWeight: 700, color: T.muted }}>Rp</span>
+                <input type="number" value={purchasePrice} onChange={e => setPurchasePrice(e.target.value)} className="form-field" style={{ ...fieldStyle, paddingLeft: 32 }} placeholder="0" />
+              </div>
+            </Field>
+          </div>
+
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <p style={{ fontSize: 9, fontWeight: 700, color: errors.price ? T.red : T.muted, textTransform: 'uppercase' }}>Harga Jual</p>
+            <p style={{ fontSize: 9, fontWeight: 700, color: errors.price ? T.red : T.muted, textTransform: 'uppercase' }}>Harga Jual Produk</p>
             {errors.price && <p style={{ fontSize: 10, color: T.red, fontWeight: 600 }}>⚠ {errors.price}</p>}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: sellPerUnit === 'kg' ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: 8 }}>

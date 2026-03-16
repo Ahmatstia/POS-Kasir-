@@ -14,6 +14,7 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
   const [qtyPack, setQtyPack]   = useState('');
   const [qtyPcs, setQtyPcs]     = useState('');
   const [qtyKg, setQtyKg]       = useState('');
+  const [purchasePrice, setPurchasePrice] = useState('');
   const [expiry, setExpiry]     = useState('');
   const [batchCode, setBatch]   = useState('');
   const [notes, setNotes]       = useState('');
@@ -38,7 +39,7 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
     setSaving(true);
     const res = await addStock(product.id, {
       qty_dus: dusVal, qty_pack: packVal, qty_pcs: pcsVal, qty_kg: kgVal,
-      purchase_price: 0,
+      purchase_price: Number(purchasePrice) || 0,
       expiry_date: expiry || null,
       batch_code: batchCode,
       notes,
@@ -214,6 +215,24 @@ function StockInModal({ product, onClose, onSuccess, showToast }) {
 
           {step === 2 && (
             <>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginBottom: 4 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.green, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
+                    Harga Beli / {isKg ? 'Kg' : 'Pcs'} (HPP)
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 13, fontWeight: 700, color: T.muted }}>Rp</span>
+                    <input
+                      type="number" min="0" step="1" value={purchasePrice}
+                      onChange={e => setPurchasePrice(e.target.value)}
+                      placeholder="0"
+                      style={{ ...inp, paddingLeft: 34 }}
+                    />
+                  </div>
+                  <p style={{ fontSize: 10, color: T.muted, marginTop: 6 }}>Opsional — untuk menghitung margin keuntungan</p>
+                </div>
+              </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 12 }}>
                 <div>

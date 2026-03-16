@@ -308,10 +308,10 @@ class DatabaseManager {
   async seedCategories() {
     const defaults = [
       ['Bumbu Instan', '#F5A623'], ['Bahan Kue', '#A78BFA'], ['Rempah-rempah', '#34C98B'],
-      ['Gelas & Cup', '#5B8AF5'], ['Mika', '#E85858'], ['Thinwall', '#34C98B'],
-      ['Plastik', '#9998A3'],     ['Kantong Plastik', '#9998A3'], ['Kecap', '#F5A623'],
-      ['Saus', '#E85858'],        ['Kotak Makan', '#5B8AF5'],     ['Gula', '#F5A623'],
-      ['Sendok', '#9998A3'],      ['Botol', '#5B8AF5'],           ['Lainnya', '#5C5C66'],
+      ['Gelas & Cup', '#5B8AF5'], ['Mika', '#E85858'], ['Thinwall', '#06B6D4'],
+      ['Plastik', '#9998A3'],     ['Kantong Plastik', '#4B5563'], ['Kecap', '#F97316'],
+      ['Saus', '#EF4444'],        ['Kotak Makan', '#3B82F6'],     ['Gula', '#FBBF24'],
+      ['Sendok', '#6366F1'],      ['Botol', '#0EA5E9'],           ['Lainnya', '#5C5C66'],
     ];
     for (const [name, color] of defaults) {
       await this._runSQL(

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { getCategories, addCategory, updateCategory, deleteCategory } from "../../services/categories";
 import { T } from "../../theme";
 
@@ -15,10 +15,18 @@ const fieldStyle = {
   transition: 'border-color 0.15s',
 };
 
-function CategoryForm({ initial = {}, onSave, onCancel, loading }) {
+function CategoryForm({ initial = {}, onSave, onCancel, loading, usedColors = [] }) {
   const [name, setName]         = useState(initial.name || '');
   const [desc, setDesc]         = useState(initial.description || '');
   const [color, setColor]       = useState(initial.color || '#5B8AF5');
+  const colorInputRef           = useRef(null);
+
+  // Filter out the current category's color if editing
+  const otherUsedColors = initial.id 
+    ? usedColors.filter(c => c.toLowerCase() !== initial.color?.toLowerCase())
+    : usedColors;
+
+  const isColorUsed = (c) => otherUsedColors.some(uc => uc.toLowerCase() === c.toLowerCase());
 
   const handleSave = () => {
     if (!name.trim()) return alert("Nama kategori wajib diisi");
@@ -42,21 +50,77 @@ function CategoryForm({ initial = {}, onSave, onCancel, loading }) {
       <div>
         <label style={{ fontSize: 9, fontWeight: 700, color: T.muted, textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Warna Badge</label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-          {PRESET_COLORS.map(c => (
-            <button key={c} onClick={() => setColor(c)} style={{
-              width: 28, height: 28, borderRadius: 8, background: c, border: 'none',
-              cursor: 'pointer', transition: 'transform 0.1s',
-              outline: color === c ? `3px solid ${T.text}` : 'none',
-              outlineOffset: 2,
-            }} />
-          ))}
+          {PRESET_COLORS.map(c => {
+            const used = isColorUsed(c);
+            return (
+              <button 
+                key={c} 
+                onClick={() => setColor(c)} 
+                title={used ? "Warna ini sudah digunakan kategori lain" : ""}
+                style={{
+                  width: 28, height: 28, borderRadius: 8, background: c, border: 'none',
+                  cursor: 'pointer', transition: 'all 0.15s ease',
+                  outline: color === c ? `3px solid ${T.text}` : 'none',
+                  outlineOffset: 2,
+                  transform: color === c ? 'scale(0.9)' : 'scale(1)',
+                  position: 'relative',
+                  opacity: used ? 0.45 : 1,
+                  filter: used ? 'grayscale(0.3)' : 'none',
+                }}
+              >
+                {used && (
+                  <div style={{
+                    position: 'absolute', bottom: -2, right: -2, width: 10, height: 10,
+                    borderRadius: '50%', background: T.surface, border: `1px solid ${T.border2}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    <div style={{ width: 4, height: 4, borderRadius: '50%', background: T.muted }} />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+
+          {/* RGB Color Picker Trigger (Rainbow Wheel) */}
+          <div style={{ position: 'relative' }}>
+            <input 
+              type="color" 
+              ref={colorInputRef}
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
+              style={{ position: 'absolute', opacity: 0, width: 0, height: 0, pointerEvents: 'none' }}
+            />
+            <button 
+              onClick={() => colorInputRef.current?.click()}
+              title="Pilih Warna Kustom"
+              style={{
+                width: 32, height: 32, borderRadius: '50%', 
+                background: 'conic-gradient(from 0deg, red, yellow, lime, aqua, blue, magenta, red)',
+                border: `2px solid ${T.surface}`, 
+                cursor: 'pointer', transition: 'all 0.2s',
+                boxShadow: `0 2px 5px rgba(0,0,0,0.15)`,
+                outline: !PRESET_COLORS.includes(color) ? `3px solid ${T.accent}` : 'none',
+                outlineOffset: 2,
+                transform: !PRESET_COLORS.includes(color) ? 'scale(1.1)' : 'scale(1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                overflow: 'hidden'
+              }}
+            >
+              <div style={{ width: 14, height: 14, borderRadius: '50%', background: color, border: '2px solid white', boxShadow: '0 0 4px rgba(0,0,0,0.2)' }} />
+            </button>
+          </div>
+
+          <div style={{ flex: 1 }} />
+
           {/* Preview */}
           <div style={{
-            marginLeft: 8, padding: '3px 10px', borderRadius: 100,
+            padding: '4px 12px', borderRadius: 100,
             background: color + '20', border: `1px solid ${color}50`,
             color, fontSize: 11, fontWeight: 700,
+            transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            transform: 'scale(1.05)'
           }}>
-            {name || 'Preview'}
+            {name || 'Pratinjau'}
           </div>
         </div>
       </div>
@@ -151,7 +215,12 @@ function CategoryList() {
         {showAdd && (
           <div style={{ background: T.surface, border: `1px solid ${T.accent}35`, borderRadius: 14, padding: 20, marginBottom: 20 }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: T.accent, marginBottom: 14, textTransform: 'uppercase', letterSpacing: '0.08em' }}>+ Tambah Kategori Baru</p>
-            <CategoryForm onSave={handleAdd} onCancel={() => setShowAdd(false)} loading={saving} />
+            <CategoryForm 
+              onSave={handleAdd} 
+              onCancel={() => setShowAdd(false)} 
+              loading={saving} 
+              usedColors={categories.map(c => c.color)}
+            />
           </div>
         )}
 
@@ -224,6 +293,7 @@ function CategoryList() {
                             onSave={data => handleUpdate(cat.id, data)}
                             onCancel={() => setEditingId(null)}
                             loading={saving}
+                            usedColors={categories.map(c => c.color)}
                           />
                         </td>
                       </tr>

@@ -114,16 +114,15 @@ export const printReceipt = (transaction, items) => {
     </head>
     <body>
       <div class="header">
-        <h2>TOKO BUMBU</h2>
-        <p>Jl. Contoh No. 123, Kota</p>
-        <p>Telp: 0812-3456-7890</p>
+        <h2>TOKO YENI</h2>
+        <p>Jl. Imam Bonjol, Muara Sabak Barat, Tanjung Jambung Timur</p>
+        <p>Telp: 0822-8324-8946</p>
       </div>
       
       <div class="invoice">
         <h3>STRUK PEMBAYARAN</h3>
         <p>No. ${escapeHtml(transaction.invoice_no)}</p>
         <p>${escapeHtml(formattedDate)}</p>
-        <p>Kasir: ${escapeHtml(transaction.created_by || 'Admin')}</p>
       </div>
 
       <table class="items">

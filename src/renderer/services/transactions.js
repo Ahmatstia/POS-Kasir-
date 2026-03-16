@@ -168,6 +168,7 @@ export async function cancelTransaction(transactionId) {
         }
 
         const originalHPP = item.cost_price || 0;
+        const unitHPP = Math.round(originalHPP / (qtyReturned || 1));
 
         // Get current stock before return
         const [stockInfo] = await window.electronAPI.query(
@@ -179,12 +180,12 @@ export async function cancelTransaction(transactionId) {
 
         await window.electronAPI.run(
           "INSERT INTO stocks (product_id, batch_code, qty_kg, quantity, purchase_price, notes) VALUES (?, ?, ?, 0, ?, ?)",
-          [item.product_id, `RETURN-${tx.invoice_no}`, qtyReturned, originalHPP, `Retur transaksi ${tx.invoice_no}`]
+          [item.product_id, `RETURN-${tx.invoice_no}`, qtyReturned, unitHPP, `Retur transaksi ${tx.invoice_no}`]
         );
         await window.electronAPI.run(
           `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, quantity_kg, stock_before, stock_after, purchase_price, reference_id, notes)
            VALUES (?, 'RETURN', ?, 'kg', 0, ?, ?, ?, ?, ?, ?)`,
-          [item.product_id, qtyReturned, qtyReturned, stockBefore, stockAfter, originalHPP, tx.invoice_no, `Retur transaksi ${tx.invoice_no}`]
+          [item.product_id, qtyReturned, qtyReturned, stockBefore, stockAfter, unitHPP, tx.invoice_no, `Retur transaksi ${tx.invoice_no}`]
         );
       } else {
         const [productInfo] = await window.electronAPI.query(
@@ -198,6 +199,7 @@ export async function cancelTransaction(transactionId) {
         else if (item.unit === "dus") pcsToReturn = item.quantity * packPerDus * pcsPerPack;
 
         const originalHPP = item.cost_price || 0;
+        const unitHPP = Math.round(originalHPP / (pcsToReturn || 1));
 
         // Add stock back (create a RETURN batch)
         // Get current stock before return
@@ -210,12 +212,12 @@ export async function cancelTransaction(transactionId) {
 
         await window.electronAPI.run(
           "INSERT INTO stocks (product_id, batch_code, quantity, purchase_price, notes) VALUES (?, ?, ?, ?, ?)",
-          [item.product_id, `RETURN-${tx.invoice_no}`, pcsToReturn, originalHPP, `Retur transaksi ${tx.invoice_no}`]
+          [item.product_id, `RETURN-${tx.invoice_no}`, pcsToReturn, unitHPP, `Retur transaksi ${tx.invoice_no}`]
         );
         await window.electronAPI.run(
           `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, stock_before, stock_after, purchase_price, reference_id, notes)
            VALUES (?, 'RETURN', ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [item.product_id, pcsToReturn, item.unit, pcsToReturn, stockBefore, stockAfter, originalHPP, tx.invoice_no, `Retur transaksi ${tx.invoice_no}`]
+          [item.product_id, pcsToReturn, item.unit, pcsToReturn, stockBefore, stockAfter, unitHPP, tx.invoice_no, `Retur transaksi ${tx.invoice_no}`]
         );
       }
     }
@@ -263,6 +265,7 @@ export async function deleteTransaction(transactionId) {
             qtyReturned = item.quantity * (prod?.kg_per_karung || 25);
           }
           const originalHPP = item.cost_price || 0;
+          const unitHPP = Math.round(originalHPP / (qtyReturned || 1));
 
           const [stockInfo] = await window.electronAPI.query(
             "SELECT COALESCE(SUM(qty_kg), 0) as current_stock FROM stocks WHERE product_id = ? AND is_active = 1",
@@ -273,12 +276,12 @@ export async function deleteTransaction(transactionId) {
 
           await window.electronAPI.run(
             "INSERT INTO stocks (product_id, batch_code, qty_kg, quantity, purchase_price, notes) VALUES (?, ?, ?, 0, ?, ?)",
-            [item.product_id, `RETURN-${tx.invoice_no}`, qtyReturned, originalHPP, `Retur hapus transaksi ${tx.invoice_no}`]
+            [item.product_id, `RETURN-${tx.invoice_no}`, qtyReturned, unitHPP, `Retur hapus transaksi ${tx.invoice_no}`]
           );
           await window.electronAPI.run(
             `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, quantity_kg, stock_before, stock_after, purchase_price, reference_id, notes)
              VALUES (?, 'RETURN', ?, 'kg', 0, ?, ?, ?, ?, ?, ?)`,
-            [item.product_id, qtyReturned, qtyReturned, stockBefore, stockAfter, originalHPP, tx.invoice_no, `Retur hapus transaksi ${tx.invoice_no}`]
+            [item.product_id, qtyReturned, qtyReturned, stockBefore, stockAfter, unitHPP, tx.invoice_no, `Retur hapus transaksi ${tx.invoice_no}`]
           );
         } else {
           const [productInfo] = await window.electronAPI.query(
@@ -292,6 +295,7 @@ export async function deleteTransaction(transactionId) {
           else if (item.unit === "dus") pcsToReturn = item.quantity * packPerDus * pcsPerPack;
 
           const originalHPP = item.cost_price || 0;
+          const unitHPP = Math.round(originalHPP / (pcsToReturn || 1));
 
           const [stockInfo] = await window.electronAPI.query(
             "SELECT COALESCE(SUM(quantity), 0) as current_stock FROM stocks WHERE product_id = ? AND is_active = 1",
@@ -302,12 +306,12 @@ export async function deleteTransaction(transactionId) {
 
           await window.electronAPI.run(
             "INSERT INTO stocks (product_id, batch_code, quantity, purchase_price, notes) VALUES (?, ?, ?, ?, ?)",
-            [item.product_id, `RETURN-${tx.invoice_no}`, pcsToReturn, originalHPP, `Retur hapus transaksi ${tx.invoice_no}`]
+            [item.product_id, `RETURN-${tx.invoice_no}`, pcsToReturn, unitHPP, `Retur hapus transaksi ${tx.invoice_no}`]
           );
           await window.electronAPI.run(
             `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, stock_before, stock_after, purchase_price, reference_id, notes)
              VALUES (?, 'RETURN', ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [item.product_id, pcsToReturn, item.unit, pcsToReturn, stockBefore, stockAfter, originalHPP, tx.invoice_no, `Retur hapus transaksi ${tx.invoice_no}`]
+            [item.product_id, pcsToReturn, item.unit, pcsToReturn, stockBefore, stockAfter, unitHPP, tx.invoice_no, `Retur hapus transaksi ${tx.invoice_no}`]
           );
         }
       }

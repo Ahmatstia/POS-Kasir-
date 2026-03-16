@@ -338,7 +338,7 @@ export async function adjustStockKg(productId, newTotalKg, reason = "Koreksi man
       for (const batch of batches) {
         if (toRemove <= 0) break;
         const remove = Math.min(batch.qty_kg, toRemove);
-        const newQtyKg = batch.qty_kg - remove;
+        const newQtyKg = Math.round((batch.qty_kg - remove) * 1000) / 1000;
         await window.electronAPI.run(
           "UPDATE stocks SET qty_kg = ?, is_active = ? WHERE id = ?",
           [newQtyKg, (newQtyKg > 0 || batch.quantity > 0) ? 1 : 0, batch.id]
@@ -348,7 +348,7 @@ export async function adjustStockKg(productId, newTotalKg, reason = "Koreksi man
         } catch (e) {
           /* ignore */
         }
-        toRemove -= remove;
+        toRemove = Math.round((toRemove - remove) * 1000) / 1000;
       }
       await window.electronAPI.run(
         `INSERT INTO inventory_log (product_id, type, quantity_input, unit_input, quantity_pcs, quantity_kg, stock_before, stock_after, notes)
@@ -383,7 +383,7 @@ export async function deductStockFIFOKg(productId, quantityKg, invoiceNo, create
   for (const batch of batches) {
     if (toDeduct <= 0) break;
     const deduct = Math.min(batch.qty_kg, toDeduct);
-    const newQtyKg = batch.qty_kg - deduct;
+    const newQtyKg = Math.round((batch.qty_kg - deduct) * 1000) / 1000;
 
     // Update quantity
     await window.electronAPI.run(
@@ -395,7 +395,7 @@ export async function deductStockFIFOKg(productId, quantityKg, invoiceNo, create
     } catch (e) {
       /* ignore */
     }
-    toDeduct -= deduct;
+    toDeduct = Math.round((toDeduct - deduct) * 1000) / 1000;
   }
 
   // Calculate total cost (HPP)

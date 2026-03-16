@@ -232,6 +232,17 @@ class DatabaseManager {
           await this._runSQL("ALTER TABLE transaction_items ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD transaction_items.created_at");
           await this._runSQL("ALTER TABLE transaction_items ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD transaction_items.updated_at");
 
+          // ── INDEXES ──────────────────────────────────────────────────────────
+          await this._runSQL("CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at)", "INDEX transactions.created_at");
+          await this._runSQL("CREATE INDEX IF NOT EXISTS idx_inventory_log_ref_id ON inventory_log(reference_id)", "INDEX inventory_log.reference_id");
+          await this._runSQL("CREATE INDEX IF NOT EXISTS idx_stocks_product_active ON stocks(product_id, is_active)", "INDEX stocks.product_active");
+
+          // ── ENSURE DATA CONSISTENCY ──────────────────────────────────────────
+          await this._runSQL("UPDATE transactions SET status = 'COMPLETED' WHERE status IS NULL", "FIX transactions.status");
+          await this._runSQL("UPDATE transactions SET created_at = transaction_date WHERE created_at IS NULL AND transaction_date IS NOT NULL", "FIX transactions.created_at");
+          await this._runSQL("UPDATE transaction_items SET cost_price = 0 WHERE cost_price IS NULL", "FIX transaction_items.cost_price");
+          await this._runSQL("UPDATE transaction_items SET created_at = (SELECT created_at FROM transactions WHERE transactions.id = transaction_items.transaction_id) WHERE created_at IS NULL", "FIX transaction_items.created_at");
+
           // ── MIGRATE OLD STOCK → stocks table ─────────────────────────────────
           await this.migrateStockData();
 

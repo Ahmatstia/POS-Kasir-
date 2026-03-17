@@ -511,26 +511,46 @@ export default function Dashboard({ setCurrentPage }) {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {data.lowStock.slice(0, 5).map((p) => {
+                    const isHybrid = p.has_unit_price && p.has_weight_price;
                     const isKg = p.sell_per_unit === 'kg';
-                    const current = isKg ? p.total_stock_kg : p.total_stock;
-                    const min = isKg ? p.min_stock_kg : p.min_stock;
-                    const unit = isKg ? 'kg' : 'unit';
+                    const isOut = isHybrid 
+                      ? (p.total_stock <= 0 && p.total_stock_kg <= 0)
+                      : (isKg ? p.total_stock_kg <= 0 : p.total_stock <= 0);
                     
                     return (
                       <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 10, background: T.bg, border: `1px solid ${T.border}` }}>
                         <div style={{ flex: 1, minWidth: 0, paddingRight: 10 }}>
                           <p style={{ fontSize: 12, fontWeight: 600, color: T.text, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</p>
-                          <p style={{ fontSize: 11, color: T.muted, fontFamily: 'JetBrains Mono, monospace' }}>min {min} {unit}</p>
+                          {isHybrid ? (
+                            <p style={{ fontSize: 10, color: T.muted, fontFamily: 'JetBrains Mono, monospace' }}>
+                              min {p.min_stock} pcs / {p.min_stock_kg} kg
+                            </p>
+                          ) : (
+                            <p style={{ fontSize: 11, color: T.muted, fontFamily: 'JetBrains Mono, monospace' }}>
+                              min {isKg ? p.min_stock_kg : p.min_stock} {isKg ? 'kg' : 'pcs'}
+                            </p>
+                          )}
                         </div>
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          <span style={{
-                            display: 'block',
-                            fontSize: 20, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace',
-                            color: current <= 0 ? T.red : T.accent,
-                            lineHeight: 1,
-                          }}>{current}</span>
-                          <Chip color={current <= 0 ? T.red : T.accent}>
-                            {current <= 0 ? 'Habis' : 'Menipis'}
+                          {isHybrid ? (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: '2px 8px', marginBottom: 4 }}>
+                              <span style={{ fontSize: 13, fontWeight: 800, color: p.total_stock <= p.min_stock ? (p.total_stock <= 0 ? T.red : T.accent) : T.sub }}>
+                                {p.total_stock}<span style={{ fontSize: 9, marginLeft: 2, fontWeight: 600 }}>pcs</span>
+                              </span>
+                              <span style={{ fontSize: 13, fontWeight: 800, color: p.total_stock_kg <= p.min_stock_kg ? (p.total_stock_kg <= 0 ? T.red : T.accent) : T.sub }}>
+                                {p.total_stock_kg}<span style={{ fontSize: 9, marginLeft: 2, fontWeight: 600 }}>kg</span>
+                              </span>
+                            </div>
+                          ) : (
+                            <span style={{
+                              display: 'block',
+                              fontSize: 20, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace',
+                              color: isOut ? T.red : T.accent,
+                              lineHeight: 1,
+                            }}>{isKg ? p.total_stock_kg : p.total_stock}</span>
+                          )}
+                          <Chip color={isOut ? T.red : T.accent}>
+                            {isOut ? 'Habis' : 'Menipis'}
                           </Chip>
                         </div>
                       </div>

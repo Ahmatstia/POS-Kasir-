@@ -53,14 +53,16 @@ export async function getDashboardData() {
       lowStock = await window.electronAPI.query(`
         SELECT p.id, p.name, p.min_stock, p.min_stock_kg, p.sell_per_unit,
                COALESCE(SUM(s.quantity), 0) as total_stock,
-               COALESCE(SUM(s.qty_kg), 0) as total_stock_kg
+               COALESCE(SUM(s.qty_kg), 0) as total_stock_kg,
+               (CASE WHEN (p.price_pcs > 0 OR p.price_pack > 0 OR p.price_dus > 0) THEN 1 ELSE 0 END) as has_unit_price,
+               (CASE WHEN (p.price_kg > 0 OR p.price_karung > 0) THEN 1 ELSE 0 END) as has_weight_price
         FROM products p
         LEFT JOIN stocks s ON s.product_id = p.id AND s.is_active = 1
         WHERE p.is_active = 1
         GROUP BY p.id
         HAVING 
-          (p.sell_per_unit != 'kg' AND (total_stock <= 0 OR (p.min_stock > 0 AND total_stock <= p.min_stock)))
-          OR (p.sell_per_unit = 'kg' AND (total_stock_kg <= 0 OR (p.min_stock_kg > 0 AND total_stock_kg <= p.min_stock_kg)))
+          (has_unit_price = 1 AND (total_stock <= 0 OR (p.min_stock > 0 AND total_stock <= p.min_stock)))
+          OR (has_weight_price = 1 AND (total_stock_kg <= 0 OR (p.min_stock_kg > 0 AND total_stock_kg <= p.min_stock_kg)))
         ORDER BY 
           CASE WHEN p.sell_per_unit = 'kg' THEN total_stock_kg ELSE total_stock END ASC
       `);

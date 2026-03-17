@@ -9,7 +9,9 @@ export async function getProducts() {
         c.name  as category_name,
         c.color as category_color,
         COALESCE(SUM(s.quantity), 0) as stock,
-        COALESCE(SUM(s.qty_kg), 0) as stock_kg
+        COALESCE(SUM(s.qty_kg), 0) as stock_kg,
+        (CASE WHEN (p.price_pcs > 0 OR p.price_pack > 0 OR p.price_dus > 0) THEN 1 ELSE 0 END) as has_unit_price,
+        (CASE WHEN (p.price_kg > 0 OR p.price_karung > 0) THEN 1 ELSE 0 END) as has_weight_price
       FROM products p
       LEFT JOIN categories c ON c.id = p.category_id
       LEFT JOIN stocks s ON s.product_id = p.id AND s.is_active = 1
@@ -45,7 +47,9 @@ export async function getProductById(id) {
         c.name  as category_name,
         c.color as category_color,
         COALESCE(SUM(s.quantity), 0) as stock,
-        COALESCE(SUM(s.qty_kg), 0) as stock_kg
+        COALESCE(SUM(s.qty_kg), 0) as stock_kg,
+        (CASE WHEN (p.price_pcs > 0 OR p.price_pack > 0 OR p.price_dus > 0) THEN 1 ELSE 0 END) as has_unit_price,
+        (CASE WHEN (p.price_kg > 0 OR p.price_karung > 0) THEN 1 ELSE 0 END) as has_weight_price
       FROM products p
       LEFT JOIN categories c ON c.id = p.category_id
       LEFT JOIN stocks s ON s.product_id = p.id AND s.is_active = 1

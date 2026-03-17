@@ -1391,23 +1391,36 @@ function Reports() {
                 <ReportTable
                   headers={["Produk", "Kategori", "Stok Tersedia", "Ambang Batas", "Status"]}
                   rows={stockReport.lowStock.map((p) => {
+                    const isHybrid = p.has_unit_price && p.has_weight_price;
                     const isKg = p.sell_per_unit === 'kg';
-                    const current = isKg ? p.total_stock_kg : p.total_stock;
-                    const min = isKg ? p.min_stock_kg : p.min_stock;
-                    const unit = isKg ? 'kg' : 'pcs';
-                    const isOut = current <= 0;
                     
+                    let currentLabel, minLabel, isOut;
+                    
+                    if (isHybrid) {
+                      isOut = p.total_stock <= 0 && p.total_stock_kg <= 0;
+                      currentLabel = `${p.total_stock} pcs / ${Number(p.total_stock_kg || 0).toFixed(2)} kg`;
+                      minLabel = `${p.min_stock} pcs / ${Number(p.min_stock_kg || 0).toFixed(2)} kg`;
+                    } else {
+                      const current = isKg ? p.total_stock_kg : p.total_stock;
+                      const min = isKg ? p.min_stock_kg : p.min_stock;
+                      const unit = isKg ? 'kg' : 'pcs';
+                      isOut = current <= 0;
+                      currentLabel = `${isKg ? Number(current || 0).toFixed(2) : current} ${unit}`;
+                      minLabel = `${isKg ? Number(min || 0).toFixed(2) : min} ${unit}`;
+                    }
+
                     return [
                       { label: p.name, bold: true, color: T.text, truncate: true, maxWidth: 220 },
                       { label: p.category_name, truncate: true, maxWidth: 150 },
                       {
-                        label: `${current} ${unit}`,
+                        label: currentLabel,
                         mono: true,
                         highlight: true,
                         color: isOut ? T.red : T.accent,
                         bold: true,
+                        noWrap: true
                       },
-                      { label: `${min} ${unit}`, mono: true },
+                      { label: minLabel, mono: true, noWrap: true },
                       {
                         label: (
                           <span

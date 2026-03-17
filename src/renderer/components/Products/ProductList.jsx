@@ -45,14 +45,23 @@ function StatCard({ label, value, color, icon }) {
 
 // ─── PRODUCT CARD ─────────────────────────────────────────────────────────────
 function ProductCard({ product, onEdit, onDelete, isDeleting, isConfirmingDelete, onConfirmDelete, onCancelDelete }) {
+  const isHybrid = product.has_unit_price && product.has_weight_price;
   const isKg = product.sell_per_unit === 'kg';
-  const currentStock = isKg ? (product.stock_kg || 0) : (product.stock || 0);
-  const minStock = isKg ? (product.min_stock_kg || 0) : (product.min_stock || 0);
-  const outOfStock = currentStock <= 0;
-  const lowStock   = !outOfStock && currentStock <= minStock;
+  
+  let currentStock, minStock, isOut, isLow;
 
-  const stockColor  = outOfStock ? T.red : lowStock ? T.accent : T.green;
-  const stockLabel  = outOfStock ? 'Habis' : lowStock ? 'Menipis' : 'Aman';
+  if (isHybrid) {
+    isOut = product.stock <= 0 && product.stock_kg <= 0;
+    isLow = !isOut && (product.stock <= product.min_stock || product.stock_kg <= product.min_stock_kg);
+  } else {
+    currentStock = isKg ? (product.stock_kg || 0) : (product.stock || 0);
+    minStock = isKg ? (product.min_stock_kg || 0) : (product.min_stock || 0);
+    isOut = currentStock <= 0;
+    isLow = !isOut && currentStock <= minStock;
+  }
+
+  const stockColor  = isOut ? T.red : isLow ? T.accent : T.green;
+  const stockLabel  = isOut ? 'Habis' : isLow ? 'Menipis' : 'Aman';
 
   // Collect active price units
   const activePrices = [
@@ -67,15 +76,15 @@ function ProductCard({ product, onEdit, onDelete, isDeleting, isConfirmingDelete
   return (
     <div style={{
       background: T.card,
-      border: `1px solid ${outOfStock ? T.red + '20' : T.border}`,
+      border: `1px solid ${isOut ? T.red + '20' : T.border}`,
       borderRadius: 14,
       padding: '16px',
       transition: 'border-color 0.2s, transform 0.15s',
       display: 'flex', flexDirection: 'column', gap: 12,
-      opacity: outOfStock ? 0.75 : 1,
+      opacity: isOut ? 0.75 : 1,
     }}
       onMouseEnter={e => { e.currentTarget.style.borderColor = T.border2; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = outOfStock ? T.red + '20' : T.border; e.currentTarget.style.transform = 'translateY(0)'; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = isOut ? T.red + '20' : T.border; e.currentTarget.style.transform = 'translateY(0)'; }}
     >
       {/* Header row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
@@ -117,11 +126,22 @@ function ProductCard({ product, onEdit, onDelete, isDeleting, isConfirmingDelete
           padding: '6px 10px', borderRadius: 10,
           background: stockColor + '10', border: `1px solid ${stockColor}25`,
         }}>
-          <p style={{ fontSize: 16, fontWeight: 800, color: stockColor, fontFamily: 'JetBrains Mono, monospace', lineHeight: 1, marginBottom: 2 }}>
-            {isKg ? Number(currentStock).toFixed(2) : currentStock}
-          </p>
+          {isHybrid ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+              <p style={{ fontSize: 13, fontWeight: 800, color: product.stock <= product.min_stock ? (product.stock <= 0 ? T.red : T.accent) : T.sub, fontFamily: 'JetBrains Mono, monospace', lineHeight: 1 }}>
+                {product.stock}<small style={{ fontSize: 8, marginLeft: 2 }}>Pcs</small>
+              </p>
+              <p style={{ fontSize: 13, fontWeight: 800, color: product.stock_kg <= product.min_stock_kg ? (product.stock_kg <= 0 ? T.red : T.accent) : T.sub, fontFamily: 'JetBrains Mono, monospace', lineHeight: 1 }}>
+                {Number(product.stock_kg || 0).toFixed(2)}<small style={{ fontSize: 8, marginLeft: 2 }}>Kg</small>
+              </p>
+            </div>
+          ) : (
+            <p style={{ fontSize: 16, fontWeight: 800, color: stockColor, fontFamily: 'JetBrains Mono, monospace', lineHeight: 1, marginBottom: 2 }}>
+              {isKg ? Number(currentStock || 0).toFixed(2) : currentStock}
+            </p>
+          )}
           <p style={{ fontSize: 8, fontWeight: 700, color: stockColor, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            {isKg ? 'Kg' : stockLabel}
+            {stockLabel}
           </p>
         </div>
       </div>
@@ -155,7 +175,22 @@ function ProductCard({ product, onEdit, onDelete, isDeleting, isConfirmingDelete
       )}
 
       {/* Min stock info */}
-      {minStock > 0 && (
+      {isHybrid ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ flex: 1, height: 3, borderRadius: 2, background: T.border2, overflow: 'hidden' }}>
+              <div style={{ height: '100%', background: product.stock <= product.min_stock ? (product.stock <= 0 ? T.red : T.accent) : T.green, width: `${Math.min(100, (product.stock / Math.max(product.min_stock * 2, 1)) * 100)}%` }} />
+            </div>
+            <span style={{ fontSize: 8, color: T.muted }}>min {product.min_stock} pcs</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ flex: 1, height: 3, borderRadius: 2, background: T.border2, overflow: 'hidden' }}>
+              <div style={{ height: '100%', background: product.stock_kg <= product.min_stock_kg ? (product.stock_kg <= 0 ? T.red : T.accent) : T.green, width: `${Math.min(100, (product.stock_kg / Math.max(product.min_stock_kg * 2, 1)) * 100)}%` }} />
+            </div>
+            <span style={{ fontSize: 8, color: T.muted }}>min {product.min_stock_kg} kg</span>
+          </div>
+        </div>
+      ) : (minStock > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div style={{
             flex: 1, height: 4, borderRadius: 4,
@@ -172,7 +207,7 @@ function ProductCard({ product, onEdit, onDelete, isDeleting, isConfirmingDelete
             min {minStock}{isKg ? ' kg' : ''}
           </span>
         </div>
-      )}
+      ))}
 
       {/* Actions */}
       {isConfirmingDelete ? (
@@ -264,25 +299,30 @@ function ProductList() {
       if (filterUnit === 'timbangan') f = f.filter(p => p.sell_per_unit === 'kg');
     }
 
-    if (filterStatus === 'habis')
+    if (filterStatus) {
       f = f.filter(p => {
+        const isHybrid = p.has_unit_price && p.has_weight_price;
         const isKg = p.sell_per_unit === 'kg';
-        return isKg ? (p.stock_kg || 0) <= 0 : (p.stock || 0) === 0;
+        
+        if (isHybrid) {
+          const sPcs = p.stock || 0;
+          const mPcs = p.min_stock || 0;
+          const sKg  = p.stock_kg || 0;
+          const mKg  = p.min_stock_kg || 0;
+          
+          if (filterStatus === 'habis')   return sPcs <= 0 && sKg <= 0;
+          if (filterStatus === 'menipis') return ! (sPcs <= 0 && sKg <= 0) && (sPcs <= mPcs || sKg <= mKg);
+          if (filterStatus === 'aman')    return sPcs > mPcs && sKg > mKg;
+        } else {
+          const s = isKg ? (p.stock_kg || 0) : (p.stock || 0);
+          const m = isKg ? (p.min_stock_kg || 0) : (p.min_stock || 0);
+          if (filterStatus === 'habis')   return s <= 0;
+          if (filterStatus === 'menipis') return s > 0 && s <= m;
+          if (filterStatus === 'aman')    return s > m;
+        }
+        return true;
       });
-    else if (filterStatus === 'menipis')
-      f = f.filter(p => {
-        const isKg = p.sell_per_unit === 'kg';
-        const s = isKg ? (p.stock_kg || 0) : (p.stock || 0);
-        const m = isKg ? (p.min_stock_kg || 0) : (p.min_stock || 0);
-        return s > 0 && s <= m;
-      });
-    else if (filterStatus === 'aman')
-      f = f.filter(p => {
-        const isKg = p.sell_per_unit === 'kg';
-        const s = isKg ? (p.stock_kg || 0) : (p.stock || 0);
-        const m = isKg ? (p.min_stock_kg || 0) : (p.min_stock || 0);
-        return s > m;
-      });
+    }
     setFilteredProducts(f);
   }, [searchTerm, filterCategory, filterUnit, filterStatus, products]);
 
@@ -327,22 +367,31 @@ function ProductList() {
     }
   };
 
-  // Stats — correct for kg products
+  // Stats — correct for kg and hybrid products
   const total   = products.length;
   const aman    = products.filter(p => {
+    const isHybrid = p.has_unit_price && p.has_weight_price;
     const isKg = p.sell_per_unit === 'kg';
+    if (isHybrid) return (p.stock || 0) > (p.min_stock || 0) && (p.stock_kg || 0) > (p.min_stock_kg || 0);
     const s = isKg ? (p.stock_kg || 0) : (p.stock || 0);
     const m = isKg ? (p.min_stock_kg || 0) : (p.min_stock || 0);
     return s > m;
   }).length;
   const menipis = products.filter(p => {
+    const isHybrid = p.has_unit_price && p.has_weight_price;
     const isKg = p.sell_per_unit === 'kg';
+    if (isHybrid) {
+      const isOut = (p.stock || 0) <= 0 && (p.stock_kg || 0) <= 0;
+      return !isOut && ((p.stock || 0) <= (p.min_stock || 0) || (p.stock_kg || 0) <= (p.min_stock_kg || 0));
+    }
     const s = isKg ? (p.stock_kg || 0) : (p.stock || 0);
     const m = isKg ? (p.min_stock_kg || 0) : (p.min_stock || 0);
     return s > 0 && s <= m;
   }).length;
   const habis   = products.filter(p => {
+    const isHybrid = p.has_unit_price && p.has_weight_price;
     const isKg = p.sell_per_unit === 'kg';
+    if (isHybrid) return (p.stock || 0) <= 0 && (p.stock_kg || 0) <= 0;
     return isKg ? (p.stock_kg || 0) <= 0 : (p.stock || 0) === 0;
   }).length;
 
@@ -591,47 +640,61 @@ function ProductList() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredProducts.map(product => {
-                    const isKg = product.sell_per_unit === 'kg';
-                    const currentStock = isKg ? (product.stock_kg || 0) : (product.stock || 0);
-                    const minSt = isKg ? (product.min_stock_kg || 0) : (product.min_stock || 0);
-                    const outOfStock = currentStock <= 0;
-                    const lowStock   = !outOfStock && currentStock <= minSt;
-                    const stockColor = outOfStock ? T.red : lowStock ? T.accent : T.green;
+                  {filteredProducts.map(p => {
+                    const isHybrid = p.has_unit_price && p.has_weight_price;
+                    const isKg = p.sell_per_unit === 'kg';
+                    
+                    let sCol, mCol, sColor;
+                    if (isHybrid) {
+                      const isOut = (p.stock || 0) <= 0 && (p.stock_kg || 0) <= 0;
+                      const isLow = !isOut && ((p.stock || 0) <= (p.min_stock || 0) || (p.stock_kg || 0) <= (p.min_stock_kg || 0));
+                      sColor = isOut ? T.red : isLow ? T.accent : T.green;
+                      sCol = `${p.stock} pcs / ${Number(p.stock_kg || 0).toFixed(2)} kg`;
+                      mCol = `${p.min_stock} pcs / ${Number(p.min_stock_kg || 0).toFixed(2)} kg`;
+                    } else {
+                      const s = isKg ? (p.stock_kg || 0) : (p.stock || 0);
+                      const m = isKg ? (p.min_stock_kg || 0) : (p.min_stock || 0);
+                      const isOut = s <= 0;
+                      const isLow = !isOut && s <= m;
+                      sColor = isOut ? T.red : isLow ? T.accent : T.green;
+                      sCol = isKg ? Number(s).toFixed(2) : s;
+                      mCol = `${m}${isKg ? ' kg' : ''}`;
+                    }
+
                     return (
-                      <tr key={product.id}>
-                        <td><span style={{ fontWeight: 700, color: T.text, fontSize: 13 }}>{product.name}</span></td>
+                      <tr key={p.id}>
+                        <td><span style={{ fontWeight: 700, color: T.text, fontSize: 13 }}>{p.name}</span></td>
                         <td>
-                          <span style={{ padding: '2px 8px', borderRadius: 100, fontSize: 10, fontWeight: 700, background: (product.category_color || T.blue) + '16', border: `1px solid ${(product.category_color || T.blue)}25`, color: product.category_color || T.blue }}>
-                            {product.category_name || '—'}
+                          <span style={{ padding: '2px 8px', borderRadius: 100, fontSize: 10, fontWeight: 700, background: (p.category_color || T.blue) + '16', border: `1px solid ${(p.category_color || T.blue)}25`, color: p.category_color || T.blue }}>
+                            {p.category_name || '—'}
                           </span>
                         </td>
                         <td>
                           <span style={{ padding: '2px 8px', borderRadius: 100, fontSize: 10, fontWeight: 700, background: T.border2, color: T.sub }}>
-                            {product.sell_per_unit || 'all'}
+                            {p.sell_per_unit || 'all'}
                           </span>
                         </td>
-                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: product.price_pcs ? T.text : T.muted }}>{fmt(product.price_pcs) || '—'}</td>
-                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: product.price_pack ? T.text : T.muted }}>{fmt(product.price_pack) || '—'}</td>
-                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: product.price_dus ? T.text : T.muted }}>{fmt(product.price_dus) || '—'}</td>
-                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: product.price_kg ? T.text : T.muted }}>{fmt(product.price_kg) || '—'}</td>
+                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: p.price_pcs ? T.text : T.muted }}>{fmt(p.price_pcs) || '—'}</td>
+                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: p.price_pack ? T.text : T.muted }}>{fmt(p.price_pack) || '—'}</td>
+                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: p.price_dus ? T.text : T.muted }}>{fmt(p.price_dus) || '—'}</td>
+                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: p.price_kg ? T.text : T.muted }}>{fmt(p.price_kg) || '—'}</td>
                         <td>
-                          <span style={{ padding: '2px 9px', borderRadius: 100, fontSize: 11, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace', background: stockColor + '14', border: `1px solid ${stockColor}30`, color: stockColor }}>
-                            {isKg ? Number(currentStock).toFixed(2) : currentStock}
+                          <span style={{ padding: '2px 9px', borderRadius: 100, fontSize: 11, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace', background: sColor + '14', border: `1px solid ${sColor}30`, color: sColor }}>
+                            {sCol}
                           </span>
                         </td>
-                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: T.muted }}>{minSt ?? 0}{isKg ? ' kg' : ''}</td>
+                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: T.muted }}>{mCol}</td>
                         <td>
-                          {confirmDeleteId === product.id ? (
+                          {confirmDeleteId === p.id ? (
                             <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
                               <span style={{ fontSize: 10, color: T.red, fontWeight: 600 }}>Hapus?</span>
-                              <button onClick={() => handleDelete(product.id)} disabled={deletingId === product.id} style={{ padding: '3px 8px', borderRadius: 6, border: `1px solid ${T.red}40`, background: T.red + '15', color: T.red, fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>{deletingId === product.id ? '…' : 'Ya'}</button>
+                              <button onClick={() => handleDelete(p.id)} disabled={deletingId === p.id} style={{ padding: '3px 8px', borderRadius: 6, border: `1px solid ${T.red}40`, background: T.red + '15', color: T.red, fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>{deletingId === p.id ? '…' : 'Ya'}</button>
                               <button onClick={() => setConfirmDeleteId(null)} style={{ padding: '3px 8px', borderRadius: 6, border: `1px solid ${T.border2}`, background: 'transparent', color: T.sub, fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>Batal</button>
                             </div>
                           ) : (
                             <div style={{ display: 'flex', gap: 5 }}>
-                              <button onClick={() => setEditingProduct(product)} style={{ padding: '5px 10px', borderRadius: 7, border: `1px solid ${T.blue}30`, background: T.blue + '0C', color: T.blue, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'Syne, sans-serif' }}>Edit</button>
-                              <button onClick={() => setConfirmDeleteId(product.id)} style={{ padding: '5px 8px', borderRadius: 7, border: `1px solid ${T.border2}`, background: 'transparent', color: T.sub, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'Syne, sans-serif' }}>
+                              <button onClick={() => setEditingProduct(p)} style={{ padding: '5px 10px', borderRadius: 7, border: `1px solid ${T.blue}30`, background: T.blue + '0C', color: T.blue, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'Syne, sans-serif' }}>Edit</button>
+                              <button onClick={() => setConfirmDeleteId(p.id)} style={{ padding: '5px 8px', borderRadius: 7, border: `1px solid ${T.border2}`, background: 'transparent', color: T.sub, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'Syne, sans-serif' }}>
                                 <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 2.5h8M4 2.5V2a1 1 0 012 0v.5M4.5 5v2.5M6.5 5v2.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><rect x="2" y="2.5" width="7" height="6.5" rx="1.5" stroke="currentColor" strokeWidth="1.2"/></svg>
                               </button>
                             </div>

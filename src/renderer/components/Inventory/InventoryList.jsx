@@ -512,32 +512,60 @@ function InventoryList() {
       if (filterUnit === 'kemasan' && p.sell_per_unit === 'kg') return false;
       if (filterUnit === 'timbangan' && p.sell_per_unit !== 'kg') return false;
     }
-    
-    const isKg = p.sell_per_unit === 'kg';
-    const cStock = isKg ? (p.stock_kg || 0) : (p.stock || 0);
-    const cMin = isKg ? (p.min_stock_kg || 0) : (p.min_stock || 0);
 
-    if (filterStatus === 'habis'   && cStock > 0) return false;
-    if (filterStatus === 'menipis' && (cStock === 0 || cStock > cMin)) return false;
-    if (filterStatus === 'aman'    && cStock <= cMin) return false;
+    const hasUnit   = p.has_unit_price   ?? ((Number(p.price_pcs) || 0) > 0 || (Number(p.price_pack) || 0) > 0 || (Number(p.price_dus) || 0) > 0);
+    const hasWeight = p.has_weight_price ?? ((Number(p.price_kg) || 0) > 0 || (Number(p.price_karung) || 0) > 0);
+    const isHybrid  = hasUnit && hasWeight;
+    const isKg      = p.sell_per_unit === 'kg';
+
+    if (isHybrid) {
+      const sPcs = p.stock || 0;
+      const mPcs = p.min_stock || 0;
+      const sKg  = p.stock_kg || 0;
+      const mKg  = p.min_stock_kg || 0;
+      
+      const isPcsEmpty = sPcs <= 0;
+      const isKgEmpty  = sKg <= 0;
+      const isPcsLow   = sPcs <= mPcs;
+      const isKgLow    = sKg <= mKg;
+
+      if (filterStatus === 'habis')   return isPcsEmpty && isKgEmpty;
+      if (filterStatus === 'menipis') return ! (isPcsEmpty && isKgEmpty) && (isPcsLow || isKgLow);
+      if (filterStatus === 'aman')    return ! (isPcsLow || isKgLow);
+    } else {
+      const cStock = isKg ? (p.stock_kg || 0) : (p.stock || 0);
+      const cMin   = isKg ? (p.min_stock_kg || 0) : (p.min_stock || 0);
+
+      if (filterStatus === 'habis')   return cStock <= 0;
+      if (filterStatus === 'menipis') return cStock > 0 && cStock <= cMin;
+      if (filterStatus === 'aman')    return cStock > cMin;
+    }
     return true;
   });
 
   // Stats
+  const getProductStatus = (p) => {
+    const hasUnit   = p.has_unit_price   ?? ((Number(p.price_pcs) || 0) > 0 || (Number(p.price_pack) || 0) > 0 || (Number(p.price_dus) || 0) > 0);
+    const hasWeight = p.has_weight_price ?? ((Number(p.price_kg) || 0) > 0 || (Number(p.price_karung) || 0) > 0);
+    const isHybrid  = hasUnit && hasWeight;
 
-  const aman    = products.filter(p => {
-    const isKg = p.sell_per_unit === 'kg';
-    return isKg ? (p.stock_kg || 0) > (p.min_stock_kg || 0) : (p.stock || 0) > (p.min_stock || 0);
-  }).length;
-  const menipis = products.filter(p => {
-    const isKg = p.sell_per_unit === 'kg';
-    const s = isKg ? (p.stock_kg || 0) : (p.stock || 0);
-    const m = isKg ? (p.min_stock_kg || 0) : (p.min_stock || 0);
-    return s > 0 && s <= m;
-  }).length;
-  const habis   = products.filter(p => {
-    return p.sell_per_unit === 'kg' ? (p.stock_kg || 0) <= 0 : (p.stock || 0) <= 0;
-  }).length;
+    if (isHybrid) {
+      if ((p.stock || 0) <= 0 && (p.stock_kg || 0) <= 0) return 'habis';
+      if ((p.stock || 0) <= (p.min_stock || 0) || (p.stock_kg || 0) <= (p.min_stock_kg || 0)) return 'menipis';
+      return 'aman';
+    } else {
+      const isKg = p.sell_per_unit === 'kg';
+      const s = isKg ? (p.stock_kg || 0) : (p.stock || 0);
+      const m = isKg ? (p.min_stock_kg || 0) : (p.min_stock || 0);
+      if (s <= 0) return 'habis';
+      if (s <= m) return 'menipis';
+      return 'aman';
+    }
+  };
+
+  const aman    = products.filter(p => getProductStatus(p) === 'aman').length;
+  const menipis = products.filter(p => getProductStatus(p) === 'menipis').length;
+  const habis   = products.filter(p => getProductStatus(p) === 'habis').length;
 
   if (loading) {
     return (
@@ -718,17 +746,52 @@ function InventoryList() {
 
                 {/* Rows */}
                 <div style={{ padding: '0 8px' }}>
-                  {filtered.map((product, idx) => {
-                    const isKg    = product.sell_per_unit === 'kg';
-                    const stock   = isKg ? (product.stock_kg || 0) : (product.stock || 0);
-                    const minSt   = isKg ? (product.min_stock_kg || 0) : (product.min_stock || 0);
-                    const outOf   = stock <= 0;
-                    const low     = !outOf && stock <= minSt;
-                    const sc      = outOf ? T.red : low ? T.accent : T.green;
-                    const label   = outOf ? 'Stok Habis' : low ? 'Hampir Habis' : 'Stok Aman';
-                    const pct     = minSt > 0 ? Math.min(100, (stock / Math.max(minSt * 2, 1)) * 100) : (stock > 0 ? 100 : 0);
-                    const pp      = product.pcs_per_pack || 1;
-                    const pd      = product.pack_per_dus || 1;
+                   {filtered.map((product, idx) => {
+                    const hasUnit   = product.has_unit_price   ?? ((Number(product.price_pcs) || 0) > 0 || (Number(product.price_pack) || 0) > 0 || (Number(product.price_dus) || 0) > 0);
+                    const hasWeight = product.has_weight_price ?? ((Number(product.price_kg) || 0) > 0 || (Number(product.price_karung) || 0) > 0);
+                    const isHybrid  = hasUnit && hasWeight;
+                    const isKg      = product.sell_per_unit === 'kg';
+
+                    let stock, minSt, outOf, sc, label, pct;
+
+                    if (isHybrid) {
+                      const sPcs = product.stock || 0;
+                      const mPcs = product.min_stock || 0;
+                      const sKg  = product.stock_kg || 0;
+                      const mKg  = product.min_stock_kg || 0;
+
+                      // Calculate health percentage for each set
+                      const pPcs = mPcs > 0 ? Math.min(100, (sPcs / Math.max(mPcs * 2, 1)) * 100) : (sPcs > 0 ? 100 : 0);
+                      const pKg  = mKg > 0 ? Math.min(100, (sKg / Math.max(mKg * 2, 1)) * 100) : (sKg > 0 ? 100 : 0);
+                      
+                      pct = Math.min(pPcs, pKg); // Health follows the most critical one
+                      
+                      const isPcsLow = sPcs <= mPcs;
+                      const isKgLow  = sKg <= mKg;
+                      const isPcsEmpty = sPcs <= 0;
+                      const isKgEmpty  = sKg <= 0;
+
+                      if (isPcsEmpty && isKgEmpty) {
+                        sc = T.red; label = 'Stok Habis';
+                      } else if (isPcsEmpty || isKgEmpty || isPcsLow || isKgLow) {
+                        sc = T.accent; label = 'Hampir Habis';
+                      } else {
+                        sc = T.green; label = 'Stok Aman';
+                      }
+                      stock = isKg ? sKg : sPcs; // Fallback for single-line logic if needed
+                      minSt = isKg ? mKg : mPcs;
+                    } else {
+                      stock   = isKg ? (product.stock_kg || 0) : (product.stock || 0);
+                      minSt   = isKg ? (product.min_stock_kg || 0) : (product.min_stock || 0);
+                      outOf   = stock <= 0;
+                      const low = !outOf && stock <= minSt;
+                      sc      = outOf ? T.red : low ? T.accent : T.green;
+                      label   = outOf ? 'Stok Habis' : low ? 'Hampir Habis' : 'Stok Aman';
+                      pct     = minSt > 0 ? Math.min(100, (stock / Math.max(minSt * 2, 1)) * 100) : (stock > 0 ? 100 : 0);
+                    }
+
+                    const pp = product.pcs_per_pack || 1;
+                    const pd = product.pack_per_dus || 1;
 
                     return (
                       <div
@@ -756,43 +819,74 @@ function InventoryList() {
                       >
                         {/* Product info */}
                         <div style={{ paddingLeft: 8, overflow: 'hidden' }}>
-                          <p className="text-truncate" style={{ fontSize: 13, fontWeight: 700, color: outOf ? T.sub : T.text, marginBottom: 4 }} title={product.name}>{product.name}</p>
+                          <p className="text-truncate" style={{ fontSize: 13, fontWeight: 700, color: (product.stock <= 0 && product.stock_kg <= 0) ? T.sub : T.text, marginBottom: 4 }} title={product.name}>{product.name}</p>
                           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                             <span className="text-truncate" style={{ fontSize: 10, fontWeight: 700, color: T.sub, fontFamily: 'JetBrains Mono, monospace', background: T.bg, padding: '2px 8px', borderRadius: 6, border: `1px solid ${T.border2}`, maxWidth: 120 }} title={product.category_name}>
                               {product.category_name || 'Tanpa Kategori'}
                             </span>
-                            {isKg && (product.kg_per_karung > 0) && (
-                               <span style={{ fontSize: 10, fontWeight: 700, color: T.orange, background: T.orange + '10', padding: '2px 8px', borderRadius: 6, border: `1px solid ${T.orange}30` }}>
-                                 ± {Math.floor(stock / product.kg_per_karung)} Karung
-                               </span>
-                            )}
-                            {!isKg && (pp > 1 || pd > 1) && (
-                               <span style={{ fontSize: 9, color: T.muted }}>
-                                 {pp > 1 ? `${Math.floor(stock / pp)} Pack` : ''} 
-                                 {pd > 1 && stock >= pp * pd ? ` / ${Math.floor(stock / (pp * pd))} Dus` : ''}
-                               </span>
+                            {isHybrid ? (
+                               <span style={{ fontSize: 9, fontWeight: 700, color: T.purple, background: T.purple + '10', padding: '1px 6px', borderRadius: 4, border: `1px solid ${T.purple}30` }}>HYBRID</span>
+                            ) : (
+                               isKg ? (
+                                 product.kg_per_karung > 0 && (
+                                   <span style={{ fontSize: 10, fontWeight: 700, color: T.orange, background: T.orange + '10', padding: '2px 8px', borderRadius: 6, border: `1px solid ${T.orange}30` }}>
+                                     ± {Math.floor((product.stock_kg || 0) / product.kg_per_karung)} Karung
+                                   </span>
+                                 )
+                               ) : (
+                                 (pp > 1 || pd > 1) && (
+                                   <span style={{ fontSize: 9, color: T.muted }}>
+                                     {pp > 1 ? `${Math.floor((product.stock || 0) / pp)} Pack` : ''} 
+                                     {pd > 1 && (product.stock || 0) >= pp * pd ? ` / ${Math.floor((product.stock || 0) / (pp * pd))} Dus` : ''}
+                                   </span>
+                                 )
+                               )
                             )}
                           </div>
                         </div>
 
                         {/* Stock number */}
                         <div>
-                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                            <span style={{ fontSize: 16, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace', color: sc, letterSpacing: '-0.02em' }}>
-                              {isKg ? Number(stock).toFixed(2) : numFmt(stock)}
-                            </span>
-                            <span style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: 'uppercase' }}>{isKg ? 'Kg' : 'Pcs'}</span>
-                          </div>
+                          {isHybrid ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                               <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                                 <span style={{ fontSize: 14, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace', color: (product.stock || 0) <= (product.min_stock || 0) ? T.accent : T.text }}>
+                                   {numFmt(product.stock)}
+                                 </span>
+                                 <span style={{ fontSize: 8, fontWeight: 700, color: T.muted }}>PCS</span>
+                               </div>
+                               <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                                 <span style={{ fontSize: 14, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace', color: (product.stock_kg || 0) <= (product.min_stock_kg || 0) ? T.accent : T.text }}>
+                                   {(product.stock_kg || 0).toFixed(2)}
+                                 </span>
+                                 <span style={{ fontSize: 8, fontWeight: 700, color: T.muted }}>KG</span>
+                               </div>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                              <span style={{ fontSize: 16, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace', color: sc, letterSpacing: '-0.02em' }}>
+                                {isKg ? Number(stock).toFixed(2) : numFmt(stock)}
+                              </span>
+                              <span style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: 'uppercase' }}>{isKg ? 'Kg' : 'Pcs'}</span>
+                            </div>
+                          )}
                         </div>
 
                         {/* Min stock */}
-                        <div style={{ fontSize: 12, fontFamily: 'JetBrains Mono, monospace', color: T.sub, fontWeight: 600 }}>
-                          {minSt > 0 ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ opacity: 0.6 }}>min</span>
-                              <span>{isKg ? minSt : numFmt(minSt)}</span>
-                            </div>
-                          ) : '—'}
+                        <div style={{ fontSize: 11, fontFamily: 'JetBrains Mono, monospace', color: T.sub, fontWeight: 600 }}>
+                          {isHybrid ? (
+                             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                               <span>{numFmt(product.min_stock)} <span style={{ fontSize: 8, opacity: 0.6 }}>Pcs</span></span>
+                               <span>{(product.min_stock_kg || 0)} <span style={{ fontSize: 8, opacity: 0.6 }}>Kg</span></span>
+                             </div>
+                          ) : (
+                            minSt > 0 ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span style={{ opacity: 0.6, fontSize: 10 }}>min</span>
+                                <span>{isKg ? minSt : numFmt(minSt)}</span>
+                              </div>
+                            ) : '—'
+                          )}
                         </div>
 
                         {/* Progress bar + status */}

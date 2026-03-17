@@ -15,7 +15,7 @@ module.exports = {
       config: {
         setupIcon: './assets/icon.ico',
         authors: 'Ahmatstia',
-        description: 'Aplikasi POS Kasir Bumbu'
+        description: 'Sistem Kasir toko bumbu'
       },
     },
     {

@@ -139,12 +139,17 @@ export async function getStockReport() {
         COALESCE(SUM(s.quantity * s.purchase_price) + SUM(s.qty_kg * s.purchase_price), 0) as total_inventory_value,
         COALESCE(AVG(stock_agg.stock), 0) as average_stock,
         COUNT(CASE 
-          WHEN (p.sell_per_unit != 'kg' AND COALESCE(stock_agg.stock, 0) <= p.min_stock AND p.min_stock > 0)
-            OR (p.sell_per_unit = 'kg' AND COALESCE(stock_agg.stock_kg, 0) <= p.min_stock_kg AND p.min_stock_kg > 0)
+          WHEN (
+            ((p.price_pcs > 0 OR p.price_pack > 0 OR p.price_dus > 0) AND COALESCE(stock_agg.stock, 0) <= p.min_stock AND p.min_stock > 0)
+            OR ((p.price_kg > 0 OR p.price_karung > 0) AND COALESCE(stock_agg.stock_kg, 0) <= p.min_stock_kg AND p.min_stock_kg > 0)
+          )
           THEN 1 END) as low_stock_count,
         COUNT(CASE 
-          WHEN (p.sell_per_unit != 'kg' AND COALESCE(stock_agg.stock, 0) = 0)
-            OR (p.sell_per_unit = 'kg' AND COALESCE(stock_agg.stock_kg, 0) = 0)
+          WHEN (
+            ((p.price_pcs > 0 OR p.price_pack > 0 OR p.price_dus > 0) OR (p.price_kg > 0 OR p.price_karung > 0))
+            AND (CASE WHEN (p.price_pcs > 0 OR p.price_pack > 0 OR p.price_dus > 0) THEN COALESCE(stock_agg.stock, 0) <= 0 ELSE 1 END)
+            AND (CASE WHEN (p.price_kg > 0 OR p.price_karung > 0) THEN COALESCE(stock_agg.stock_kg, 0) <= 0 ELSE 1 END)
+          )
           THEN 1 END) as out_of_stock_count
       FROM products p
       LEFT JOIN (
@@ -176,17 +181,20 @@ export async function getStockReport() {
       SELECT 
         p.id, p.name, p.min_stock, p.min_stock_kg, p.price_pcs, p.price_kg, p.sell_per_unit,
         p.pcs_per_pack, p.pack_per_dus,
+        p.price_pack, p.price_dus, p.price_karung,
         c.name as category_name,
         COALESCE(SUM(s.quantity), 0) as total_stock,
-        COALESCE(SUM(s.qty_kg), 0) as total_stock_kg
+        COALESCE(SUM(s.qty_kg), 0) as total_stock_kg,
+        (CASE WHEN (p.price_pcs > 0 OR p.price_pack > 0 OR p.price_dus > 0) THEN 1 ELSE 0 END) as has_unit_price,
+        (CASE WHEN (p.price_kg > 0 OR p.price_karung > 0) THEN 1 ELSE 0 END) as has_weight_price
       FROM products p
       JOIN categories c ON p.category_id = c.id
       LEFT JOIN stocks s ON s.product_id = p.id AND s.is_active = 1
       WHERE p.is_active = 1
       GROUP BY p.id
       HAVING 
-        (p.sell_per_unit != 'kg' AND p.min_stock > 0 AND total_stock <= p.min_stock)
-        OR (p.sell_per_unit = 'kg' AND p.min_stock_kg > 0 AND total_stock_kg <= p.min_stock_kg)
+        (has_unit_price = 1 AND (total_stock <= 0 OR (p.min_stock > 0 AND total_stock <= p.min_stock)))
+        OR (has_weight_price = 1 AND (total_stock_kg <= 0 OR (p.min_stock_kg > 0 AND total_stock_kg <= p.min_stock_kg)))
       ORDER BY 
         CASE WHEN p.sell_per_unit = 'kg' THEN (total_stock_kg * 1.0 / MAX(p.min_stock_kg, 1)) 
              ELSE (total_stock * 1.0 / MAX(p.min_stock, 1)) END ASC

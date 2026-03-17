@@ -143,12 +143,22 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef, ign
   const [manualQty, setManualQty]   = useState(1);
   const [manualUnit, setManualUnit] = useState('pcs');
 
-  // Tentukan status stok berdasarkan unit jual
+  // Tentukan status stok berdasarkan unit jual (Hybrid aware)
+  const isHybrid = product.has_unit_price && product.has_weight_price;
   const isKgProduct = product.sell_per_unit === 'kg';
-  const currentStock = isKgProduct ? (product.stock_kg || 0) : (product.stock || 0);
-  const minStock     = isKgProduct ? (product.min_stock_kg || 0) : (product.min_stock || 0);
-  const outOfStock = currentStock <= 0;
-  const lowStock   = !outOfStock && currentStock <= minStock;
+  
+  let isOut, isLow, stockDisplay;
+  if (isHybrid) {
+    isOut = product.stock <= 0 && product.stock_kg <= 0;
+    isLow = !isOut && (product.stock <= product.min_stock || product.stock_kg <= product.min_stock_kg);
+    stockDisplay = `${product.stock} pcs / ${Number(product.stock_kg || 0).toFixed(2)} kg`;
+  } else {
+    const current = isKgProduct ? (product.stock_kg || 0) : (product.stock || 0);
+    const min     = isKgProduct ? (product.min_stock_kg || 0) : (product.min_stock || 0);
+    isOut = current <= 0;
+    isLow = !isOut && current <= min;
+    stockDisplay = isOut ? 'HABIS' : `${isKgProduct ? Number(current).toFixed(2) : current}${isKgProduct ? ' kg' : ' stok'}`;
+  }
 
   const handleManualAdd = () => {
     const price = parseFloat(manualPrice);
@@ -193,7 +203,7 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef, ign
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
         <div style={{ flex: 1, minWidth: 0, marginRight: 10 }}>
           <p style={{
-            fontSize: 13, fontWeight: 700, color: (!ignoreStock && outOfStock) ? T.muted : T.text,
+            fontSize: 13, fontWeight: 700, color: (!ignoreStock && isOut) ? T.muted : T.text,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             marginBottom: 4,
           }}>
@@ -203,9 +213,9 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef, ign
             {!ignoreStock && (
               <span style={{
                 fontSize: 10, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
-                color: outOfStock ? T.red : lowStock ? T.accent : T.green,
+                color: isOut ? T.red : isLow ? T.accent : T.green,
               }}>
-              {outOfStock ? 'HABIS' : `${currentStock}${isKgProduct ? ' kg' : ' stok'}`}
+                {stockDisplay}
               </span>
             )}
             <span style={{
@@ -238,7 +248,7 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef, ign
       {!showManual && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {availableUnits.map(u => {
-            const isButtonDisabled = !ignoreStock && outOfStock;
+            const isButtonDisabled = !ignoreStock && isOut;
             return (
               <button
                 key={u.key}
@@ -262,7 +272,7 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef, ign
             );
           })}
 
-          {availableUnits.length === 0 && !outOfStock && (
+          {availableUnits.length === 0 && !isOut && (
             <span style={{ fontSize: 11, color: T.muted, fontStyle: 'italic' }}>Gunakan mode Harga Kustom</span>
           )}
         </div>

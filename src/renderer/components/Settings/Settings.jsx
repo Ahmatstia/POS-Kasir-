@@ -12,6 +12,7 @@ function Settings() {
   const [hideCost, setHideCost] = useState(false);
   const [loading, setLoading] = useState(true);
   const [backingUp, setBackingUp] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -50,10 +51,15 @@ function Settings() {
   const handleBackup = async () => {
     setBackingUp(true);
     try {
+      // 1. Log activity FIRST so it gets included in the backup file
+      await logActivity(AUDIT_ACTIONS.MANUAL_BACKUP, "Security", "Created manual database backup");
+      
+      // 2. Perform the backup (backend will now checkpoint/flush data)
       const res = await window.electronAPI.invoke("db:backup");
+      
       if (res.success) {
         showToast('success', '✅ Database berhasil diamankan ke folder "backups"');
-        logActivity(AUDIT_ACTIONS.MANUAL_BACKUP, "Security", "Created manual database backup");
+        setRefreshKey(prev => prev + 1); // Trigger activity log refresh
       } else {
         showToast('error', 'Gagal membuat backup: ' + res.error);
       }
@@ -295,7 +301,7 @@ function Settings() {
              </div>
 
              {/* Activity Logs Component */}
-             <ActivityLogs />
+             <ActivityLogs key={refreshKey} />
           </div>
         )}
       </div>

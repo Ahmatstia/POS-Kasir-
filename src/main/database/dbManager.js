@@ -372,6 +372,25 @@ class DatabaseManager {
       });
     });
   }
+
+  checkpoint() {
+    return new Promise((resolve, reject) => {
+      if (!this.db) {
+        resolve();
+        return;
+      }
+      // Checkpoint flushes WAL to the main .db file
+      this.db.run("PRAGMA wal_checkpoint(FULL)", (err) => {
+        if (err) {
+          console.error("❌ Checkpoint failed:", err);
+          reject(err);
+        } else {
+          console.log("✅ Database checkpoint complete (flushed to disk)");
+          resolve();
+        }
+      });
+    });
+  }
 }
 
 module.exports = new DatabaseManager();

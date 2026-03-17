@@ -39,10 +39,13 @@ async function backupDatabase() {
     
     if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir);
 
+    // 1. Ensure all data is flushed to the main file
+    await dbManager.checkpoint();
+
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const backupPath = path.join(backupDir, `pos-backup-${timestamp}.db`);
 
-    // Copy file
+    // 2. Copy file
     fs.copyFileSync(dbPath, backupPath);
     console.log("✅ Backup created at:", backupPath);
 

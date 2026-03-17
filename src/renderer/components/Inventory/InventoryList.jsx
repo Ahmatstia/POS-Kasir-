@@ -4,6 +4,7 @@ import { getCategories } from "../../services/database";
 import { isPrivacyModeEnabled } from "../../services/settings";
 import { useToast } from "../Toast";
 import { T } from "../../theme";
+import { InventoryIcon } from "../Icons/AppIcons";
 
 const fmt    = n => `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
 const numFmt = n => Number(n || 0).toLocaleString('id-ID');
@@ -605,8 +606,12 @@ function InventoryList() {
         {/* ── PAGE HEADER ── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div>
-            <p style={{ fontSize: 10, fontWeight: 700, color: T.muted, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>Manajemen</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: T.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+              <InventoryIcon />
+            </div>
             <h2 style={{ fontSize: 22, fontWeight: 800, color: T.text, letterSpacing: '-0.01em' }}>Inventori Stok</h2>
+          </div>
           </div>
           <div style={{ display: 'flex', background: T.surface, padding: 4, borderRadius: 12, border: `1px solid ${T.border}` }}>
             <button onClick={() => setActiveTab('list')} style={{ 

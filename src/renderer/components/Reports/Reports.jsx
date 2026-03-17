@@ -22,6 +22,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { T } from "../../theme";
+import { ReportsIcon } from "../Icons/AppIcons";
 
 const PALETTE = [
   T.accent,
@@ -450,29 +451,11 @@ function Reports() {
             marginBottom: 24,
           }}
         >
-          <div>
-            <p
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                color: T.muted,
-                marginBottom: 4,
-              }}
-            >
-              Analitik
-            </p>
-            <h1
-              style={{
-                fontSize: 22,
-                fontWeight: 800,
-                color: T.text,
-                letterSpacing: "-0.01em",
-              }}
-            >
-              Laporan
-            </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: T.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+              <ReportsIcon />
+            </div>
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text, letterSpacing: '-0.01em' }}>Laporan</h1>
           </div>
           <div className="no-print" style={{ display: "flex", gap: 8 }}>
             <button
@@ -495,21 +478,7 @@ function Reports() {
                 (e.currentTarget.style.background = T.green + "10")
               }
             >
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                <path
-                  d="M6.5 1v8M4 7l2.5 2.5L9 7"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M1 10v1.5A1.5 1.5 0 002.5 13h8A1.5 1.5 0 0012 11.5V10"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                />
-              </svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
               Export CSV
             </button>
             <button
@@ -532,30 +501,7 @@ function Reports() {
                 (e.currentTarget.style.background = T.blue + "10")
               }
             >
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                <path
-                  d="M3 3.5h7v3H3v-3z"
-                  stroke="currentColor"
-                  strokeWidth="1.3"
-                  strokeLinejoin="round"
-                />
-                <rect
-                  x="1"
-                  y="4.5"
-                  width="11"
-                  height="5.5"
-                  rx="1.5"
-                  stroke="currentColor"
-                  strokeWidth="1.3"
-                />
-                <path
-                  d="M3 9.5v3h7v-3"
-                  stroke="currentColor"
-                  strokeWidth="1.3"
-                  strokeLinejoin="round"
-                />
-                <circle cx="9.5" cy="7.5" r="0.7" fill="currentColor" />
-              </svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
               Cetak
             </button>
           </div>

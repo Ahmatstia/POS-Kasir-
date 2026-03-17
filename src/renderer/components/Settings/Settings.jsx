@@ -4,6 +4,7 @@ import { T } from "../../theme";
 import { useToast } from "../Toast";
 import ActivityLogs from "../Security/ActivityLogs";
 import { logActivity, AUDIT_ACTIONS, clearLogs } from "../../services/audit";
+import { SettingsIcon } from "../Icons/AppIcons";
 
 function Settings() {
   const { showToast } = useToast();
@@ -133,9 +134,11 @@ function Settings() {
 
       <div style={{ animation: 'fadeUp 0.4s ease both', fontFamily: 'Syne, sans-serif' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
-          <div>
-            <p style={{ fontSize: 10, fontWeight: 700, color: T.muted, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>Konfigurasi Aplikasi</p>
-            <h2 style={{ fontSize: 22, fontWeight: 800, color: T.text }}>Pengaturan</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: T.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+              <SettingsIcon />
+            </div>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: T.text, letterSpacing: '-0.01em' }}>Pengaturan</h2>
           </div>
           <div style={{ display: 'flex', background: T.surface, padding: 4, borderRadius: 12, border: `1px solid ${T.border}` }}>
             <button onClick={() => setActiveTab('general')} style={{ 

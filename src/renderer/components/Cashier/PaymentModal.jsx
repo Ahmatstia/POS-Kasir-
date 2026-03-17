@@ -9,37 +9,21 @@ const METHODS = [
     key: 'cash',
     label: 'Tunai',
     icon: (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-        <rect x="1" y="4" width="16" height="10" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-        <circle cx="9" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.5"/>
-        <path d="M4 9h.5M13.5 9H14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-      </svg>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="12" y1="15" x2="12" y2="15"/><line x1="17" y1="15" x2="17" y2="15"/></svg>
     ),
   },
   {
     key: 'debit',
     label: 'Debit',
     icon: (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-        <rect x="1" y="3" width="16" height="12" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-        <path d="M1 7h16" stroke="currentColor" strokeWidth="1.5"/>
-        <rect x="3" y="10" width="4" height="2" rx="0.5" fill="currentColor" opacity="0.6"/>
-      </svg>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
     ),
   },
   {
     key: 'qris',
     label: 'QRIS',
     icon: (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-        <rect x="2" y="2" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5"/>
-        <rect x="10" y="2" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5"/>
-        <rect x="2" y="10" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5"/>
-        <rect x="10.5" y="10.5" width="2" height="2" fill="currentColor"/>
-        <rect x="14" y="10.5" width="2" height="2" fill="currentColor"/>
-        <rect x="10.5" y="14" width="2" height="2" fill="currentColor"/>
-        <rect x="14" y="14" width="2" height="2" fill="currentColor"/>
-      </svg>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
     ),
   },
 ];
@@ -177,11 +161,7 @@ function PaymentModal({ total, onClose, onConfirm, loading = false }) {
                 background: T.accent + '18', border: `1px solid ${T.accent}30`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                  <rect x="2" y="5" width="18" height="13" rx="2.5" stroke={T.accent} strokeWidth="1.6"/>
-                  <circle cx="11" cy="11.5" r="3" stroke={T.accent} strokeWidth="1.6"/>
-                  <path d="M5 11.5h.5M16.5 11.5H17" stroke={T.accent} strokeWidth="1.6" strokeLinecap="round"/>
-                </svg>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="12" y1="15" x2="12" y2="15"/><line x1="17" y1="15" x2="17" y2="15"/></svg>
               </div>
             </div>
 
@@ -338,9 +318,7 @@ function PaymentModal({ total, onClose, onConfirm, loading = false }) {
                 onMouseLeave={e => { if (isValid && !loading) e.currentTarget.style.background = T.green + '18'; }}
               >
                 {!loading && (
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M3 8l3.5 3.5L13 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                 )}
                 {loading ? 'Memproses...' : 'Konfirmasi Bayar'}
               </button>

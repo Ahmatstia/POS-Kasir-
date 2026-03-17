@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { getCategories, addCategory, updateCategory, deleteCategory } from "../../services/categories";
 import { T } from "../../theme";
+import { CategoriesIcon } from "../Icons/AppIcons";
 
 const PRESET_COLORS = [
   '#F5A623','#34C98B','#5B8AF5','#E85858','#A78BFA',
@@ -195,8 +196,12 @@ function CategoryList() {
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20 }}>
           <div>
-            <p style={{ fontSize: 10, fontWeight: 700, color: T.muted, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>Master Data</p>
-            <h2 style={{ fontSize: 22, fontWeight: 800, color: T.text }}>Kategori Produk</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: T.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+              <CategoriesIcon />
+            </div>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: T.text, letterSpacing: '-0.01em' }}>Kategori Produk</h2>
+          </div>
           </div>
           {!showAdd && (
             <button onClick={() => setShowAdd(true)} style={{
@@ -205,7 +210,7 @@ function CategoryList() {
               border: `1px solid ${T.green}35`, background: T.green + '10', color: T.green,
               fontFamily: 'Syne, sans-serif', fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
             }}>
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 2v9M2 6.5h9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>
               Tambah Kategori
             </button>
           )}

@@ -6,6 +6,7 @@ import {
 import { getDashboardData } from '../../services/dashboard';
 import { isPrivacyModeEnabled, isStockManaged } from '../../services/settings';
 import { T } from '../../theme';
+import { DashboardIcon } from '../Icons/AppIcons';
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 const fmt = (n) => `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
@@ -289,13 +290,8 @@ export default function Dashboard({ setCurrentPage }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40, animation: 'fadeUp 0.4s ease both' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-              <div style={{ width: 28, height: 28, borderRadius: 8, background: T.accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <rect x="1" y="1" width="5" height="5" rx="1.5" fill="#0E0F11"/>
-                  <rect x="8" y="1" width="5" height="5" rx="1.5" fill="#0E0F11"/>
-                  <rect x="1" y="8" width="5" height="5" rx="1.5" fill="#0E0F11"/>
-                  <rect x="8" y="8" width="5" height="5" rx="1.5" fill="#0E0F11"/>
-                </svg>
+              <div style={{ width: 28, height: 28, borderRadius: 8, background: T.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+                <DashboardIcon />
               </div>
               <span style={{ fontSize: 18, fontWeight: 800, color: T.text, letterSpacing: '-0.01em' }}>
                 Analitik

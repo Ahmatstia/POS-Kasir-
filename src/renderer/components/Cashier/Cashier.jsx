@@ -774,10 +774,7 @@ function Cashier() {
 
             {/* Search */}
             <div style={{ position: 'relative' }}>
-              <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }} width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <circle cx="6" cy="6" r="4.5" stroke={T.sub} strokeWidth="1.5"/>
-                <path d="M9.5 9.5L12 12" stroke={T.sub} strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
+              <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.sub} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               <input
                 type="text"
                 value={searchTerm}
@@ -842,11 +839,7 @@ function Cashier() {
               </>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, gap: 8 }}>
-                <svg width="36" height="36" viewBox="0 0 36 36" fill="none" opacity="0.3">
-                  <circle cx="16" cy="16" r="10" stroke={T.sub} strokeWidth="2"/>
-                  <path d="M24 24L30 30" stroke={T.sub} strokeWidth="2" strokeLinecap="round"/>
-                  <path d="M12 16h8M16 12v8" stroke={T.sub} strokeWidth="2" strokeLinecap="round"/>
-                </svg>
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.sub} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.3"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 <p style={{ fontSize: 12, color: T.muted }}>
                   {searchTerm ? `Tidak ada produk "${searchTerm}"` : 'Tidak ada produk'}
                 </p>
@@ -918,11 +911,7 @@ function Cashier() {
           <div className="cart-scroll" style={{ flex: 1, overflowY: 'auto', padding: '12px 14px' }}>
             {cart.length === 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 10 }}>
-                <svg width="48" height="48" viewBox="0 0 48 48" fill="none" opacity="0.2">
-                  <path d="M8 8h4l5 22h18l4-14H14" stroke={T.sub} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <circle cx="20" cy="36" r="2" fill={T.sub}/>
-                  <circle cx="34" cy="36" r="2" fill={T.sub}/>
-                </svg>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={T.sub} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
                 <p style={{ fontSize: 13, fontWeight: 700, color: T.muted }}>Keranjang kosong</p>
                 <p style={{ fontSize: 11, color: T.muted + '80' }}>Pilih produk dari panel kiri</p>
               </div>

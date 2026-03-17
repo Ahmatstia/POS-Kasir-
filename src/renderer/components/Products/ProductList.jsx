@@ -10,6 +10,7 @@ import EditProductForm from "./EditProductForm";
 import ImportExcel from "./ImportExcel";
 import { useToast } from "../Toast";
 import { T } from "../../theme";
+import { ProductsIcon } from "../Icons/AppIcons";
 
 const fmt = (n) => n ? `Rp ${Number(n).toLocaleString('id-ID')}` : null;
 
@@ -238,9 +239,7 @@ function ProductCard({ product, onEdit, onDelete, isDeleting, isConfirmingDelete
             onMouseEnter={e => e.currentTarget.style.background = T.blue + '18'}
             onMouseLeave={e => e.currentTarget.style.background = T.blue + '0C'}
           >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M8 1l3 3-7 7H1V9l7-7z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
-            </svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
             Edit
           </button>
           <button
@@ -445,8 +444,10 @@ function ProductList() {
 
         {/* ── PAGE HEADER ── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
-          <div>
-            <p style={{ fontSize: 10, fontWeight: 700, color: T.muted, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>Manajemen</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: T.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+              <ProductsIcon />
+            </div>
             <h2 style={{ fontSize: 22, fontWeight: 800, color: T.text, letterSpacing: '-0.01em' }}>Daftar Produk</h2>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

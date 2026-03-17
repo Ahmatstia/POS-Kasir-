@@ -3,13 +3,16 @@
  * Handles logging of important system actions for accountability.
  */
 
+import { getLocalDatetimeStr } from "./transactions";
+
 export async function logActivity(action, module, details = "") {
   try {
+    const nowStr = getLocalDatetimeStr();
     const sql = `
       INSERT INTO activity_logs (action, module, details, user, created_at)
-      VALUES (?, ?, ?, 'Admin', CURRENT_TIMESTAMP)
+      VALUES (?, ?, ?, 'Admin', ?)
     `;
-    await window.electronAPI.run(sql, [action, module, details]);
+    await window.electronAPI.run(sql, [action, module, details, nowStr]);
   } catch (error) {
     console.error("Failed to log activity:", error);
   }

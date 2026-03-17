@@ -1,4 +1,5 @@
 import { isPrivacyModeEnabled } from "./settings";
+import { getLocalDatetimeStr } from "./transactions";
 
 // ─── INVENTORY SERVICE ───────────────────────────────────────────────────────
 
@@ -123,10 +124,11 @@ export async function addStock(productId, {
       `BATCH-${date.getFullYear()}${String(date.getMonth()+1).padStart(2,'0')}${String(date.getDate()).padStart(2,'0')}-${Math.floor(Math.random()*1000).toString().padStart(3,'0')}`;
 
     // Create new batch
+    const nowStr = getLocalDatetimeStr();
     const stockResult = await window.electronAPI.run(
-      `INSERT INTO stocks (product_id, batch_code, quantity, qty_kg, purchase_price, expiry_date, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [productId, autoCode, totalPcs, totalKg, finalPurchasePrice, expiry_date || null, notes]
+      `INSERT INTO stocks (product_id, batch_code, quantity, qty_kg, purchase_price, expiry_date, notes, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [productId, autoCode, totalPcs, totalKg, finalPurchasePrice, expiry_date || null, notes, nowStr, nowStr]
     );
     const stockId = stockResult.lastID;
 
@@ -138,10 +140,10 @@ export async function addStock(productId, {
     await window.electronAPI.run(
       `INSERT INTO inventory_log 
          (product_id, stock_id, type, quantity_input, unit_input, quantity_pcs, quantity_kg,
-          stock_before, stock_after, purchase_price, batch_code, expiry_date, notes)
-       VALUES (?, ?, 'IN', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          stock_before, stock_after, purchase_price, batch_code, expiry_date, notes, created_at)
+       VALUES (?, ?, 'IN', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [productId, stockId, isKg ? totalKg : totalPcs, isKg ? 'kg' : 'pcs', totalPcs, totalKg, finalStockBefore, finalStockAfter,
-       finalPurchasePrice, autoCode, expiry_date || null, notes]
+       finalPurchasePrice, autoCode, expiry_date || null, notes, nowStr]
     );
 
     await window.electronAPI.run("COMMIT");

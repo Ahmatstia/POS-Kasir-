@@ -99,22 +99,13 @@ export async function getSalesReport(startDate, endDate) {
       ORDER BY hour ASC
     `, [startDate, endDate]);
 
-    const hideCost = await isPrivacyModeEnabled();
     const data = {
-      summary: hideCost ? {
-        ...summary,
-        total_sales: 0,
-        average_sales: 0,
-        total_payment: 0,
-        total_change: 0,
-        total_purchase_cost: 0,
-        total_profit: 0
-      } : summary,
-      dailySales: hideCost ? dailySales.map(d => ({ ...d, omzet: 0 })) : dailySales,
-      paymentMethods: hideCost ? paymentMethods.map(p => ({ ...p, omzet: 0 })) : paymentMethods,
-      topProducts: hideCost ? topProducts.map(p => ({ ...p, total_sales: 0 })) : topProducts,
-      topCategories: hideCost ? topCategories.map(c => ({ ...c, total_sales: 0 })) : topCategories,
-      peakHours: hideCost ? peakHours.map(h => ({ ...h, omzet: 0 })) : peakHours,
+      summary,
+      dailySales,
+      paymentMethods,
+      topProducts,
+      topCategories,
+      peakHours,
       startDate,
       endDate
     };
@@ -200,12 +191,8 @@ export async function getStockReport() {
              ELSE (total_stock * 1.0 / MAX(p.min_stock, 1)) END ASC
     `);
 
-    const hideCost = await isPrivacyModeEnabled();
     return {
-      summary: hideCost ? {
-        ...summary[0],
-        total_inventory_value: 0
-      } : summary[0],
+      summary: summary[0],
       stockByCategory,
       lowStock
     };

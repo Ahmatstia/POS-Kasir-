@@ -3,7 +3,7 @@ import { getSetting, updateSetting } from "../../services/settings";
 import { T } from "../../theme";
 import { useToast } from "../Toast";
 import ActivityLogs from "../Security/ActivityLogs";
-import { logActivity, AUDIT_ACTIONS } from "../../services/audit";
+import { logActivity, AUDIT_ACTIONS, clearLogs } from "../../services/audit";
 
 function Settings() {
   const { showToast } = useToast();
@@ -51,14 +51,20 @@ function Settings() {
   const handleBackup = async () => {
     setBackingUp(true);
     try {
-      // 1. Log activity FIRST so it gets included in the backup file
-      await logActivity(AUDIT_ACTIONS.MANUAL_BACKUP, "Security", "Created manual database backup");
+      // 1. Generate the same timestamp format used in backend
+      const d = new Date();
+      const pad = (n) => n.toString().padStart(2, "0");
+      const ts = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`;
+      const filename = `pos-backup-${ts}.db`;
+
+      // 2. Log activity FIRST with the filename so it gets included in the backup file
+      await logActivity(AUDIT_ACTIONS.MANUAL_BACKUP, "Security", `Created manual database backup: ${filename}`);
       
-      // 2. Perform the backup (backend will now checkpoint/flush data)
-      const res = await window.electronAPI.invoke("db:backup");
+      // 3. Perform the backup using the exact same timestamp
+      const res = await window.electronAPI.invoke("db:backup", ts);
       
       if (res.success) {
-        showToast('success', '✅ Database berhasil diamankan ke folder "backups"');
+        showToast('success', '✅ Database berhasil diamankan: ' + res.filename);
         setRefreshKey(prev => prev + 1); // Trigger activity log refresh
       } else {
         showToast('error', 'Gagal membuat backup: ' + res.error);
@@ -246,28 +252,36 @@ function Settings() {
                    </div>
                    <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 8, color: T.text }}>Cadangan Database</h3>
                    <p style={{ fontSize: 12, color: T.sub, marginBottom: 20, lineHeight: 1.5 }}>Simpan salinan data Anda sekarang untuk menjaga keamanan informasi toko.</p>
-                   <button 
-                    onClick={handleBackup} disabled={backingUp}
-                    style={{ 
-                      width: '100%', padding: '14px', borderRadius: 14, background: backingUp ? T.border2 : T.purple, color: '#fff', 
-                      fontSize: 13, fontWeight: 800, border: 'none', cursor: backingUp ? 'wait' : 'pointer',
-                      boxShadow: backingUp ? 'none' : `0 8px 20px ${T.purple}40`, transition: '0.2s',
-                      marginBottom: 12
-                    }}>
-                      {backingUp ? 'Proses Backup...' : 'Backup Sekarang (Manual)'}
-                   </button>
-                    <button 
-                     onClick={() => window.electronAPI.openBackupFolder()}
-                     style={{ 
-                       width: '100%', padding: '12px', borderRadius: 14, background: T.surface, color: T.purple, 
-                       fontSize: 12, fontWeight: 700, border: `1px solid ${T.purple}40`, cursor: 'pointer',
-                       transition: '0.2s', marginBottom: 16
-                     }}
-                     onMouseEnter={e => { e.currentTarget.style.background = T.purple + '08'; }}
-                     onMouseLeave={e => { e.currentTarget.style.background = T.surface; }}
-                    >
-                       📂 Lihat Folder Backup
-                    </button>
+                   <div style={{ display: 'flex', gap: 12, width: '100%', marginBottom: 16 }}>
+                     <button 
+                      onClick={handleBackup} disabled={backingUp}
+                      style={{ 
+                        flex: 1, padding: '14px 10px', borderRadius: 14, background: backingUp ? T.border2 : T.purple, color: '#fff', 
+                        fontSize: 12, fontWeight: 800, border: 'none', cursor: backingUp ? 'wait' : 'pointer',
+                        boxShadow: backingUp ? 'none' : `0 8px 20px ${T.purple}40`, transition: '0.2s',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                      }}>
+                        {backingUp ? '...' : (
+                          <>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                            Backup
+                          </>
+                        )}
+                     </button>
+                      <button 
+                       onClick={() => window.electronAPI.openBackupFolder()}
+                       style={{ 
+                         flex: 1, padding: '14px 10px', borderRadius: 14, background: T.surface, color: T.purple, 
+                         fontSize: 12, fontWeight: 700, border: `1px solid ${T.purple}40`, cursor: 'pointer',
+                         transition: '0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                       }}
+                       onMouseEnter={e => { e.currentTarget.style.background = T.purple + '08'; }}
+                       onMouseLeave={e => { e.currentTarget.style.background = T.surface; }}
+                      >
+                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                         Folder
+                      </button>
+                   </div>
 
                     <div style={{ height: 1, background: T.border2, width: '100%', marginBottom: 16 }} />
 
@@ -283,7 +297,7 @@ function Settings() {
                     >
                        📥 Impor Data / Perbarui Database
                     </button>
-                </div>
+                 </div>
 
                 <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, padding: 24, display: 'flex', gap: 20, alignItems: 'center' }}>
                    <div style={{ flex: 1 }}>

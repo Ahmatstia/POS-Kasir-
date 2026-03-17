@@ -27,6 +27,15 @@ export async function getActivityLogs(limit = 100) {
   }
 }
 
+export async function clearLogs() {
+  try {
+    return await window.electronAPI.clearLogs();
+  } catch (error) {
+    console.error("Failed to clear logs:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 export const AUDIT_ACTIONS = {
   // Products
   CREATE_PRODUCT: "CREATE_PRODUCT",
@@ -43,7 +52,10 @@ export const AUDIT_ACTIONS = {
   DELETE_TRANSACTION: "DELETE_TRANSACTION",
   DELETE_ALL_TRANSACTIONS: "DELETE_ALL_TRANSACTIONS",
   
-  // Security
+  // Security & DB
   MANUAL_BACKUP: "MANUAL_BACKUP",
+  BACKUP_DB: "BACKUP_DB",
+  RESTORE_DB: "RESTORE_DB",
+  DELETE_LOGS: "DELETE_LOGS",
   LOGIN: "LOGIN",
 };

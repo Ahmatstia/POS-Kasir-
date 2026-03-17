@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { getActivityLogs } from "../../services/audit";
+import { getActivityLogs, clearLogs } from "../../services/audit";
 import { T } from "../../theme";
+import { useToast } from "../Toast";
 
 const formatDate = (dateStr) => {
+// ... existing formatDate code
   if (!dateStr) return "-";
   const date = new Date(dateStr);
   return date.toLocaleString('id-ID', {
@@ -15,6 +17,7 @@ const formatDate = (dateStr) => {
 };
 
 const getActionColor = (action) => {
+// ... existing getActionColor code
   if (action?.includes('DELETE')) return T.red;
   if (action?.includes('CANCEL')) return T.orange;
   if (action?.includes('CREATE') || action?.includes('ADD')) return T.green;
@@ -24,6 +27,7 @@ const getActionColor = (action) => {
 };
 
 export default function ActivityLogs() {
+  const { showToast } = useToast();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,6 +42,23 @@ export default function ActivityLogs() {
     setLoading(false);
   };
 
+  const handleClear = async () => {
+    if (!window.confirm("Hapus semua log aktivitas?")) return;
+    if (!window.confirm("Yakin? Data ini tidak bisa dikembalikan.")) return;
+
+    try {
+      const res = await clearLogs();
+      if (res.success) {
+        showToast('success', 'Log dibersihkan');
+        loadLogs();
+      } else {
+        showToast('error', res.error);
+      }
+    } catch (e) {
+      showToast('error', 'Gagal membersihkan log');
+    }
+  };
+
   return (
     <div style={{ animation: 'fadeUp 0.4s ease both' }}>
       <style>{`
@@ -50,17 +71,33 @@ export default function ActivityLogs() {
           <p style={{ fontSize: 10, fontWeight: 700, color: T.muted, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>Keamanan & Audit</p>
           <h2 style={{ fontSize: 22, fontWeight: 800, color: T.text, letterSpacing: '-0.01em' }}>Log Aktivitas</h2>
         </div>
-        <button 
-          onClick={loadLogs}
-          style={{ 
-            padding: '10px 18px', borderRadius: 12, border: `1px solid ${T.border2}`, 
-            background: T.surface, color: T.text, fontSize: 12, fontWeight: 700, 
-            cursor: 'pointer', fontFamily: 'Syne, sans-serif', display: 'flex', alignItems: 'center', gap: 8 
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" /></svg>
-          Refresh
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button 
+            onClick={handleClear}
+            style={{ 
+              width: 38, height: 38, borderRadius: 10, border: `1px solid ${T.red}30`, 
+              background: T.red+'10', color: T.red, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', transition: '0.2s'
+            }}
+            title="Bersihkan Log"
+            onMouseEnter={e => { e.currentTarget.style.background = T.red; e.currentTarget.style.color = '#fff'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = T.red+'10'; e.currentTarget.style.color = T.red; }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/></svg>
+          </button>
+
+          <button 
+            onClick={loadLogs}
+            style={{ 
+              padding: '0 18px', height: 38, borderRadius: 10, border: `1px solid ${T.border2}`, 
+              background: T.surface, color: T.text, fontSize: 12, fontWeight: 700, 
+              cursor: 'pointer', fontFamily: 'Syne, sans-serif', display: 'flex', alignItems: 'center', gap: 8 
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" /></svg>
+            Refresh
+          </button>
+        </div>
       </div>
 
       {loading ? (

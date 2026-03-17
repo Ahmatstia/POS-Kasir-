@@ -31,8 +31,17 @@ ipcMain.handle("db:run", async (event, sql, params) => {
   }
 });
 
+ipcMain.handle("db:clear-logs", async () => {
+  try {
+    await dbManager.run("DELETE FROM activity_logs");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 // --- BACKUP LOGIC ---
-async function backupDatabase() {
+async function backupDatabase(customTimestamp) {
   try {
     const dbPath = dbManager.dbPath;
     const backupDir = path.join(app.getPath("userData"), "backups");
@@ -42,8 +51,14 @@ async function backupDatabase() {
     // 1. Ensure all data is flushed to the main file
     await dbManager.checkpoint();
 
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const backupPath = path.join(backupDir, `pos-backup-${timestamp}.db`);
+    let timestampToUse = customTimestamp;
+    if (!timestampToUse) {
+      const d = new Date();
+      const pad = (n) => n.toString().padStart(2, "0");
+      timestampToUse = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`;
+    }
+
+    const backupPath = path.join(backupDir, `pos-backup-${timestampToUse}.db`);
 
     // 2. Copy file
     fs.copyFileSync(dbPath, backupPath);
@@ -61,15 +76,15 @@ async function backupDatabase() {
         console.log("🗑️ Deleted old backup:", f.name);
       });
     }
-    return { success: true, path: backupPath };
+    return { success: true, path: backupPath, filename: path.basename(backupPath) };
   } catch (error) {
     console.error("❌ Backup failed:", error);
     return { success: false, error: error.message };
   }
 }
 
-ipcMain.handle("db:backup", async () => {
-  return await backupDatabase();
+ipcMain.handle("db:backup", async (event, customTimestamp) => {
+  return await backupDatabase(customTimestamp);
 });
 
 ipcMain.handle("db:open-backup-folder", async () => {

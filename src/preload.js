@@ -15,6 +15,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Convenience: Activity Logs
   getActivityLogs: (limit) => ipcRenderer.invoke("db:get-activity-logs", limit),
+  clearLogs: () => ipcRenderer.invoke("db:clear-logs"),
+
+  // Convenience: Settings
 
   // App info
   getVersion: () => ipcRenderer.invoke("app:getVersion"),

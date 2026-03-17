@@ -80,6 +80,37 @@ ipcMain.handle("db:open-backup-folder", async () => {
   }
 });
 
+ipcMain.handle("db:restore", async () => {
+  try {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      title: "Pilih File Backup Database (.db)",
+      filters: [{ name: "SQLite Database", extensions: ["db"] }],
+      properties: ["openFile"]
+    });
+
+    if (canceled || filePaths.length === 0) return { success: false, error: "Dibatalkan" };
+
+    const selectedFile = filePaths[0];
+    const dbPath = dbManager.dbPath;
+
+    // 1. Close current connection
+    await dbManager.close();
+
+    // 2. Overwrite with selected file
+    fs.copyFileSync(selectedFile, dbPath);
+    console.log("✅ Database restored from:", selectedFile);
+
+    // 3. Restart the app
+    app.relaunch();
+    app.exit();
+
+    return { success: true };
+  } catch (error) {
+    console.error("❌ Restore failed:", error);
+    return { success: false, error: error.message };
+  }
+});
+
 ipcMain.handle("db:get-activity-logs", async (event, limit = 100) => {
   try {
     return await dbManager.query("SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT ?", [limit]);

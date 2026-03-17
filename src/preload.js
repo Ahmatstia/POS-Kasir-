@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Convenience: Backup
   backup: () => ipcRenderer.invoke("db:backup"),
   openBackupFolder: () => ipcRenderer.invoke("db:open-backup-folder"),
+  restoreDatabase: () => ipcRenderer.invoke("db:restore"),
 
   // Convenience: Activity Logs
   getActivityLogs: (limit) => ipcRenderer.invoke("db:get-activity-logs", limit),

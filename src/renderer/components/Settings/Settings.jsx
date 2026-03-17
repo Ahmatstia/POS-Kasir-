@@ -64,6 +64,27 @@ function Settings() {
     }
   };
 
+  const handleRestore = async () => {
+    const confirm = window.confirm(
+      "⚠ PERINGATAN KRITIS!\n\n" +
+      "Proses ini akan MENGHAPUS SEMUA DATA saat ini dan menggantinya dengan data dari file backup.\n" +
+      "Aplikasi akan menutup dan memulai ulang (Restart) otomatis setelah proses selesai.\n\n" +
+      "Apakah Anda yakin ingin melanjutkan?"
+    );
+
+    if (!confirm) return;
+
+    try {
+      const res = await window.electronAPI.restoreDatabase();
+      if (!res.success && res.error !== "Dibatalkan") {
+        showToast('error', 'Gagal memulihkan database: ' + res.error);
+      }
+      // If success, the app will exit/restart anyway from main process
+    } catch (e) {
+      showToast('error', 'Terjadi kesalahan sistem saat pemulihan');
+    }
+  };
+
   return (
     <>
       <style>{`
@@ -217,7 +238,7 @@ function Settings() {
                    <div style={{ width: 60, height: 60, borderRadius: '50%', background: T.purple + '10', color: T.purple, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
                       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
                    </div>
-                   <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>Cadangan Database</h3>
+                   <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 8, color: T.text }}>Cadangan Database</h3>
                    <p style={{ fontSize: 12, color: T.sub, marginBottom: 20, lineHeight: 1.5 }}>Simpan salinan data Anda sekarang untuk menjaga keamanan informasi toko.</p>
                    <button 
                     onClick={handleBackup} disabled={backingUp}
@@ -229,23 +250,38 @@ function Settings() {
                     }}>
                       {backingUp ? 'Proses Backup...' : 'Backup Sekarang (Manual)'}
                    </button>
-                   <button 
-                    onClick={() => window.electronAPI.openBackupFolder()}
-                    style={{ 
-                      width: '100%', padding: '12px', borderRadius: 14, background: T.surface, color: T.purple, 
-                      fontSize: 12, fontWeight: 700, border: `1px solid ${T.purple}40`, cursor: 'pointer',
-                      transition: '0.2s'
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.background = T.purple + '08'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = T.surface; }}
-                   >
-                      📂 Lihat Folder Backup
-                   </button>
+                    <button 
+                     onClick={() => window.electronAPI.openBackupFolder()}
+                     style={{ 
+                       width: '100%', padding: '12px', borderRadius: 14, background: T.surface, color: T.purple, 
+                       fontSize: 12, fontWeight: 700, border: `1px solid ${T.purple}40`, cursor: 'pointer',
+                       transition: '0.2s', marginBottom: 16
+                     }}
+                     onMouseEnter={e => { e.currentTarget.style.background = T.purple + '08'; }}
+                     onMouseLeave={e => { e.currentTarget.style.background = T.surface; }}
+                    >
+                       📂 Lihat Folder Backup
+                    </button>
+
+                    <div style={{ height: 1, background: T.border2, width: '100%', marginBottom: 16 }} />
+
+                    <button 
+                     onClick={handleRestore}
+                     style={{ 
+                       width: '100%', padding: '12px', borderRadius: 14, background: T.red + '10', color: T.red, 
+                       fontSize: 12, fontWeight: 800, border: `1.5px dashed ${T.red}40`, cursor: 'pointer',
+                       transition: '0.2s', letterSpacing: '0.02em'
+                     }}
+                     onMouseEnter={e => { e.currentTarget.style.background = T.red; e.currentTarget.style.color = '#fff'; }}
+                     onMouseLeave={e => { e.currentTarget.style.background = T.red + '10'; e.currentTarget.style.color = T.red; }}
+                    >
+                       📥 Impor Data / Perbarui Database
+                    </button>
                 </div>
 
                 <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, padding: 24, display: 'flex', gap: 20, alignItems: 'center' }}>
                    <div style={{ flex: 1 }}>
-                      <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>Keamanan Audit</h3>
+                      <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 8, color: T.text }}>Keamanan Audit</h3>
                       <p style={{ fontSize: 12, color: T.sub, lineHeight: 1.6 }}>System Audit Trail akan mencatat setiap tindakan penting seperti penghapusan transaksi dan perubahan stok. Ini membantu Anda melacak jika ada ketidaksesuaian data.</p>
                       <div style={{ marginTop: 16, display: 'flex', gap: 12 }}>
                          <div style={{ padding: '6px 12px', borderRadius: 8, background: T.bg, border: `1px solid ${T.border2}`, fontSize: 11, color: T.sub }}>Status: <b>AKTIF</b></div>

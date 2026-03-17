@@ -318,6 +318,13 @@ class DatabaseManager {
   }
 
   async seedCategories() {
+    // Check if categories table already has data
+    const existing = await this.query("SELECT COUNT(*) as count FROM categories");
+    if (existing[0].count > 0) {
+      console.log("ℹ️ Categories already exist, skipping default seeding.");
+      return;
+    }
+
     const defaults = [
       ['Bumbu Instan', '#F5A623'], ['Bahan Kue', '#A78BFA'], ['Rempah-rempah', '#34C98B'],
       ['Gelas & Cup', '#5B8AF5'], ['Mika', '#E85858'], ['Thinwall', '#06B6D4'],
@@ -330,7 +337,7 @@ class DatabaseManager {
         `INSERT OR IGNORE INTO categories (name, color) VALUES ('${name}', '${color}')`,
         `Seed category: ${name}`
       );
-      // Update color if it's missing
+      // Update color if it's missing (failsafe)
       this.db.run("UPDATE categories SET color = ? WHERE name = ? AND (color IS NULL OR color = '')", [color, name]);
     }
   }

@@ -303,10 +303,10 @@ function Settings() {
                    <div style={{ flex: 1 }}>
                       <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 8, color: T.text }}>Keamanan Audit</h3>
                       <p style={{ fontSize: 12, color: T.sub, lineHeight: 1.6 }}>System Audit Trail akan mencatat setiap tindakan penting seperti penghapusan transaksi dan perubahan stok. Ini membantu Anda melacak jika ada ketidaksesuaian data.</p>
-                      <div style={{ marginTop: 16, display: 'flex', gap: 12 }}>
-                         <div style={{ padding: '6px 12px', borderRadius: 8, background: T.bg, border: `1px solid ${T.border2}`, fontSize: 11, color: T.sub }}>Status: <b>AKTIF</b></div>
-                         <div style={{ padding: '6px 12px', borderRadius: 8, background: T.bg, border: `1px solid ${T.border2}`, fontSize: 11, color: T.sub }}>Rotasi: <b>5 File</b></div>
-                      </div>
+                       <div style={{ marginTop: 16, display: 'flex', gap: 12 }}>
+                          <div style={{ padding: '6px 12px', borderRadius: 8, background: T.bg, border: `1px solid ${T.border2}`, fontSize: 11, color: T.sub }}>Pencatatan: <b>Aktif</b></div>
+                          <div style={{ padding: '6px 12px', borderRadius: 8, background: T.bg, border: `1px solid ${T.border2}`, fontSize: 11, color: T.sub }}>Riwayat: <b>5 Backup Terbaru</b></div>
+                       </div>
                    </div>
                    <div style={{ width: 120, height: 120, opacity: 0.1, color: T.accent }}>
                       <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>

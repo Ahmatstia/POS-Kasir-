@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, shell } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs");
 const dbManager = require("./main/database/dbManager");
@@ -67,6 +67,17 @@ async function backupDatabase() {
 
 ipcMain.handle("db:backup", async () => {
   return await backupDatabase();
+});
+
+ipcMain.handle("db:open-backup-folder", async () => {
+  try {
+    const backupDir = path.join(app.getPath("userData"), "backups");
+    if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir);
+    await shell.openPath(backupDir);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 });
 
 ipcMain.handle("db:get-activity-logs", async (event, limit = 100) => {

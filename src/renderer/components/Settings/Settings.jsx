@@ -224,9 +224,22 @@ function Settings() {
                     style={{ 
                       width: '100%', padding: '14px', borderRadius: 14, background: backingUp ? T.border2 : T.purple, color: '#fff', 
                       fontSize: 13, fontWeight: 800, border: 'none', cursor: backingUp ? 'wait' : 'pointer',
-                      boxShadow: backingUp ? 'none' : `0 8px 20px ${T.purple}40`, transition: '0.2s'
+                      boxShadow: backingUp ? 'none' : `0 8px 20px ${T.purple}40`, transition: '0.2s',
+                      marginBottom: 12
                     }}>
                       {backingUp ? 'Proses Backup...' : 'Backup Sekarang (Manual)'}
+                   </button>
+                   <button 
+                    onClick={() => window.electronAPI.openBackupFolder()}
+                    style={{ 
+                      width: '100%', padding: '12px', borderRadius: 14, background: T.surface, color: T.purple, 
+                      fontSize: 12, fontWeight: 700, border: `1px solid ${T.purple}40`, cursor: 'pointer',
+                      transition: '0.2s'
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = T.purple + '08'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = T.surface; }}
+                   >
+                      📂 Lihat Folder Backup
                    </button>
                 </div>
 

@@ -58,7 +58,7 @@ function Settings() {
       const filename = `pos-backup-${ts}.db`;
 
       // 2. Log activity FIRST with the filename so it gets included in the backup file
-      await logActivity(AUDIT_ACTIONS.MANUAL_BACKUP, "Security", `Created manual database backup: ${filename}`);
+      await logActivity(AUDIT_ACTIONS.MANUAL_BACKUP, "Security", filename);
       
       // 3. Perform the backup using the exact same timestamp
       const res = await window.electronAPI.invoke("db:backup", ts);

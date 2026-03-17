@@ -1,0 +1,46 @@
+/**
+ * Audit Service
+ * Handles logging of important system actions for accountability.
+ */
+
+export async function logActivity(action, module, details = "") {
+  try {
+    const sql = `
+      INSERT INTO activity_logs (action, module, details, user, created_at)
+      VALUES (?, ?, ?, 'Admin', CURRENT_TIMESTAMP)
+    `;
+    await window.electronAPI.run(sql, [action, module, details]);
+  } catch (error) {
+    console.error("Failed to log activity:", error);
+  }
+}
+
+export async function getActivityLogs(limit = 100) {
+  try {
+    return await window.electronAPI.invoke("db:get-activity-logs", limit);
+  } catch (error) {
+    console.error("Failed to get activity logs:", error);
+    return [];
+  }
+}
+
+export const AUDIT_ACTIONS = {
+  // Products
+  CREATE_PRODUCT: "CREATE_PRODUCT",
+  UPDATE_PRODUCT: "UPDATE_PRODUCT",
+  DELETE_PRODUCT: "DELETE_PRODUCT",
+  
+  // Inventory
+  STOCK_IN: "STOCK_IN",
+  STOCK_ADJUST: "STOCK_ADJUST",
+  
+  // Transactions
+  CREATE_TRANSACTION: "CREATE_TRANSACTION",
+  CANCEL_TRANSACTION: "CANCEL_TRANSACTION",
+  DELETE_TRANSACTION: "DELETE_TRANSACTION",
+  DELETE_ALL_TRANSACTIONS: "DELETE_ALL_TRANSACTIONS",
+  
+  // Security
+  MANUAL_BACKUP: "MANUAL_BACKUP",
+  LOGIN: "LOGIN",
+};

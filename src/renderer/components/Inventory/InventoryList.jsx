@@ -15,6 +15,7 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
   const [qtyPack, setQtyPack]   = useState('');
   const [qtyPcs, setQtyPcs]     = useState('');
   const [qtyKg, setQtyKg]       = useState('');
+  const [qtyKarung, setQtyKarung] = useState('');
   const [purchasePrice, setPurchasePrice] = useState('');
   const [expiry, setExpiry]     = useState('');
   const [batchCode, setBatch]   = useState('');
@@ -24,15 +25,26 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
 
   const pp = product.pcs_per_pack || 1;
   const pd = product.pack_per_dus || 1;
-  const isKg = product?.sell_per_unit === 'kg';
+  
+  // Revised Hybrid Detection: use flags from service if available, fallback to prices
+  const hasUnitPrices = product.has_unit_price ?? ((Number(product.price_pcs) || 0) > 0 || (Number(product.price_pack) || 0) > 0 || (Number(product.price_dus) || 0) > 0);
+  const hasWeightPrices = product.has_weight_price ?? ((Number(product.price_kg) || 0) > 0 || (Number(product.price_karung) || 0) > 0);
+  
+  const isKgOnly = product?.sell_per_unit === 'kg';
+  const isHybrid = hasUnitPrices && hasWeightPrices;
   
   const dusVal  = parseInt(qtyDus)  || 0;
   const packVal = parseInt(qtyPack) || 0;
   const pcsVal  = parseInt(qtyPcs)  || 0;
   const kgVal   = parseFloat(qtyKg) || 0;
+  
   const totalPcs = (dusVal * pd * pp) + (packVal * pp) + pcsVal;
   const totalKg  = kgVal;
-  const totalDisplay = isKg ? `${totalKg > 0 ? totalKg + ' Kg' : ''} ${totalPcs > 0 ? totalPcs + ' Pcs' : ''}`.trim() : `${totalPcs} Pcs`;
+
+  const totalDisplay = [
+    totalKg > 0 ? `${totalKg} Kg` : '',
+    totalPcs > 0 ? `${totalPcs} Pcs` : ''
+  ].filter(Boolean).join(' & ') || '0 Pcs';
 
   const handleSave = async () => {
     if (totalPcs <= 0 && totalKg <= 0) { setError('Masukkan jumlah stok yang valid'); return; }
@@ -130,55 +142,56 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
               )}
 
               {/* Qty inputs */}
-              <div style={{ display: 'grid', gridTemplateColumns: isKg ? '1fr' : 'repeat(3, 1fr)', gap: 12 }}>
-                {isKg && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.purple, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
-                        Jumlah Masuk (Kg)
-                      </label>
-                      <input type="number" step="0.01" min="0" value={qtyKg} onChange={e => { setQtyKg(e.target.value); setError(''); }}
-                        placeholder="0.00" style={{ ...inp, fontSize: 18, padding: '14px' }} autoFocus />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.orange, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
-                        Atau (Karung)
-                      </label>
-                      <input type="number" min="0" value={qtyDus} onChange={e => { 
-                          setQtyDus(e.target.value); 
-                          const val = parseInt(e.target.value) || 0;
-                          const kgPerKarung = product.kg_per_karung || 25;
-                          setQtyKg(String(val * kgPerKarung));
-                          setError(''); 
-                        }}
-                        placeholder="0" style={{ ...inp, fontSize: 18, padding: '14px', borderColor: T.orange + '40' }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {(isKgOnly || isHybrid) && (
+                  <div style={{ padding: 18, background: T.purple + '06', border: `1.5px dashed ${T.purple}30`, borderRadius: 16 }}>
+                    <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.purple, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>
+                      📦 Stok Timbangan (Kg / Karung)
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 12 }}>
+                      <div style={{ position: 'relative' }}>
+                        <input type="number" step="0.01" min="0" value={qtyKg} onChange={e => { setQtyKg(e.target.value); setError(''); }}
+                          placeholder="0.00" style={{ ...inp, fontSize: 18, padding: '14px 40px 14px 14px' }} autoFocus={isKgOnly} />
+                        <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, fontWeight: 800, color: T.purple }}>Kg</span>
+                      </div>
+                      <div style={{ position: 'relative' }}>
+                        <input type="number" min="0" value={qtyKarung} onChange={e => { 
+                            const val = e.target.value;
+                            setQtyKarung(val);
+                            const numVal = parseInt(val) || 0;
+                            const kgPerKarung = product.kg_per_karung || 25;
+                            setQtyKg(String(numVal * kgPerKarung));
+                            setError(''); 
+                          }}
+                          placeholder="Karung" style={{ ...inp, fontSize: 16, padding: '14px' }} />
+                      </div>
                     </div>
                   </div>
                 )}
-                {(!isKg) && (
-                  <>
-                    <div>
-                      <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: pd > 1 ? T.accent : T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
-                        DUS
-                      </label>
-                      <input type="number" min="0" value={qtyDus} onChange={e => { setQtyDus(e.target.value); setError(''); }}
-                        placeholder="0" style={{ ...inp, opacity: pd > 1 ? 1 : 0.4, padding: '12px' }} disabled={pd <= 1} />
+                
+                {(!isKgOnly || isHybrid) && (
+                  <div style={{ padding: 18, background: T.blue + '06', border: `1.5px dashed ${T.blue}30`, borderRadius: 16 }}>
+                    <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.blue, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>
+                      📦 Stok Kemasan (Pcs / Pack / Dus)
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                      <div>
+                        <p style={{ fontSize: 9, fontWeight: 700, color: T.muted, marginBottom: 6, textAlign: 'center' }}>DUS</p>
+                        <input type="number" min="0" value={qtyDus && !isKgOnly ? qtyDus : ''} onChange={e => { setQtyDus(e.target.value); setError(''); }}
+                          placeholder="0" style={{ ...inp, opacity: pd > 1 ? 1 : 0.4 }} disabled={pd <= 1} />
+                      </div>
+                      <div>
+                        <p style={{ fontSize: 9, fontWeight: 700, color: T.muted, marginBottom: 6, textAlign: 'center' }}>PACK</p>
+                        <input type="number" min="0" value={qtyPack} onChange={e => { setQtyPack(e.target.value); setError(''); }}
+                          placeholder="0" style={{ ...inp, opacity: pp > 1 ? 1 : 0.4 }} disabled={pp <= 1} />
+                      </div>
+                      <div>
+                        <p style={{ fontSize: 9, fontWeight: 700, color: T.muted, marginBottom: 6, textAlign: 'center' }}>PCS</p>
+                        <input type="number" min="0" value={qtyPcs} onChange={e => { setQtyPcs(e.target.value); setError(''); }}
+                          placeholder="0" style={{ ...inp }} />
+                      </div>
                     </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: pp > 1 ? T.green : T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
-                        PACK
-                      </label>
-                      <input type="number" min="0" value={qtyPack} onChange={e => { setQtyPack(e.target.value); setError(''); }}
-                        placeholder="0" style={{ ...inp, opacity: pp > 1 ? 1 : 0.4, padding: '12px' }} disabled={pp <= 1} />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.blue, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
-                        PCS
-                      </label>
-                      <input type="number" min="0" value={qtyPcs} onChange={e => { setQtyPcs(e.target.value); setError(''); }}
-                        placeholder="0" style={{ ...inp, padding: '12px' }} />
-                    </div>
-                  </>
+                  </div>
                 )}
               </div>
 
@@ -279,26 +292,29 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
 }
 
 // ─── ADJUST MODAL ─────────────────────────────────────────────────────────────
-function AdjustModal({ product, onClose, onSuccess, showToast }) {
-  const isKg = product?.sell_per_unit === 'kg';
-  const currentBase = isKg ? (product.stock_kg || 0) : (product.stock || 0);
+function AdjustModal({ product, onClose, onSuccess, showToast, isKg }) {
+  // Preset reasons
+  const REASONS = ['Stok opname', 'Barang rusak/hilang', 'Pengembalian barang', 'Koreksi sistem', 'Lain-lain'];
+
+  const hasUnitPrices = product.has_unit_price ?? ((Number(product.price_pcs) || 0) > 0 || (Number(product.price_pack) || 0) > 0 || (Number(product.price_dus) || 0) > 0);
+  const hasWeightPrices = product.has_weight_price ?? ((Number(product.price_kg) || 0) > 0 || (Number(product.price_karung) || 0) > 0);
+  const isHybrid = hasUnitPrices && hasWeightPrices;
+
+  const [adjustUnit, setAdjustUnit] = useState(isKg ? 'kg' : 'pcs');
+  const currentBase = adjustUnit === 'kg' ? (product.stock_kg || 0) : (product.stock || 0);
 
   const [newQty, setNewQty]   = useState(String(currentBase));
   const [reason, setReason]   = useState('');
   const [saving, setSaving]   = useState(false);
   const [error, setError]     = useState('');
 
-  const pp = product.pcs_per_pack || 1;
-  const pd = product.pack_per_dus || 1;
+  const newVal = adjustUnit === 'kg' ? (parseFloat(newQty) || 0) : (parseInt(newQty) || 0);
+  const diff   = newVal - currentBase;
+  const isPlus = diff > 0;
 
-  const current = currentBase;
-  const newVal  = isKg ? (parseFloat(newQty) || 0) : (parseInt(newQty) || 0);
-  const diff    = isKg ? Number((newVal - current).toFixed(2)) : (newVal - current);
-  const isPlus  = diff > 0;
-  const isMinus = diff < 0;
-
-  // Preset reasons
-  const REASONS = ['Stok opname', 'Barang rusak/hilang', 'Pengembalian barang', 'Koreksi sistem', 'Lain-lain'];
+  useEffect(() => {
+    setNewQty(String(currentBase));
+  }, [adjustUnit, currentBase]);
 
   const handleSave = async () => {
     if (!reason.trim()) { setError('Alasan koreksi wajib diisi'); return; }
@@ -308,8 +324,8 @@ function AdjustModal({ product, onClose, onSuccess, showToast }) {
     let res;
     const hppVal = 0;
     import('../../services/inventory').then(async ({ adjustStockKg, adjustStock }) => {
-       if (isKg) res = await adjustStockKg(product.id, newVal, reason, hppVal);
-       else      res = await adjustStock(product.id, newVal, reason, hppVal);
+        if (adjustUnit === 'kg') res = await adjustStockKg(product.id, newVal, reason, hppVal);
+        else                     res = await adjustStock(product.id, newVal, reason, hppVal);
 
        setSaving(false);
        if (res.success) {
@@ -338,24 +354,32 @@ function AdjustModal({ product, onClose, onSuccess, showToast }) {
 
         <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
+          {/* Unit Switcher for Hybrid */}
+          {isHybrid && (
+            <div style={{ display: 'flex', gap: 10, background: T.bg, padding: 4, borderRadius: 12, border: `1px solid ${T.border2}`, marginBottom: 20 }}>
+               <button onClick={() => setAdjustUnit('pcs')} style={{ flex: 1, padding: '8px', borderRadius: 9, fontSize: 10, fontWeight: 700, border: 'none', background: adjustUnit === 'pcs' ? T.blue : 'transparent', color: adjustUnit === 'pcs' ? '#fff' : T.sub, cursor: 'pointer', transition: 'all 0.2s' }}>Koreksi PCS</button>
+               <button onClick={() => setAdjustUnit('kg')} style={{ flex: 1, padding: '8px', borderRadius: 9, fontSize: 10, fontWeight: 700, border: 'none', background: adjustUnit === 'kg' ? T.purple : 'transparent', color: adjustUnit === 'kg' ? '#fff' : T.sub, cursor: 'pointer', transition: 'all 0.2s' }}>Koreksi KG</button>
+            </div>
+          )}
+
           {/* Before / After cards */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 12, alignItems: 'center' }}>
             <div style={{ padding: '16px', borderRadius: 16, background: T.bg, border: `1px solid ${T.border2}`, textAlign: 'center' }}>
               <p style={{ fontSize: 10, color: T.muted, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Saat Ini</p>
-              <p style={{ fontSize: 26, fontWeight: 900, fontFamily: 'JetBrains Mono, monospace', color: T.text, lineHeight: 1 }}>{isKg ? Number(current).toFixed(2) : numFmt(current)}</p>
-              <p style={{ fontSize: 11, color: T.sub, fontWeight: 700, marginTop: 4 }}>{isKg ? 'Kg' : 'Pcs'}</p>
+              <p style={{ fontSize: 26, fontWeight: 900, fontFamily: 'JetBrains Mono, monospace', color: T.text, lineHeight: 1 }}>{adjustUnit === 'kg' ? Number(currentBase).toFixed(2) : numFmt(currentBase)}</p>
+              <p style={{ fontSize: 11, color: T.sub, fontWeight: 700, marginTop: 4 }}>{adjustUnit === 'kg' ? 'Kg' : 'Pcs'}</p>
             </div>
-            <div style={{ fontSize: 20, color: diff !== 0 ? (isPlus ? T.green : T.red) : T.muted, fontWeight: 900 }}>→</div>
+            <div style={{ fontSize: 20, color: (parseFloat(newQty) - currentBase) !== 0 ? ((parseFloat(newQty) - currentBase) > 0 ? T.green : T.red) : T.muted, fontWeight: 900 }}>→</div>
             <div style={{ 
               padding: '16px', borderRadius: 16, 
-              background: diff === 0 ? T.bg : isPlus ? T.green + '08' : T.red + '08', 
-              border: `1.5px solid ${diff === 0 ? T.border2 : isPlus ? T.green + '40' : T.red + '40'}`, 
+              background: (parseFloat(newQty) - currentBase) === 0 ? T.bg : (parseFloat(newQty) - currentBase) > 0 ? T.green + '08' : T.red + '08', 
+              border: `1.5px solid ${(parseFloat(newQty) - currentBase) === 0 ? T.border2 : (parseFloat(newQty) - currentBase) > 0 ? T.green + '40' : T.red + '40'}`, 
               textAlign: 'center', transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-              boxShadow: diff === 0 ? 'none' : isPlus ? `0 8px 20px ${T.green}15` : `0 8px 20px ${T.red}15`
+              boxShadow: (parseFloat(newQty) - currentBase) === 0 ? 'none' : (parseFloat(newQty) - currentBase) > 0 ? `0 8px 20px ${T.green}15` : `0 8px 20px ${T.red}15`
             }}>
               <p style={{ fontSize: 10, color: T.muted, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Sesudah</p>
-              <p style={{ fontSize: 26, fontWeight: 900, fontFamily: 'JetBrains Mono, monospace', color: diff === 0 ? T.text : isPlus ? T.green : T.red, lineHeight: 1 }}>{isKg ? Number(newVal).toFixed(2) : numFmt(newVal)}</p>
-              <p style={{ fontSize: 11, color: T.sub, fontWeight: 700, marginTop: 4 }}>{isKg ? 'Kg' : 'Pcs'}</p>
+              <p style={{ fontSize: 26, fontWeight: 900, fontFamily: 'JetBrains Mono, monospace', color: (parseFloat(newQty) - currentBase) === 0 ? T.text : (parseFloat(newQty) - currentBase) > 0 ? T.green : T.red, lineHeight: 1 }}>{adjustUnit === 'kg' ? (parseFloat(newQty) || 0).toFixed(2) : numFmt(parseInt(newQty) || 0)}</p>
+              <p style={{ fontSize: 11, color: T.sub, fontWeight: 700, marginTop: 4 }}>{adjustUnit === 'kg' ? 'Kg' : 'Pcs'}</p>
             </div>
           </div>
 
@@ -377,13 +401,13 @@ function AdjustModal({ product, onClose, onSuccess, showToast }) {
               Stok Fisik Baru (Total)
             </label>
             <div style={{ position: 'relative' }}>
-               <input type="number" step={isKg ? "0.01" : "1"} min="0" value={newQty}
+               <input type="number" step={adjustUnit === 'kg' ? "0.01" : "1"} min="0" value={newQty}
                 onChange={e => setNewQty(e.target.value)}
                 style={{ ...inp, fontSize: 24, textAlign: 'center', fontWeight: 900, padding: '18px', border: `2px solid ${T.border2}`, borderRadius: 16 }}
                 autoFocus
               />
               <div style={{ position: 'absolute', right: 20, top: '50%', transform: 'translateY(-50%)', fontSize: 14, fontWeight: 800, color: T.muted }}>
-                {isKg ? 'Kg' : 'Pcs'}
+                {adjustUnit === 'kg' ? 'Kg' : 'Pcs'}
               </div>
             </div>
           </div>

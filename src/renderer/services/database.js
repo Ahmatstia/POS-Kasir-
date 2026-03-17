@@ -95,6 +95,11 @@ export async function addProduct(product) {
       kg_per_karung
     ];
     const result = await window.electronAPI.run(sql, params);
+    if (result.lastID) {
+      import("./audit").then(({ logActivity, AUDIT_ACTIONS }) => {
+        logActivity(AUDIT_ACTIONS.ADD_PRODUCT, "Products", `Added new product: ${name} (ID: ${result.lastID})`);
+      });
+    }
     return { success: true, id: result.lastID };
   } catch (error) {
     console.error("Error adding product:", error);
@@ -141,6 +146,12 @@ export async function updateProduct(id, product) {
       id,
     ];
     const result = await window.electronAPI.run(sql, params);
+
+    if (result.changes > 0) {
+      import("./audit").then(({ logActivity, AUDIT_ACTIONS }) => {
+        logActivity(AUDIT_ACTIONS.UPDATE_PRODUCT, "Products", `Updated product: ${product.name} (ID: ${id})`);
+      });
+    }
 
     // Try to update updated_at separately
     try {

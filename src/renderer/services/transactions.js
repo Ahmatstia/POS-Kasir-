@@ -262,11 +262,12 @@ export async function cancelTransaction(transactionId) {
       console.log(`[cancelTransaction] Skipping restock for ${tx.invoice_no} as no physical deduction occurred (Ignore Stock mode was likely ON).`);
     }
 
-    await window.electronAPI.run(
-      "UPDATE transactions SET status = 'CANCELLED' WHERE id = ?",
-      [transactionId]
-    );
-
+    const res = await window.electronAPI.run("UPDATE transactions SET status = 'CANCELLED' WHERE id = ?", [transactionId]);
+    if (res.changes > 0) {
+      import("./audit").then(({ logActivity, AUDIT_ACTIONS }) => {
+        logActivity(AUDIT_ACTIONS.CANCEL_TRANSACTION, "Transactions", `Cancelled transaction ID: ${transactionId}`);
+      });
+    }
     await window.electronAPI.run("COMMIT");
     return { success: true };
   } catch (error) {
@@ -375,10 +376,13 @@ export async function deleteTransaction(transactionId) {
     );
 
     // Hapus transaksi
-    await window.electronAPI.run(
-      "DELETE FROM transactions WHERE id = ?",
-      [transactionId]
-    );
+    const res = await window.electronAPI.run("DELETE FROM transactions WHERE id = ?", [transactionId]);
+    if (res.changes > 0) {
+      import("./audit").then(({ logActivity, AUDIT_ACTIONS }) => {
+        logActivity(AUDIT_ACTIONS.DELETE_TRANSACTION, "Transactions", `Deleted transaction ID: ${transactionId}`);
+      });
+    }
+    // Finalize deletion
 
     // Secara opsional hapus juga SALE logs dari transaksi ini di inventory_log supaya bersih?
     await window.electronAPI.run(

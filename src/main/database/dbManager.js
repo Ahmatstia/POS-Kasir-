@@ -187,6 +187,17 @@ class DatabaseManager {
           await this._runSQL("ALTER TABLE inventory_log ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD inventory_log.updated_at");
           await this._runSQL("ALTER TABLE inventory_log ADD COLUMN quantity_kg REAL DEFAULT 0", "ADD inventory_log.quantity_kg");
 
+          // ── ACTIVITY LOGS (AUDIT TRAIL) ──────────────────────────────────────
+          await this._runSQL(`
+            CREATE TABLE IF NOT EXISTS activity_logs (
+              id          INTEGER PRIMARY KEY AUTOINCREMENT,
+              action      TEXT NOT NULL,
+              module      TEXT,
+              details     TEXT,
+              user        TEXT DEFAULT 'Admin',
+              created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`, "CREATE activity_logs");
+
           // ── TRANSACTIONS ─────────────────────────────────────────────────────
           await this._runSQL(`
             CREATE TABLE IF NOT EXISTS transactions (

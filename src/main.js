@@ -1,5 +1,6 @@
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("node:path");
+const fs = require("node:fs");
 const dbManager = require("./main/database/dbManager");
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -30,7 +31,51 @@ ipcMain.handle("db:run", async (event, sql, params) => {
   }
 });
 
-// App Info
+// --- BACKUP LOGIC ---
+async function backupDatabase() {
+  try {
+    const dbPath = dbManager.dbPath;
+    const backupDir = path.join(app.getPath("userData"), "backups");
+    
+    if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir);
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const backupPath = path.join(backupDir, `pos-backup-${timestamp}.db`);
+
+    // Copy file
+    fs.copyFileSync(dbPath, backupPath);
+    console.log("✅ Backup created at:", backupPath);
+
+    // Rotation Policy: KEEP ONLY LAST 5
+    const files = fs.readdirSync(backupDir)
+      .filter(f => f.endsWith(".db"))
+      .map(f => ({ name: f, time: fs.statSync(path.join(backupDir, f)).mtime.getTime() }))
+      .sort((a, b) => b.time - a.time);
+
+    if (files.length > 5) {
+      files.slice(5).forEach(f => {
+        fs.unlinkSync(path.join(backupDir, f.name));
+        console.log("🗑️ Deleted old backup:", f.name);
+      });
+    }
+    return { success: true, path: backupPath };
+  } catch (error) {
+    console.error("❌ Backup failed:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+ipcMain.handle("db:backup", async () => {
+  return await backupDatabase();
+});
+
+ipcMain.handle("db:get-activity-logs", async (event, limit = 100) => {
+  try {
+    return await dbManager.query("SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT ?", [limit]);
+  } catch (error) {
+    return [];
+  }
+});
 ipcMain.handle("app:getVersion", () => {
   return app.getVersion();
 });

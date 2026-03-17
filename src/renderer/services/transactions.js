@@ -401,19 +401,12 @@ export async function deleteTransaction(transactionId) {
 
 export async function deleteAllTransactions() {
   try {
-    // Karena ini untuk membersihkan data testing, kita bisa
-    // menghapus semua transaksi, item, dan me-reset stok ke 0, 
-    // atau sekadar menghapus transaksi saja. Di sini kita menghapus 
-    // murni data transaksinya. Stok yang terjual diabaikan karena ini hard reset test data.
-    
     await window.electronAPI.run("BEGIN TRANSACTION");
+    // FIX: Also remove SALE entries from inventory_log to prevent data inconsistency.
+    // This ensures stock logs are clean after a full transaction wipe.
+    await window.electronAPI.run("DELETE FROM inventory_log WHERE type = 'SALE'");
     await window.electronAPI.run("DELETE FROM transaction_items");
     await window.electronAPI.run("DELETE FROM transactions");
-    
-    // Karena ini kemungkinan hard reset, bisa membersihkan inventory logs yang jenisnya OUT (penjualan)
-    // Tapi demi amannya, kita hapus seluruh `transactions` saja. User bisa menyesuaikan stok manual 
-    // via opname jika selisihnya besar paska testing.
-    
     await window.electronAPI.run("COMMIT");
     return { success: true };
   } catch (error) {

@@ -287,7 +287,7 @@ export default function Dashboard({ setCurrentPage }) {
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 24px', minHeight: '100vh' }}>
 
         {/* ── TOP NAV ── */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40, animation: 'fadeUp 0.4s ease both' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30, animation: 'fadeUp 0.4s ease both' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
               <div style={{ width: 28, height: 28, borderRadius: 8, background: T.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>

@@ -1013,10 +1013,12 @@ function Cashier() {
               setReweighItem(null);
               return;
             }
-            const otherKg = calcCartKg(reweighItem.product.id, reweighItem.itemId);
-            if (kgVal + otherKg > (reweighItem.product.stock_kg || 0)) {
-               showToast('error', `Stok Kg tidak mencukupi! Tersisa: ${reweighItem.product.stock_kg || 0} Kg`);
-               return;
+            if (!ignoreStock) {
+              const otherKg = calcCartKg(reweighItem.product.id, reweighItem.itemId);
+              if (kgVal + otherKg > (reweighItem.product.stock_kg || 0)) {
+                 showToast('error', `Stok Kg tidak mencukupi! Tersisa: ${reweighItem.product.stock_kg || 0} Kg`);
+                 return;
+              }
             }
             setCart(cart.map(i => i.id === reweighItem.itemId ? { ...i, quantity: kgVal, subtotal: kgVal * i.price } : i));
             setReweighItem(null);

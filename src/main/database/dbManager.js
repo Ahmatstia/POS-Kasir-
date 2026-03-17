@@ -332,14 +332,19 @@ class DatabaseManager {
       ['Saus', '#EF4444'],        ['Kotak Makan', '#3B82F6'],     ['Gula', '#FBBF24'],
       ['Sendok', '#6366F1'],      ['Botol', '#0EA5E9'],           ['Lainnya', '#5C5C66'],
     ];
+    // FIX: Use parameterized queries to prevent SQL injection
     for (const [name, color] of defaults) {
-      await this._runSQL(
-        `INSERT OR IGNORE INTO categories (name, color) VALUES ('${name}', '${color}')`,
-        `Seed category: ${name}`
+      await this.run(
+        "INSERT OR IGNORE INTO categories (name, color) VALUES (?, ?)",
+        [name, color]
       );
-      // Update color if it's missing (failsafe)
-      this.db.run("UPDATE categories SET color = ? WHERE name = ? AND (color IS NULL OR color = '')", [color, name]);
+      // Update color if it's missing (failsafe), also parameterized
+      await this.run(
+        "UPDATE categories SET color = ? WHERE name = ? AND (color IS NULL OR color = '')",
+        [color, name]
+      );
     }
+    console.log("✅ Default categories seeded.");
   }
 
   query(sql, params = []) {

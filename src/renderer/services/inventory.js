@@ -258,7 +258,6 @@ export async function getProductStock(productId) {
 
 // Deduct stock FIFO (used internally by transactions)
 export async function deductStockFIFO(productId, quantityPcs, invoiceNo, createdAt = null) {
-  let toDeduct = quantityPcs;
   const batches = await window.electronAPI.query(
     "SELECT * FROM stocks WHERE product_id = ? AND is_active = 1 AND quantity > 0 ORDER BY created_at ASC",
     [productId]
@@ -269,6 +268,14 @@ export async function deductStockFIFO(productId, quantityPcs, invoiceNo, created
     [productId]
   );
   const stockBefore = beforeRow?.total || 0;
+
+  // FIX: Pre-flight check — throw BEFORE any DB modification to prevent partial deduction
+  const totalAvailable = batches.reduce((sum, b) => sum + b.quantity, 0);
+  if (totalAvailable < quantityPcs) {
+    throw new Error(`Stok tidak mencukupi (tersedia: ${totalAvailable}, dibutuhkan: ${quantityPcs})`);
+  }
+
+  let toDeduct = quantityPcs;
 
   // Deduction from batches
   for (const batch of batches) {
@@ -317,8 +324,6 @@ export async function deductStockFIFO(productId, quantityPcs, invoiceNo, created
     : [productId, quantityPcs, quantityPcs, stockBefore, stockAfter, avgPurchasePrice, invoiceNo];
 
   await window.electronAPI.run(logSql, logParams);
-
-  if (toDeduct > 0) throw new Error("Stok tidak mencukupi");
 
   return totalCost;
 }
@@ -386,7 +391,6 @@ export async function adjustStockKg(productId, newTotalKg, reason = "Koreksi man
 
 // Deduct stock FIFO specifically for Kg (used by transactions)
 export async function deductStockFIFOKg(productId, quantityKg, invoiceNo, createdAt = null) {
-  let toDeduct = quantityKg;
   const batches = await window.electronAPI.query(
     "SELECT * FROM stocks WHERE product_id = ? AND is_active = 1 AND qty_kg > 0 ORDER BY created_at ASC",
     [productId]
@@ -397,6 +401,14 @@ export async function deductStockFIFOKg(productId, quantityKg, invoiceNo, create
     [productId]
   );
   const stockBefore = beforeRow?.total || 0;
+
+  // FIX: Pre-flight check — throw BEFORE any DB modification to prevent partial deduction
+  const totalAvailableKg = batches.reduce((sum, b) => sum + (b.qty_kg || 0), 0);
+  if (totalAvailableKg < quantityKg - 0.001) {
+    throw new Error(`Stok Kg tidak mencukupi (tersedia: ${totalAvailableKg.toFixed(3)} kg, dibutuhkan: ${quantityKg.toFixed(3)} kg)`);
+  }
+
+  let toDeduct = quantityKg;
 
   // Deduction from batches
   for (const batch of batches) {
@@ -441,8 +453,6 @@ export async function deductStockFIFOKg(productId, quantityKg, invoiceNo, create
     : [productId, quantityKg, quantityKg, stockBefore, stockAfter, avgPurchasePrice, invoiceNo];
 
   await window.electronAPI.run(logSql, logParams);
-
-  if (toDeduct > 0.001) throw new Error("Stok Kg tidak mencukupi"); // Use small margin for floats
 
   return Math.round(totalCost);
 }

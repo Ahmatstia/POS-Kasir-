@@ -286,18 +286,58 @@ function Transactions() {
           {/* Header */}
           <div
             style={{
-              padding: "20px 24px 16px",
+              padding: "20px 24px 14px",
               borderBottom: `1px solid ${T.border}`,
               background: `linear-gradient(to bottom, ${T.bg}, ${T.surface})`,
             }}
           >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 28, height: 28, borderRadius: 8, background: T.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
                   <TransactionsIcon />
                 </div>
                 <h2 style={{ fontSize: 22, fontWeight: 800, color: T.text, letterSpacing: '-0.01em' }}>Riwayat Transaksi</h2>
               </div>
+              {/* Quick filter buttons */}
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <button
+                  onClick={() => { setStartDate(todayStr); setEndDate(todayStr); }}
+                  style={{
+                    padding: "5px 12px", borderRadius: 10,
+                    border: `1px solid ${startDate === todayStr && endDate === todayStr ? T.accent + '40' : T.border2}`,
+                    background: startDate === todayStr && endDate === todayStr ? T.accent + '10' : 'transparent',
+                    color: startDate === todayStr && endDate === todayStr ? T.accent : T.sub,
+                    fontSize: 10, fontWeight: 800, cursor: 'pointer', fontFamily: 'Syne, sans-serif'
+                  }}
+                >HARI INI</button>
+                <button
+                  onClick={() => { setStartDate(''); setEndDate(''); }}
+                  style={{
+                    padding: "5px 12px", borderRadius: 10,
+                    border: `1px solid ${!startDate ? T.accent + '40' : T.border2}`,
+                    background: !startDate ? T.accent + '10' : 'transparent',
+                    color: !startDate ? T.accent : T.sub,
+                    fontSize: 10, fontWeight: 800, cursor: 'pointer', fontFamily: 'Syne, sans-serif'
+                  }}
+                >SEMUA</button>
+                <div style={{ width: 1, height: 14, background: T.border2 }} />
+                <button
+                  onClick={loadTransactions}
+                  title="Refresh Data"
+                  style={{
+                    width: 30, height: 30, borderRadius: 9, border: `1px solid ${T.border2}`,
+                    background: 'transparent', color: T.sub, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = T.accent; e.currentTarget.style.color = T.accent; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = T.border2; e.currentTarget.style.color = T.sub; }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                </button>
+              </div>
             </div>
+          </div>
+
 
             {/* Filters Row */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: 10, padding: '0 10px', marginBottom: 14 }}>

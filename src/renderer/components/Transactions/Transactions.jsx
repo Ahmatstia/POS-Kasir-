@@ -10,7 +10,7 @@ import { id } from "date-fns/locale";
 import { printReceipt, printThermalReceipt } from "../../utils/PrintUtility";
 import { T } from "../../theme";
 import { useToast } from "../Toast";
-import { isPrivacyModeEnabled } from "../../services/settings";
+import { isPrivacyModeEnabled, getStoreProfile } from "../../services/settings";
 import { TransactionsIcon } from "../Icons/AppIcons";
 
 const fmt = (n) => `Rp ${Number(n || 0).toLocaleString("id-ID")}`;
@@ -161,11 +161,12 @@ function Transactions() {
     setDetailLoading(false);
   };
 
-  const handlePrint = (type = "normal") => {
+  const handlePrint = async (type = "normal") => {
     if (!selected) return;
+    const store = await getStoreProfile();
     type === "thermal"
-      ? printThermalReceipt(selected.transaction, selected.items)
-      : printReceipt(selected.transaction, selected.items);
+      ? printThermalReceipt(selected.transaction, selected.items, store)
+      : printReceipt(selected.transaction, selected.items, store);
   };
 
   const filtered = transactions.filter(

@@ -8,15 +8,16 @@ import { T } from "../../theme";
 
 // ─── FIELD CONFIGS ────────────────────────────────────────────────────────────
 const MAPPING_FIELDS = [
-  { key: 'name',          label: 'Nama Produk', required: true,  color: T.text   },
-  { key: 'category',      label: 'Kategori',    required: true,  color: T.text   },
-  { key: 'sell_per_unit', label: 'Satuan Jual', required: false, color: T.text   },
-  { key: 'price_pcs',     label: 'Harga /Pcs',  required: false, color: T.blue   },
-  { key: 'price_pack',    label: 'Harga /Pack', required: false, color: T.green  },
-  { key: 'price_dus',     label: 'Harga Dus',   required: false, color: T.accent },
-  { key: 'price_kg',      label: 'Harga /Kg',   required: false, color: T.purple },
-  { key: 'stock',         label: 'Stok Awal',   required: false, color: T.green  },
-  { key: 'min_stock',     label: 'Min Stok',    required: false, color: T.sub    },
+  { key: 'name',           label: 'Nama Produk',         required: true,  color: T.text   },
+  { key: 'category',       label: 'Kategori',             required: true,  color: T.text   },
+  { key: 'sell_per_unit',  label: 'Satuan Jual',          required: false, color: T.text   },
+  { key: 'purchase_price', label: 'Harga Beli (Modal)',   required: false, color: T.accent },
+  { key: 'price_pcs',      label: 'Harga /Pcs',           required: false, color: T.blue   },
+  { key: 'price_pack',     label: 'Harga /Pack',          required: false, color: T.green  },
+  { key: 'price_dus',      label: 'Harga Dus',            required: false, color: T.accent },
+  { key: 'price_kg',       label: 'Harga /Kg',            required: false, color: T.purple },
+  { key: 'stock',          label: 'Stok Awal',            required: false, color: T.green  },
+  { key: 'min_stock',      label: 'Min Stok',             required: false, color: T.sub    },
 ];
 
 const selectStyle = {
@@ -35,7 +36,7 @@ function ImportExcel({ onClose, onSuccess }) {
   const [categories, setCategories] = useState([]);
   const [result, setResult]     = useState(null); // { success, error, total }
   const [mapping, setMapping]   = useState({
-    name: '', category: '', sell_per_unit: '',
+    name: '', category: '', sell_per_unit: '', purchase_price: '',
     price_pcs: '', price_pack: '', price_dus: '', price_kg: '',
     stock: '', min_stock: '',
   });
@@ -65,15 +66,16 @@ function ImportExcel({ onClose, onSuccess }) {
         headers.forEach((h, i) => {
           if (!h) return;
           const hl = String(h).toLowerCase().trim();
-          if (hl.includes('nama'))                                              m.name          = i;
-          if (hl.includes('kategori'))                                          m.category      = i;
-          if (hl === 'satuan' || hl.includes('satuan jual'))                    m.sell_per_unit = i;
-          if (hl.includes('harga pcs') || hl === '/pcs' || hl === 'pcs')        m.price_pcs     = i;
-          if (hl.includes('harga pack') || hl === '/pack' || hl === 'pack')     m.price_pack    = i;
-          if (hl.includes('harga kg') || hl === '/kg' || hl === 'kg')           m.price_kg      = i;
-          if (hl.includes('harga dus') || hl === '/dus' || hl === 'dus')        m.price_dus     = i;
-          if (hl.includes('stok') && !hl.includes('min'))                       m.stock         = i;
-          if (hl.includes('min stok') || hl.includes('minimal'))                m.min_stock     = i;
+          if (hl.includes('nama'))                                              m.name           = i;
+          if (hl.includes('kategori'))                                          m.category       = i;
+          if (hl === 'satuan' || hl.includes('satuan jual'))                    m.sell_per_unit  = i;
+          if (hl.includes('modal') || hl.includes('harga beli') || hl.includes('hpp') || hl.includes('beli')) m.purchase_price = i;
+          if (hl.includes('harga pcs') || hl === '/pcs' || hl === 'pcs')        m.price_pcs      = i;
+          if (hl.includes('harga pack') || hl === '/pack' || hl === 'pack')     m.price_pack     = i;
+          if (hl.includes('harga kg') || hl === '/kg' || hl === 'kg')           m.price_kg       = i;
+          if (hl.includes('harga dus') || hl === '/dus' || hl === 'dus')        m.price_dus      = i;
+          if (hl.includes('stok') && !hl.includes('min'))                       m.stock          = i;
+          if (hl.includes('min stok') || hl.includes('minimal'))                m.min_stock      = i;
         });
         setMapping(prev => ({ ...prev, ...m }));
       } catch (err) {
@@ -118,14 +120,27 @@ function ImportExcel({ onClose, onSuccess }) {
         const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
         const rows = data.slice(1);
 
-        const cleanPrice = (val) => {
+        const cleanNumber = (val, isFloat = false) => {
           if (val === undefined || val === null || val === '') return 0;
           if (typeof val === 'number') return val;
-          // Clean "Rp", spaces, commas, quotes
-          const cleaned = String(val).replace(/rp|r|p|\s|,|\.|"|'/gi, '');
-          const n = parseInt(cleaned, 10);
-          return isNaN(n) ? 0 : n;
+          let cleaned = String(val).replace(/rp|r|p|\s|"|'/gi, '');
+          if (isFloat) {
+            if (cleaned.includes(',') && !cleaned.includes('.')) {
+              cleaned = cleaned.replace(',', '.');
+            } else if (cleaned.includes('.') && cleaned.includes(',')) {
+              cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+            }
+            const n = parseFloat(cleaned);
+            return isNaN(n) ? 0 : n;
+          } else {
+            cleaned = cleaned.replace(/,|\./g, '');
+            const n = parseInt(cleaned, 10);
+            return isNaN(n) ? 0 : n;
+          }
         };
+
+        const cleanPrice = (val) => cleanNumber(val, false);
+        const cleanQty   = (val) => cleanNumber(val, true);
 
         let successCount = 0;
         const errors = [];
@@ -156,29 +171,42 @@ function ImportExcel({ onClose, onSuccess }) {
           if (!name)        { errors.push(`Baris ${i + 2}: Nama kosong`);                              continue; }
           if (!category_id) { errors.push(`Baris ${i + 2}: Kategori "${categoryName}" gagal dibuat / tidak ditemukan`); continue; }
 
+          const sell_per_unit = mapping.sell_per_unit !== '' ? (row[mapping.sell_per_unit]?.toString().trim().toLowerCase() || 'all') : 'all';
+          const purchase_price = mapping.purchase_price !== '' ? cleanPrice(row[mapping.purchase_price]) : 0;
+          const isKgProduct = sell_per_unit === 'kg';
+
           const r = await addProduct({
             name, category_id,
-            sell_per_unit: mapping.sell_per_unit !== '' ? (row[mapping.sell_per_unit]?.toString().trim().toLowerCase() || 'all') : 'all',
+            sell_per_unit,
+            purchase_price,
             price_pcs:  mapping.price_pcs  !== '' ? cleanPrice(row[mapping.price_pcs])  : 0,
             price_pack: mapping.price_pack !== '' ? cleanPrice(row[mapping.price_pack]) : 0,
             price_dus:  mapping.price_dus  !== '' ? cleanPrice(row[mapping.price_dus])  : 0,
             price_kg:   mapping.price_kg   !== '' ? cleanPrice(row[mapping.price_kg])   : 0,
-            min_stock:  mapping.min_stock  !== '' ? cleanPrice(row[mapping.min_stock])  : 0,
-            purchase_price: 0,
+            min_stock:  !isKgProduct && mapping.min_stock !== '' ? cleanPrice(row[mapping.min_stock]) : 0,
+            min_stock_kg: isKgProduct && mapping.min_stock !== '' ? cleanQty(row[mapping.min_stock]) : 0,
             notes: 'Import dari Excel / CSV',
           });
 
           if (r.success) {
             successCount++;
             // Create initial stock batch if stock column is mapped
-            const initStock = mapping.stock !== '' ? cleanPrice(row[mapping.stock]) : 0;
+            const initStock = mapping.stock !== '' ? cleanQty(row[mapping.stock]) : 0;
             
             if (initStock > 0) {
-              await addStock(r.id, { 
-                qty_pcs: initStock, 
-                purchase_price: 0,
-                notes: 'Import Excel / CSV' 
-              }, { pcs_per_pack: 1, pack_per_dus: 1 });
+              if (isKgProduct) {
+                await addStock(r.id, { 
+                  qty_kg: initStock, 
+                  purchase_price: purchase_price,
+                  notes: 'Import Excel / CSV' 
+                }, { pcs_per_pack: 1, pack_per_dus: 1 });
+              } else {
+                await addStock(r.id, { 
+                  qty_pcs: Math.round(initStock), 
+                  purchase_price: purchase_price,
+                  notes: 'Import Excel / CSV' 
+                }, { pcs_per_pack: 1, pack_per_dus: 1 });
+              }
             }
           } else {
             errors.push(`Baris ${i + 2}: ${r.error || 'Gagal'}`);

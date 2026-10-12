@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { getProducts } from "../../services/database";
 import { createTransaction } from "../../services/transactions";
+import { getStoreProfile } from "../../services/settings";
+import { printReceipt, printThermalReceipt } from "../../utils/PrintUtility";
 import PaymentModal from "./PaymentModal";
 import { useToast } from "../Toast";
 import { T } from "../../theme";
@@ -682,12 +684,43 @@ function Cashier() {
 
   const handlePayment = async (paymentData) => {
     setLoading(true);
+    const cartSnapshot = [...cart];
+    const totalSnapshot = total;
     const result = await createTransaction({
-      items: cart, subtotal: total, discount: 0, total,
+      items: cartSnapshot, subtotal: totalSnapshot, discount: 0, total: totalSnapshot,
       payment: paymentData.payment, change: paymentData.change,
       paymentMethod: paymentData.method, customerName: '', notes: '',
     });
     if (result.success) {
+      if (paymentData.autoPrint) {
+        try {
+          const store = await getStoreProfile();
+          const txData = {
+            invoice_no: result.invoiceNo,
+            created_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
+            subtotal: totalSnapshot,
+            discount: 0,
+            total_amount: totalSnapshot,
+            payment_amount: paymentData.payment,
+            change_amount: paymentData.change,
+            payment_method: paymentData.method,
+          };
+          const itemsData = cartSnapshot.map(item => ({
+            product_name: item.name,
+            quantity: item.quantity,
+            unit: item.unit,
+            price_per_unit: item.price,
+            subtotal: item.subtotal,
+          }));
+          if (paymentData.printType === 'normal') {
+            printReceipt(txData, itemsData, store);
+          } else {
+            printThermalReceipt(txData, itemsData, store);
+          }
+        } catch (printErr) {
+          console.error("Gagal cetak struk otomatis:", printErr);
+        }
+      }
       setCart([]);
       setShowPayment(false);
       // Refresh product list to show updated stock

@@ -68,6 +68,9 @@ function EditProductForm({ productId, onClose, onSuccess }) {
     if (!categoryId)    errs.category = 'Kategori harus dipilih';
     const prices = [Number(pricePcs), Number(pricePack), Number(priceDus), Number(priceKarung), Number(priceKg)];
     if (prices.every(p => p <= 0)) errs.price = 'Minimal satu harga jual harus diisi';
+    if (!hideCost && Number(purchasePrice) <= 0) {
+      errs.purchasePrice = 'Harga modal (HPP) wajib diisi lebih dari Rp 0';
+    }
     return errs;
   };
 
@@ -249,7 +252,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
         <div style={{ padding: '16px', borderRadius: 16, background: T.bg2, border: `1px solid ${T.border2}`, marginTop: 4 }}>
           {!hideCost && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-              <Field label="Harga Beli (HPP) / Unit Utama" hint="Harga modal beli ke supplier">
+              <Field label="Harga Beli (HPP) / Unit Utama" required={!hideCost} hint="Harga modal beli ke supplier" error={errors.purchasePrice}>
                 <div style={{ position: 'relative' }}>
                   <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 11, fontWeight: 700, color: T.muted }}>Rp</span>
                   <input type="number" value={purchasePrice} onChange={e => setPurchasePrice(e.target.value)} className="form-field" style={{ ...fieldStyle, paddingLeft: 32 }} placeholder="0" />

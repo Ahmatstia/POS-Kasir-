@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getSetting, updateSetting } from "../../services/settings";
+import { getSetting, updateSetting, getStoreProfile, updateStoreProfile } from "../../services/settings";
 import { T } from "../../theme";
 import { useToast } from "../Toast";
 import ActivityLogs from "../Security/ActivityLogs";
@@ -11,19 +11,48 @@ function Settings() {
   const [activeTab, setActiveTab] = useState('general'); // 'general' or 'security'
   const [ignoreStock, setIgnoreStock] = useState(false);
   const [hideCost, setHideCost] = useState(false);
+  const [storeName, setStoreName] = useState('');
+  const [storeAddress, setStoreAddress] = useState('');
+  const [storePhone, setStorePhone] = useState('');
+  const [receiptFooter, setReceiptFooter] = useState('');
+  const [savingStore, setSavingStore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [backingUp, setBackingUp] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     (async () => {
-      const isIg = await getSetting('ignore_stock', '0');
-      const isHi = await getSetting('hide_cost', '0');
+      const [isIg, isHi, profile] = await Promise.all([
+        getSetting('ignore_stock', '0'),
+        getSetting('hide_cost', '0'),
+        getStoreProfile(),
+      ]);
       setIgnoreStock(isIg === '1');
       setHideCost(isHi === '1');
+      setStoreName(profile.name);
+      setStoreAddress(profile.address);
+      setStorePhone(profile.phone);
+      setReceiptFooter(profile.footer);
       setLoading(false);
     })();
   }, []);
+
+  const handleSaveStoreProfile = async (e) => {
+    e.preventDefault();
+    setSavingStore(true);
+    const res = await updateStoreProfile({
+      name: storeName,
+      address: storeAddress,
+      phone: storePhone,
+      footer: receiptFooter,
+    });
+    setSavingStore(false);
+    if (res.success) {
+      showToast('success', 'Profil toko & identitas struk berhasil disimpan!');
+    } else {
+      showToast('error', 'Gagal menyimpan profil toko');
+    }
+  };
 
   const handleToggleIgnore = async () => {
     const newVal = !ignoreStock;
@@ -155,7 +184,106 @@ function Settings() {
         </div>
 
         {activeTab === 'general' ? (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, maxWidth: 1000, animation: 'fadeUp 0.3s ease' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 1000, animation: 'fadeUp 0.3s ease' }}>
+            {/* Store Profile Section */}
+            <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, padding: 24 }}>
+              <div style={{ marginBottom: 18 }}>
+                <p style={{ fontSize: 15, fontWeight: 800, color: T.text, marginBottom: 4 }}>🏪 Profil & Identitas Struk Toko</p>
+                <p style={{ fontSize: 12, color: T.sub, lineHeight: 1.5 }}>
+                  Atur nama toko, alamat, dan nomor telepon yang akan dicetak pada kepala struk (Thermal & Standar).
+                </p>
+              </div>
+
+              <form onSubmit={handleSaveStoreProfile} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: T.muted, textTransform: 'uppercase', marginBottom: 6 }}>
+                    Nama Toko
+                  </label>
+                  <input
+                    type="text"
+                    value={storeName}
+                    onChange={e => setStoreName(e.target.value)}
+                    placeholder="TOKO BUMBU"
+                    style={{
+                      width: '100%', padding: '10px 14px', borderRadius: 10,
+                      border: `1px solid ${T.border2}`, background: T.bg, color: T.text,
+                      fontSize: 13, fontFamily: 'Syne, sans-serif', outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: T.muted, textTransform: 'uppercase', marginBottom: 6 }}>
+                    Nomor Telepon / WA
+                  </label>
+                  <input
+                    type="text"
+                    value={storePhone}
+                    onChange={e => setStorePhone(e.target.value)}
+                    placeholder="0822-xxxx-xxxx"
+                    style={{
+                      width: '100%', padding: '10px 14px', borderRadius: 10,
+                      border: `1px solid ${T.border2}`, background: T.bg, color: T.text,
+                      fontSize: 13, fontFamily: 'Syne, sans-serif', outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: T.muted, textTransform: 'uppercase', marginBottom: 6 }}>
+                    Alamat Lengkap Toko
+                  </label>
+                  <input
+                    type="text"
+                    value={storeAddress}
+                    onChange={e => setStoreAddress(e.target.value)}
+                    placeholder="Jl. Imam Bonjol, Muara Sabak Barat"
+                    style={{
+                      width: '100%', padding: '10px 14px', borderRadius: 10,
+                      border: `1px solid ${T.border2}`, background: T.bg, color: T.text,
+                      fontSize: 13, fontFamily: 'Syne, sans-serif', outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: T.muted, textTransform: 'uppercase', marginBottom: 6 }}>
+                    Pesan Footer Struk (Penutup)
+                  </label>
+                  <input
+                    type="text"
+                    value={receiptFooter}
+                    onChange={e => setReceiptFooter(e.target.value)}
+                    placeholder="Selamat Belanja Kembali"
+                    style={{
+                      width: '100%', padding: '10px 14px', borderRadius: 10,
+                      border: `1px solid ${T.border2}`, background: T.bg, color: T.text,
+                      fontSize: 13, fontFamily: 'Syne, sans-serif', outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+                  <button
+                    type="submit"
+                    disabled={savingStore || loading}
+                    style={{
+                      padding: '10px 22px', borderRadius: 10,
+                      border: `1px solid ${T.accent}`,
+                      background: T.accent, color: '#fff',
+                      fontSize: 12, fontWeight: 800, cursor: 'pointer',
+                      fontFamily: 'Syne, sans-serif',
+                      transition: 'all 0.2s', opacity: savingStore ? 0.6 : 1
+                    }}
+                  >
+                    {savingStore ? 'Menyimpan...' : 'Simpan Profil Toko'}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* General Toggles */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
             {/* Abaikan Stok Toggle */}
             <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, padding: 24 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -243,6 +371,7 @@ function Settings() {
                   </p>
                 </div>
               </div>
+            </div>
             </div>
           </div>
         ) : (

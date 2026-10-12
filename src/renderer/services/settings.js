@@ -33,3 +33,23 @@ export async function isPrivacyModeEnabled() {
   const val = await getSetting('hide_cost', '0');
   return val === '1';
 }
+
+export async function getStoreProfile() {
+  const [name, address, phone, footer] = await Promise.all([
+    getSetting('store_name', 'TOKO BUMBU'),
+    getSetting('store_address', 'Jl. Imam Bonjol, Muara Sabak Barat, Tanjung Jabung Timur'),
+    getSetting('store_phone', '0822-8324-8946'),
+    getSetting('receipt_footer', 'Selamat Belanja Kembali'),
+  ]);
+  return { name, address, phone, footer };
+}
+
+export async function updateStoreProfile({ name, address, phone, footer }) {
+  await Promise.all([
+    updateSetting('store_name', (name || 'TOKO BUMBU').trim()),
+    updateSetting('store_address', (address || '').trim()),
+    updateSetting('store_phone', (phone || '').trim()),
+    updateSetting('receipt_footer', (footer || 'Selamat Belanja Kembali').trim()),
+  ]);
+  return { success: true };
+}

@@ -1,5 +1,12 @@
 // Utility untuk mencetak struk
-export const printReceipt = (transaction, items) => {
+export const printReceipt = (transaction, items, storeProfile = null) => {
+  const store = {
+    name: storeProfile?.name || 'TOKO BUMBU',
+    address: storeProfile?.address || 'Jl. Imam Bonjol, Muara Sabak Barat, Tanjung Jabung Timur',
+    phone: storeProfile?.phone || '0822-8324-8946',
+    footer: storeProfile?.footer || 'Selamat Belanja Kembali',
+  };
+
   // Format tanggal - created_at disimpan sebagai waktu lokal WIB
   // Ganti spasi dengan 'T' agar browser tidak salah parse sebagai UTC
   const rawDt = transaction.created_at || '';
@@ -114,9 +121,9 @@ export const printReceipt = (transaction, items) => {
     </head>
     <body>
       <div class="header">
-        <h2>TOKO YENI</h2>
-        <p>Jl. Imam Bonjol, Muara Sabak Barat, Tanjung Jambung Timur</p>
-        <p>Telp: 0822-8324-8946</p>
+        <h2>${escapeHtml(store.name)}</h2>
+        ${store.address ? `<p>${escapeHtml(store.address)}</p>` : ''}
+        ${store.phone ? `<p>Telp: ${escapeHtml(store.phone)}</p>` : ''}
       </div>
       
       <div class="invoice">
@@ -176,7 +183,7 @@ export const printReceipt = (transaction, items) => {
 
       <div class="thankyou">
         <p>Terima Kasih</p>
-        <p>Selamat Belanja Kembali</p>
+        <p>${escapeHtml(store.footer)}</p>
       </div>
     </body>
     </html>
@@ -192,7 +199,14 @@ export const printReceipt = (transaction, items) => {
 };
 
 // Fungsi untuk cetak struk thermal (ukuran kecil)
-export const printThermalReceipt = (transaction, items) => {
+export const printThermalReceipt = (transaction, items, storeProfile = null) => {
+  const store = {
+    name: storeProfile?.name || 'TOKO BUMBU',
+    address: storeProfile?.address || '',
+    phone: storeProfile?.phone || '',
+    footer: storeProfile?.footer || 'Selamat Belanja Kembali',
+  };
+
   // Format tanggal - created_at disimpan sebagai waktu lokal WIB
   const rawDt = transaction.created_at || '';
   const normalized = typeof rawDt === 'string' ? rawDt.replace(' ', 'T') : rawDt;
@@ -251,8 +265,11 @@ export const printThermalReceipt = (transaction, items) => {
     </head>
     <body>
       <div class="center">
-        <h3 style="margin:0">TOKO BUMBU</h3>
-        <p style="margin:2px 0">${transaction.invoice_no}</p>
+        <h3 style="margin:0">${escapeHtml(store.name)}</h3>
+        ${store.address ? `<p style="margin:2px 0;font-size:8px">${escapeHtml(store.address)}</p>` : ''}
+        ${store.phone ? `<p style="margin:2px 0;font-size:8px">Telp: ${escapeHtml(store.phone)}</p>` : ''}
+        <div class="line"></div>
+        <p style="margin:2px 0">${escapeHtml(transaction.invoice_no)}</p>
         <p style="margin:2px 0">${formattedDate}</p>
       </div>
       <div class="line"></div>
@@ -275,8 +292,9 @@ export const printThermalReceipt = (transaction, items) => {
         <tr><td>Tunai</td><td>${formatPrice(transaction.payment_amount)}</td></tr>
         <tr><td>Kembali</td><td>${formatPrice(transaction.change_amount)}</td></tr>
       </table>
-      <div class="center">
-        <p>Terima Kasih</p>
+      <div class="center" style="margin-top:6px">
+        <p style="margin:2px 0">Terima Kasih</p>
+        <p style="margin:2px 0;font-style:italic">${escapeHtml(store.footer)}</p>
       </div>
     </body>
     </html>

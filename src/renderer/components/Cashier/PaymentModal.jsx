@@ -31,6 +31,8 @@ const METHODS = [
 function PaymentModal({ total, onClose, onConfirm, loading = false }) {
   const [payment, setPayment]           = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [autoPrint, setAutoPrint]       = useState(true);
+  const [printType, setPrintType]       = useState('thermal'); // 'thermal' or 'normal'
   const inputRef = useRef(null);
 
   const paymentNum = Number(payment) || 0;
@@ -53,7 +55,7 @@ function PaymentModal({ total, onClose, onConfirm, loading = false }) {
 
   const handleConfirm = () => {
     if (!isValid) return;
-    onConfirm({ payment: paymentNum, change, method: paymentMethod });
+    onConfirm({ payment: paymentNum, change, method: paymentMethod, autoPrint, printType });
   };
 
   // close on backdrop click
@@ -282,6 +284,52 @@ function PaymentModal({ total, onClose, onConfirm, loading = false }) {
                   ? (isValid ? fmt(change) : fmt(shortfall))
                   : '—'}
               </p>
+            </div>
+
+            {/* ── AUTO PRINT RECEIPT OPTION ── */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '10px 14px', borderRadius: 12, background: T.bg,
+              border: `1px solid ${T.border2}`,
+            }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700, color: T.text }}>
+                <input
+                  type="checkbox"
+                  checked={autoPrint}
+                  onChange={e => setAutoPrint(e.target.checked)}
+                  style={{ accentColor: T.green, width: 16, height: 16, cursor: 'pointer' }}
+                />
+                🖨️ Cetak Struk
+              </label>
+
+              {autoPrint && (
+                <div style={{ display: 'flex', gap: 4, background: T.surface, padding: 3, borderRadius: 8, border: `1px solid ${T.border2}` }}>
+                  <button
+                    type="button"
+                    onClick={() => setPrintType('thermal')}
+                    style={{
+                      padding: '4px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700,
+                      border: 'none', cursor: 'pointer',
+                      background: printType === 'thermal' ? T.accent : 'transparent',
+                      color: printType === 'thermal' ? '#fff' : T.muted,
+                    }}
+                  >
+                    Thermal 58mm
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPrintType('normal')}
+                    style={{
+                      padding: '4px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700,
+                      border: 'none', cursor: 'pointer',
+                      background: printType === 'normal' ? T.accent : 'transparent',
+                      color: printType === 'normal' ? '#fff' : T.muted,
+                    }}
+                  >
+                    Standar
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* ── ACTION BUTTONS ── */}

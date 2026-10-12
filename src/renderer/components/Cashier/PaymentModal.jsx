@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { T } from "../../theme";
 import { getCustomers } from "../../services/debts";
 
@@ -177,37 +178,39 @@ function PaymentModal({ total, onClose, onConfirm, loading = false }) {
       `}</style>
 
       {/* Overlay */}
-      <div
-        onClick={handleBackdrop}
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 100,
-          background: "rgba(0,0,0,0.72)",
-          backdropFilter: "blur(4px)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontFamily: "Syne, sans-serif",
-          animation: "fadeOverlay 0.2s ease both",
-        }}
-      >
-        {/* Modal card */}
+      {createPortal(
         <div
+          onClick={handleBackdrop}
           style={{
-            width: "100%",
-            maxWidth: 520,
-            background: T.surface,
-            border: `1px solid ${T.border2}`,
-            borderRadius: 20,
-            overflow: "hidden",
-            boxShadow: "0 28px 70px rgba(0,0,0,0.6)",
-            animation: "modalIn 0.25s cubic-bezier(0.16,1,0.3,1) both",
-            maxHeight: "94vh",
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            background: "rgba(15, 23, 42, 0.68)",
+            backdropFilter: "blur(6px)",
             display: "flex",
-            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            fontFamily: "Syne, sans-serif",
+            animation: "fadeOverlay 0.2s ease both",
+            padding: 20,
           }}
         >
+          {/* Modal card */}
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 520,
+              background: T.surface,
+              border: `1px solid ${T.border2}`,
+              borderRadius: 20,
+              overflow: "hidden",
+              boxShadow: "0 28px 70px rgba(0,0,0,0.6)",
+              animation: "modalIn 0.25s cubic-bezier(0.16,1,0.3,1) both",
+              maxHeight: "calc(100vh - 40px)",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
           {/* Header */}
           <div
             style={{
@@ -1011,9 +1014,11 @@ function PaymentModal({ total, onClose, onConfirm, loading = false }) {
             </div>
           </div>
         </div>
-      </div>
-    </>
-  );
+      </div>,
+      document.body
+    )}
+  </>
+);
 }
 
 export default PaymentModal;

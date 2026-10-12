@@ -132,7 +132,7 @@ function ProductForm({ onClose, onSuccess }) {
     const prices = [Number(pricePcs), Number(pricePack), Number(priceDus), Number(priceKarung), Number(priceKg)];
     if (prices.every(p => p <= 0)) errs.price = 'Minimal satu harga jual harus diisi';
     if (!hideCost && Number(purchasePrice) <= 0) {
-      errs.purchasePrice = 'Harga modal (HPP) wajib diisi lebih dari Rp 0';
+      errs.purchasePrice = 'Harga modal wajib diisi lebih dari Rp 0';
     }
     return errs;
   };
@@ -308,7 +308,7 @@ function ProductForm({ onClose, onSuccess }) {
         <div style={{ padding: '16px', borderRadius: 16, background: T.bg2, border: `1px solid ${T.border2}`, marginTop: 4 }}>
           {!hideCost && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-              <Field label="Harga Modal Kulakan (Per Satuan Utama)" required={!hideCost} hint="Modal beli ke supplier / agen" error={errors.purchasePrice}>
+              <Field label="Harga Modal / Beli (Per Satuan Utama)" required={!hideCost} hint="Harga beli barang dari supplier / agen" error={errors.purchasePrice}>
                 <div style={{ position: 'relative' }}>
                   <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 11, fontWeight: 700, color: T.muted }}>Rp</span>
                   <input type="number" value={purchasePrice} onChange={e => setPurchasePrice(e.target.value)} className="form-field" style={{ ...fieldStyle, paddingLeft: 32 }} placeholder="0" />
@@ -364,7 +364,7 @@ function ProductForm({ onClose, onSuccess }) {
         {/* Notice: stok diatur di Barang Masuk */}
         <div style={{ padding: '10px 14px', borderRadius: 10, background: T.blue + '10', border: `1px solid ${T.blue}25`, display: 'flex', alignItems: 'center', gap: 8 }}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke={T.blue} strokeWidth="1.4"/><path d="M7 6v4M7 4.5v.5" stroke={T.blue} strokeWidth="1.4" strokeLinecap="round"/></svg>
-          <p style={{ fontSize: 11, color: T.blue }}>Stok awal diisi lewat tab <strong>Barang Masuk (Kulakan)</strong> setelah barang disimpan.</p>
+          <p style={{ fontSize: 11, color: T.blue }}>Stok awal diisi lewat menu <strong>Barang Masuk</strong> setelah barang disimpan.</p>
         </div>
 
         <FormActions onClose={onClose} loading={loading} submitLabel="✓ Simpan Produk" loadingLabel="Menyimpan…" />

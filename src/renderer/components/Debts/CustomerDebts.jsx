@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   getCustomers,
   addCustomer,
@@ -36,6 +37,7 @@ function CustomerDebts() {
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [payTargetCustomer, setPayTargetCustomer] = useState(null);
   const [viewInvoicesCustomer, setViewInvoicesCustomer] = useState(null);
+  const [previousInvoiceCustomer, setPreviousInvoiceCustomer] = useState(null);
   const [customerInvoices, setCustomerInvoices] = useState([]);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
 
@@ -82,6 +84,10 @@ function CustomerDebts() {
 
   // Open Pay Modal
   const openPayModal = (customer, specificDebt = null) => {
+    if (viewInvoicesCustomer) {
+      setPreviousInvoiceCustomer(viewInvoicesCustomer);
+      setViewInvoicesCustomer(null);
+    }
     setPayTargetCustomer(customer);
     const amountToPay = specificDebt
       ? specificDebt.remaining_debt
@@ -90,6 +96,14 @@ function CustomerDebts() {
     setPayNotes(specificDebt ? `Bayar nota ${specificDebt.invoice_no}` : "");
     setPayMethod("cash");
     setPayAutoPrint(true);
+  };
+
+  const closePayModal = () => {
+    setPayTargetCustomer(null);
+    if (previousInvoiceCustomer) {
+      openViewInvoices(previousInvoiceCustomer);
+      setPreviousInvoiceCustomer(null);
+    }
   };
 
   // Submit Payment
@@ -137,9 +151,11 @@ function CustomerDebts() {
           }
         }
 
+        const returnCust = previousInvoiceCustomer || viewInvoicesCustomer;
         setPayTargetCustomer(null);
-        if (viewInvoicesCustomer) {
-          openViewInvoices(payTargetCustomer);
+        setPreviousInvoiceCustomer(null);
+        if (returnCust) {
+          openViewInvoices({ ...returnCust, total_debt: res.remainingTotalDebt });
         }
         await loadData();
       } else {
@@ -1034,37 +1050,60 @@ function CustomerDebts() {
         )}
 
         {/* ── MODAL: BAYAR / CICIL KASBON ── */}
-        {payTargetCustomer && (
+        {payTargetCustomer && createPortal(
           <div
+            onClick={(e) => e.target === e.currentTarget && closePayModal()}
             style={{
               position: "fixed",
               inset: 0,
-              zIndex: 1000,
-              background: "rgba(0,0,0,0.72)",
-              backdropFilter: "blur(4px)",
+              zIndex: 9999,
+              background: "rgba(15, 23, 42, 0.68)",
+              backdropFilter: "blur(6px)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               animation: "fadeIn 0.2s ease both",
               padding: 20,
+              fontFamily: "Syne, sans-serif",
             }}
-            onClick={(e) => e.target === e.currentTarget && setPayTargetCustomer(null)}
           >
             <div
               style={{
                 width: "100%",
-                maxWidth: 460,
+                maxWidth: 480,
                 background: T.surface,
                 border: `1px solid ${T.border2}`,
                 borderRadius: 20,
-                padding: 24,
-                boxShadow: "0 24px 60px rgba(0,0,0,0.5)",
+                boxShadow: "0 28px 70px rgba(0,0,0,0.45)",
                 animation: "popIn 0.25s cubic-bezier(0.16,1,0.3,1) both",
+                maxHeight: "calc(100vh - 40px)",
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+              {/* Header */}
+              <div
+                style={{
+                  padding: "18px 24px 14px",
+                  borderBottom: `1px solid ${T.border}`,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexShrink: 0,
+                }}
+              >
                 <div>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: T.green, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 2px 0" }}>
+                  <p
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 800,
+                      color: T.green,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.1em",
+                      margin: "0 0 2px 0",
+                    }}
+                  >
                     Terima Pembayaran Kasbon
                   </p>
                   <h3 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0 }}>
@@ -1072,190 +1111,215 @@ function CustomerDebts() {
                   </h3>
                 </div>
                 <button
-                  onClick={() => setPayTargetCustomer(null)}
+                  onClick={closePayModal}
                   style={{
                     background: "none",
                     border: `1px solid ${T.border2}`,
-                    width: 30,
-                    height: 30,
-                    borderRadius: 8,
+                    width: 32,
+                    height: 32,
+                    borderRadius: 9,
                     cursor: "pointer",
                     color: T.muted,
+                    fontSize: 16,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
                 >
                   ✕
                 </button>
               </div>
 
-              {/* Total debt callout */}
-              <div
+              {/* Form & Body */}
+              <form
+                onSubmit={handleConfirmPayment}
                 style={{
-                  background: T.bg,
-                  border: `1px solid ${T.border2}`,
-                  borderRadius: 14,
-                  padding: "14px 16px",
-                  marginBottom: 16,
                   display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
+                  flexDirection: "column",
+                  flex: 1,
+                  overflowY: "auto",
+                  minHeight: 0,
                 }}
               >
-                <div>
-                  <p style={{ fontSize: 9, fontWeight: 700, color: T.muted, textTransform: "uppercase", margin: "0 0 2px 0" }}>
-                    Total Kasbon Saat Ini
-                  </p>
-                  <p style={{ fontSize: 22, fontWeight: 900, color: T.orange, fontFamily: "JetBrains Mono, monospace", margin: 0 }}>
-                    {fmt(payTargetCustomer.total_debt)}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setPayAmount(String(payTargetCustomer.total_debt))}
-                  style={{
-                    padding: "6px 12px",
-                    borderRadius: 8,
-                    border: `1px solid ${T.green}40`,
-                    background: T.green + "14",
-                    color: T.green,
-                    fontSize: 11,
-                    fontWeight: 800,
-                    cursor: "pointer",
-                  }}
-                >
-                  Bayar Lunas
-                </button>
-              </div>
+                <div style={{ padding: "18px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
+                  {/* Total debt callout */}
+                  <div
+                    style={{
+                      background: T.bg,
+                      border: `1px solid ${T.border2}`,
+                      borderRadius: 14,
+                      padding: "14px 16px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <div>
+                      <p style={{ fontSize: 9, fontWeight: 700, color: T.muted, textTransform: "uppercase", margin: "0 0 2px 0" }}>
+                        Total Kasbon Saat Ini
+                      </p>
+                      <p style={{ fontSize: 22, fontWeight: 900, color: T.orange, fontFamily: "JetBrains Mono, monospace", margin: 0 }}>
+                        {fmt(payTargetCustomer.total_debt)}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPayAmount(String(payTargetCustomer.total_debt))}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 8,
+                        border: `1px solid ${T.green}40`,
+                        background: T.green + "14",
+                        color: T.green,
+                        fontSize: 11,
+                        fontWeight: 800,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Bayar Lunas
+                    </button>
+                  </div>
 
-              <form onSubmit={handleConfirmPayment} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                {/* Amount input */}
-                <div>
-                  <label style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", display: "block", marginBottom: 6 }}>
-                    Jumlah Yang Dibayarkan (Rp) ✱
-                  </label>
-                  <div style={{ position: "relative" }}>
-                    <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 12, fontWeight: 700, color: T.muted }}>
-                      Rp
-                    </span>
+                  {/* Amount input */}
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", display: "block", marginBottom: 6 }}>
+                      Jumlah Yang Dibayarkan (Rp) ✱
+                    </label>
+                    <div style={{ position: "relative" }}>
+                      <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 12, fontWeight: 700, color: T.muted }}>
+                        Rp
+                      </span>
+                      <input
+                        type="number"
+                        value={payAmount}
+                        onChange={(e) => setPayAmount(e.target.value)}
+                        placeholder="0"
+                        autoFocus
+                        required
+                        style={{
+                          width: "100%",
+                          padding: "12px 14px 12px 40px",
+                          borderRadius: 10,
+                          border: `1px solid ${T.border2}`,
+                          background: T.bg,
+                          color: T.text,
+                          fontFamily: "JetBrains Mono, monospace",
+                          fontSize: 18,
+                          fontWeight: 800,
+                          outline: "none",
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Quick amount presets */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
+                    {[10_000, 20_000, 50_000, 100_000].map((amt) => (
+                      <button
+                        key={amt}
+                        type="button"
+                        onClick={() => setPayAmount(String(amt))}
+                        style={{
+                          padding: "6px",
+                          borderRadius: 8,
+                          border: `1px solid ${T.border2}`,
+                          background: T.bg,
+                          color: T.sub,
+                          fontSize: 10,
+                          fontWeight: 700,
+                          fontFamily: "JetBrains Mono, monospace",
+                          cursor: "pointer",
+                        }}
+                      >
+                        +{fmt(amt).replace("Rp ", "")}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Payment method */}
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", display: "block", marginBottom: 6 }}>
+                      Metode Pembayaran
+                    </label>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                      {[
+                        { key: "cash", label: "Tunai" },
+                        { key: "transfer", label: "Transfer" },
+                        { key: "qris", label: "QRIS" },
+                      ].map((m) => (
+                        <button
+                          key={m.key}
+                          type="button"
+                          onClick={() => setPayMethod(m.key)}
+                          style={{
+                            padding: "8px",
+                            borderRadius: 8,
+                            border: `1px solid ${payMethod === m.key ? T.accent : T.border2}`,
+                            background: payMethod === m.key ? T.accent + "14" : T.bg,
+                            color: payMethod === m.key ? T.accent : T.sub,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          {m.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", display: "block", marginBottom: 6 }}>
+                      Keterangan (Opsional)
+                    </label>
                     <input
-                      type="number"
-                      value={payAmount}
-                      onChange={(e) => setPayAmount(e.target.value)}
-                      placeholder="0"
-                      autoFocus
-                      required
+                      type="text"
+                      value={payNotes}
+                      onChange={(e) => setPayNotes(e.target.value)}
+                      placeholder="Contoh: Titipan cicilan minggu ke-1"
                       style={{
                         width: "100%",
-                        padding: "12px 14px 12px 40px",
-                        borderRadius: 10,
+                        padding: "8px 12px",
+                        borderRadius: 8,
                         border: `1px solid ${T.border2}`,
                         background: T.bg,
                         color: T.text,
-                        fontFamily: "JetBrains Mono, monospace",
-                        fontSize: 18,
-                        fontWeight: 800,
+                        fontSize: 12,
                         outline: "none",
                       }}
                     />
                   </div>
-                </div>
 
-                {/* Quick amount presets */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
-                  {[10_000, 20_000, 50_000, 100_000].map((amt) => (
-                    <button
-                      key={amt}
-                      type="button"
-                      onClick={() => setPayAmount(String(amt))}
-                      style={{
-                        padding: "6px",
-                        borderRadius: 8,
-                        border: `1px solid ${T.border2}`,
-                        background: T.bg,
-                        color: T.sub,
-                        fontSize: 10,
-                        fontWeight: 700,
-                        fontFamily: "JetBrains Mono, monospace",
-                        cursor: "pointer",
-                      }}
-                    >
-                      +{fmt(amt).replace("Rp ", "")}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Payment method */}
-                <div>
-                  <label style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", display: "block", marginBottom: 6 }}>
-                    Metode Pembayaran
+                  {/* Print receipt checkbox */}
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 12, fontWeight: 700, color: T.text, marginTop: 4 }}>
+                    <input
+                      type="checkbox"
+                      checked={payAutoPrint}
+                      onChange={(e) => setPayAutoPrint(e.target.checked)}
+                      style={{ accentColor: T.green, width: 16, height: 16, cursor: "pointer" }}
+                    />
+                    🖨️ Cetak Tanda Terima Kwitansi Pembayaran Kasbon
                   </label>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-                    {[
-                      { key: "cash", label: "Tunai" },
-                      { key: "transfer", label: "Transfer" },
-                      { key: "qris", label: "QRIS" },
-                    ].map((m) => (
-                      <button
-                        key={m.key}
-                        type="button"
-                        onClick={() => setPayMethod(m.key)}
-                        style={{
-                          padding: "8px",
-                          borderRadius: 8,
-                          border: `1px solid ${payMethod === m.key ? T.accent : T.border2}`,
-                          background: payMethod === m.key ? T.accent + "14" : T.bg,
-                          color: payMethod === m.key ? T.accent : T.sub,
-                          fontSize: 11,
-                          fontWeight: 700,
-                          cursor: "pointer",
-                        }}
-                      >
-                        {m.label}
-                      </button>
-                    ))}
-                  </div>
                 </div>
 
-                {/* Notes */}
-                <div>
-                  <label style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", display: "block", marginBottom: 6 }}>
-                    Keterangan (Opsional)
-                  </label>
-                  <input
-                    type="text"
-                    value={payNotes}
-                    onChange={(e) => setPayNotes(e.target.value)}
-                    placeholder="Contoh: Titipan cicilan minggu ke-1"
-                    style={{
-                      width: "100%",
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      border: `1px solid ${T.border2}`,
-                      background: T.bg,
-                      color: T.text,
-                      fontSize: 12,
-                      outline: "none",
-                    }}
-                  />
-                </div>
-
-                {/* Print receipt checkbox */}
-                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 12, fontWeight: 700, color: T.text, marginTop: 4 }}>
-                  <input
-                    type="checkbox"
-                    checked={payAutoPrint}
-                    onChange={(e) => setPayAutoPrint(e.target.checked)}
-                    style={{ accentColor: T.green, width: 16, height: 16, cursor: "pointer" }}
-                  />
-                  🖨️ Cetak Tanda Terima Kwitansi Pembayaran Kasbon
-                </label>
-
-                {/* Submit action buttons */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 10, marginTop: 10 }}>
+                {/* Footer action buttons */}
+                <div
+                  style={{
+                    padding: "14px 24px",
+                    borderTop: `1px solid ${T.border}`,
+                    background: T.surface,
+                    display: "grid",
+                    gridTemplateColumns: "1fr 2fr",
+                    gap: 10,
+                    flexShrink: 0,
+                  }}
+                >
                   <button
                     type="button"
-                    onClick={() => setPayTargetCustomer(null)}
+                    onClick={closePayModal}
                     style={{
-                      padding: "12px",
+                      padding: "11px",
                       borderRadius: 10,
                       border: `1px solid ${T.border2}`,
                       background: T.bg,
@@ -1271,7 +1335,7 @@ function CustomerDebts() {
                     type="submit"
                     disabled={paying}
                     style={{
-                      padding: "12px",
+                      padding: "11px",
                       borderRadius: 10,
                       border: `1px solid ${T.green}50`,
                       background: paying ? T.border : T.green,
@@ -1287,25 +1351,27 @@ function CustomerDebts() {
                 </div>
               </form>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
         {/* ── MODAL: RINCIAN NOTA KASBON PELANGGAN ── */}
-        {viewInvoicesCustomer && (
+        {viewInvoicesCustomer && createPortal(
           <div
+            onClick={(e) => e.target === e.currentTarget && setViewInvoicesCustomer(null)}
             style={{
               position: "fixed",
               inset: 0,
-              zIndex: 1000,
-              background: "rgba(0,0,0,0.72)",
-              backdropFilter: "blur(4px)",
+              zIndex: 9999,
+              background: "rgba(15, 23, 42, 0.68)",
+              backdropFilter: "blur(6px)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               animation: "fadeIn 0.2s ease both",
               padding: 20,
+              fontFamily: "Syne, sans-serif",
             }}
-            onClick={(e) => e.target === e.currentTarget && setViewInvoicesCustomer(null)}
           >
             <div
               style={{
@@ -1315,20 +1381,38 @@ function CustomerDebts() {
                 border: `1px solid ${T.border2}`,
                 borderRadius: 20,
                 overflow: "hidden",
-                boxShadow: "0 24px 60px rgba(0,0,0,0.5)",
+                boxShadow: "0 28px 70px rgba(0,0,0,0.45)",
                 animation: "popIn 0.25s cubic-bezier(0.16,1,0.3,1) both",
-                maxHeight: "85vh",
+                maxHeight: "calc(100vh - 40px)",
                 display: "flex",
                 flexDirection: "column",
               }}
             >
-              <div style={{ padding: "18px 22px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div
+                style={{
+                  padding: "18px 24px 14px",
+                  borderBottom: `1px solid ${T.border}`,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexShrink: 0,
+                }}
+              >
                 <div>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: T.orange, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 2px 0" }}>
+                  <p
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 800,
+                      color: T.orange,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.1em",
+                      margin: "0 0 2px 0",
+                    }}
+                  >
                     Daftar Nota Belanja Kasbon
                   </p>
                   <h3 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0 }}>
-                    {viewInvoicesCustomer.name} · Total Kasbon: {fmt(viewInvoicesCustomer.total_debt)}
+                    {viewInvoicesCustomer.name} · Sisa Kasbon: {fmt(viewInvoicesCustomer.total_debt)}
                   </h3>
                 </div>
                 <button
@@ -1336,11 +1420,15 @@ function CustomerDebts() {
                   style={{
                     background: "none",
                     border: `1px solid ${T.border2}`,
-                    width: 30,
-                    height: 30,
-                    borderRadius: 8,
+                    width: 32,
+                    height: 32,
+                    borderRadius: 9,
                     cursor: "pointer",
                     color: T.muted,
+                    fontSize: 16,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
                 >
                   ✕
@@ -1368,6 +1456,7 @@ function CustomerDebts() {
                             display: "flex",
                             justifyContent: "space-between",
                             alignItems: "center",
+                            gap: 12,
                           }}
                         >
                           <div>
@@ -1415,7 +1504,7 @@ function CustomerDebts() {
                               <button
                                 onClick={() => openPayModal(viewInvoicesCustomer, inv)}
                                 style={{
-                                  padding: "6px 12px",
+                                  padding: "8px 14px",
                                   borderRadius: 8,
                                   border: `1px solid ${T.green}40`,
                                   background: T.green + "14",
@@ -1423,6 +1512,7 @@ function CustomerDebts() {
                                   fontSize: 11,
                                   fontWeight: 800,
                                   cursor: "pointer",
+                                  whiteSpace: "nowrap",
                                 }}
                               >
                                 Bayar Nota Ini
@@ -1436,25 +1526,27 @@ function CustomerDebts() {
                 )}
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
         {/* ── MODAL: TAMBAH / EDIT PELANGGAN ── */}
-        {showAddCustomer && (
+        {showAddCustomer && createPortal(
           <div
+            onClick={(e) => e.target === e.currentTarget && setShowAddCustomer(false)}
             style={{
               position: "fixed",
               inset: 0,
-              zIndex: 1000,
-              background: "rgba(0,0,0,0.72)",
-              backdropFilter: "blur(4px)",
+              zIndex: 9999,
+              background: "rgba(15, 23, 42, 0.68)",
+              backdropFilter: "blur(6px)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               animation: "fadeIn 0.2s ease both",
               padding: 20,
+              fontFamily: "Syne, sans-serif",
             }}
-            onClick={(e) => e.target === e.currentTarget && setShowAddCustomer(false)}
           >
             <div
               style={{
@@ -1463,14 +1555,36 @@ function CustomerDebts() {
                 background: T.surface,
                 border: `1px solid ${T.border2}`,
                 borderRadius: 20,
-                padding: 24,
-                boxShadow: "0 24px 60px rgba(0,0,0,0.5)",
+                boxShadow: "0 28px 70px rgba(0,0,0,0.45)",
                 animation: "popIn 0.25s cubic-bezier(0.16,1,0.3,1) both",
+                maxHeight: "calc(100vh - 40px)",
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+              {/* Header */}
+              <div
+                style={{
+                  padding: "18px 24px 14px",
+                  borderBottom: `1px solid ${T.border}`,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexShrink: 0,
+                }}
+              >
                 <div>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: T.orange, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 2px 0" }}>
+                  <p
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 800,
+                      color: T.orange,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.1em",
+                      margin: "0 0 2px 0",
+                    }}
+                  >
                     {editingCustomer ? "Ubah Data Pelanggan" : "Pendaftaran Pelanggan"}
                   </p>
                   <h3 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0 }}>
@@ -1482,52 +1596,113 @@ function CustomerDebts() {
                   style={{
                     background: "none",
                     border: `1px solid ${T.border2}`,
-                    width: 30,
-                    height: 30,
-                    borderRadius: 8,
+                    width: 32,
+                    height: 32,
+                    borderRadius: 9,
                     cursor: "pointer",
                     color: T.muted,
+                    fontSize: 16,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
                 >
                   ✕
                 </button>
               </div>
 
-              <form onSubmit={handleSaveCustomer} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                <div>
-                  <label style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", display: "block", marginBottom: 6 }}>
-                    Nama Lengkap Pelanggan ✱
-                  </label>
-                  <input
-                    type="text"
-                    value={custName}
-                    onChange={(e) => setCustName(e.target.value)}
-                    placeholder="Contoh: Pak Budi / Bu Siti Warung Sebelah"
-                    required
-                    autoFocus
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      border: `1px solid ${T.border2}`,
-                      background: T.bg,
-                      color: T.text,
-                      fontSize: 13,
-                      outline: "none",
-                    }}
-                  />
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {/* Form & Body */}
+              <form
+                onSubmit={handleSaveCustomer}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  flex: 1,
+                  overflowY: "auto",
+                  minHeight: 0,
+                }}
+              >
+                <div style={{ padding: "18px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
                   <div>
                     <label style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", display: "block", marginBottom: 6 }}>
-                      Nomor HP / WhatsApp
+                      Nama Lengkap Pelanggan ✱
                     </label>
                     <input
                       type="text"
-                      value={custPhone}
-                      onChange={(e) => setCustPhone(e.target.value)}
-                      placeholder="08xxxxxxxxxx"
+                      value={custName}
+                      onChange={(e) => setCustName(e.target.value)}
+                      placeholder="Contoh: Pak Budi / Bu Siti Warung Sebelah"
+                      required
+                      autoFocus
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        borderRadius: 10,
+                        border: `1px solid ${T.border2}`,
+                        background: T.bg,
+                        color: T.text,
+                        fontSize: 13,
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <div>
+                      <label style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", display: "block", marginBottom: 6 }}>
+                        Nomor HP / WhatsApp
+                      </label>
+                      <input
+                        type="text"
+                        value={custPhone}
+                        onChange={(e) => setCustPhone(e.target.value)}
+                        placeholder="08xxxxxxxxxx"
+                        style={{
+                          width: "100%",
+                          padding: "10px 12px",
+                          borderRadius: 10,
+                          border: `1px solid ${T.border2}`,
+                          background: T.bg,
+                          color: T.text,
+                          fontSize: 13,
+                          outline: "none",
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", display: "block", marginBottom: 6 }}>
+                        Batas Maksimal Kasbon (Rp)
+                      </label>
+                      <input
+                        type="number"
+                        value={custDebtLimit}
+                        onChange={(e) => setCustDebtLimit(e.target.value)}
+                        placeholder="0 (Tanpa batas)"
+                        style={{
+                          width: "100%",
+                          padding: "10px 12px",
+                          borderRadius: 10,
+                          border: `1px solid ${T.border2}`,
+                          background: T.bg,
+                          color: T.text,
+                          fontSize: 13,
+                          outline: "none",
+                          fontFamily: "JetBrains Mono, monospace",
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", display: "block", marginBottom: 6 }}>
+                      Alamat / Patokan Rumah
+                    </label>
+                    <input
+                      type="text"
+                      value={custAddress}
+                      onChange={(e) => setCustAddress(e.target.value)}
+                      placeholder="Contoh: Rumah cat hijau depan musholla"
                       style={{
                         width: "100%",
                         padding: "10px 12px",
@@ -1543,13 +1718,13 @@ function CustomerDebts() {
 
                   <div>
                     <label style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", display: "block", marginBottom: 6 }}>
-                      Batas Maksimal Kasbon (Rp)
+                      Catatan Khusus (Opsional)
                     </label>
                     <input
-                      type="number"
-                      value={custDebtLimit}
-                      onChange={(e) => setCustDebtLimit(e.target.value)}
-                      placeholder="0 (Tanpa batas)"
+                      type="text"
+                      value={custNotes}
+                      onChange={(e) => setCustNotes(e.target.value)}
+                      placeholder="Contoh: Langganan warung nasi, gajian tiap tgl 25"
                       style={{
                         width: "100%",
                         padding: "10px 12px",
@@ -1559,62 +1734,28 @@ function CustomerDebts() {
                         color: T.text,
                         fontSize: 13,
                         outline: "none",
-                        fontFamily: "JetBrains Mono, monospace",
                       }}
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", display: "block", marginBottom: 6 }}>
-                    Alamat / Patokan Rumah
-                  </label>
-                  <input
-                    type="text"
-                    value={custAddress}
-                    onChange={(e) => setCustAddress(e.target.value)}
-                    placeholder="Contoh: Rumah cat hijau depan musholla"
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      border: `1px solid ${T.border2}`,
-                      background: T.bg,
-                      color: T.text,
-                      fontSize: 13,
-                      outline: "none",
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", display: "block", marginBottom: 6 }}>
-                    Catatan Khusus (Opsional)
-                  </label>
-                  <input
-                    type="text"
-                    value={custNotes}
-                    onChange={(e) => setCustNotes(e.target.value)}
-                    placeholder="Contoh: Langganan warung nasi, gajian tiap tgl 25"
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      border: `1px solid ${T.border2}`,
-                      background: T.bg,
-                      color: T.text,
-                      fontSize: 13,
-                      outline: "none",
-                    }}
-                  />
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 10, marginTop: 10 }}>
+                {/* Footer action buttons */}
+                <div
+                  style={{
+                    padding: "14px 24px",
+                    borderTop: `1px solid ${T.border}`,
+                    background: T.surface,
+                    display: "grid",
+                    gridTemplateColumns: "1fr 2fr",
+                    gap: 10,
+                    flexShrink: 0,
+                  }}
+                >
                   <button
                     type="button"
                     onClick={() => setShowAddCustomer(false)}
                     style={{
-                      padding: "12px",
+                      padding: "11px",
                       borderRadius: 10,
                       border: `1px solid ${T.border2}`,
                       background: T.bg,
@@ -1630,7 +1771,7 @@ function CustomerDebts() {
                     type="submit"
                     disabled={savingCust}
                     style={{
-                      padding: "12px",
+                      padding: "11px",
                       borderRadius: 10,
                       border: "none",
                       background: T.orange,
@@ -1645,23 +1786,25 @@ function CustomerDebts() {
                 </div>
               </form>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
         {/* ── MODAL: CONFIRM DELETE CUSTOMER ── */}
-        {deleteTarget && (
+        {deleteTarget && createPortal(
           <div
             style={{
               position: "fixed",
               inset: 0,
-              zIndex: 1000,
-              background: "rgba(0,0,0,0.72)",
-              backdropFilter: "blur(4px)",
+              zIndex: 9999,
+              background: "rgba(15, 23, 42, 0.68)",
+              backdropFilter: "blur(6px)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               animation: "fadeIn 0.2s ease both",
               padding: 20,
+              fontFamily: "Syne, sans-serif",
             }}
             onClick={() => setDeleteTarget(null)}
           >
@@ -1671,7 +1814,7 @@ function CustomerDebts() {
                 background: T.surface,
                 borderRadius: 20,
                 padding: 24,
-                boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
+                boxShadow: "0 24px 60px rgba(0,0,0,0.4)",
                 border: `1px solid ${T.border2}`,
                 animation: "popIn 0.25s ease",
               }}
@@ -1730,7 +1873,8 @@ function CustomerDebts() {
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </>

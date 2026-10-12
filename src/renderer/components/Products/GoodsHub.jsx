@@ -24,7 +24,7 @@ function GoodsHub({ defaultTab = 'products' }) {
     {
       id: 'inventory',
       label: 'Barang Masuk & Stok Rak',
-      sublabel: 'Kulakan, sisa stok & cocokkan rak',
+      sublabel: 'Catat stok masuk & cocokkan rak',
       icon: <InventoryIcon />,
     },
     {

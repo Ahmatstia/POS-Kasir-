@@ -95,7 +95,7 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
         <div style={{ padding: '20px 22px', borderBottom: `1px solid ${T.border}` }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
             <div>
-              <p style={{ fontSize: 9, fontWeight: 700, color: T.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 4 }}>Barang Masuk (Kulakan)</p>
+              <p style={{ fontSize: 9, fontWeight: 700, color: T.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 4 }}>Barang Masuk</p>
               <p style={{ fontSize: 16, fontWeight: 800, color: T.text }}>{product.name}</p>
             </div>
             <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${T.border2}`, background: 'transparent', color: T.sub, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
@@ -236,7 +236,7 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginBottom: 4 }}>
                   <div>
                     <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.green, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
-                      Modal Kulakan / {isKg ? 'Kg' : 'Pcs'}
+                      Harga Modal / {isKg ? 'Kg' : 'Pcs'}
                     </label>
                     <div style={{ position: 'relative' }}>
                       <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 13, fontWeight: 700, color: T.muted }}>Rp</span>
@@ -247,7 +247,7 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
                         style={{ ...inp, paddingLeft: 34 }}
                       />
                     </div>
-                    <p style={{ fontSize: 10, color: T.muted, marginTop: 6 }}>Harga modal kulakan untuk menghitung untung toko saat terjual</p>
+                    <p style={{ fontSize: 10, color: T.muted, marginTop: 6 }}>Harga modal beli untuk menghitung keuntungan toko saat terjual</p>
                   </div>
                 </div>
               )}

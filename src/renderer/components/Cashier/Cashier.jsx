@@ -699,6 +699,7 @@ function Cashier() {
       change: paymentData.change,
       paymentMethod: paymentData.method,
       customerName: paymentData.customerName || '',
+      customerId: paymentData.customerId || null,
       notes: paymentData.notes || '',
     });
     if (result.success) {

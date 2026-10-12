@@ -866,30 +866,30 @@ function Reports() {
                 label="Total Penjualan"
                 accent={T.accent}
                 value={`Rp ${fmtShort(s.total_sales)}`}
-                sub="Periode terpilih"
+                sub="Uang masuk belanja"
               />
               <StatCard
                 index={1}
-                label="Jumlah Transaksi"
-                accent={T.green}
-                value={fmtNum(s.total_transactions)}
+                label="Jumlah Nota Belanja"
+                accent={T.blue}
+                value={`${fmtNum(s.total_transactions)} nota`}
                 sub="Transaksi selesai"
               />
               {!hideCost && (
                 <>
                   <StatCard
                     index={2}
-                    label="Rata-rata Transaksi"
-                    accent={T.blue}
-                    value={`Rp ${fmtShort(s.average_sales)}`}
-                    sub="Per transaksi"
+                    label="Total Modal (Beli)"
+                    accent={T.purple}
+                    value={`Rp ${fmtShort(s.total_purchase_cost || 0)}`}
+                    sub="Modal barang terjual"
                   />
                   <StatCard
                     index={3}
-                    label="Hari Aktif"
-                    accent={T.purple}
-                    value={`${s.active_days} hari`}
-                    sub="Ada transaksi"
+                    label="Total Untung"
+                    accent={T.green}
+                    value={`Rp ${fmtShort(s.total_profit || 0)}`}
+                    sub={`${s.total_sales > 0 ? (((s.total_profit || 0) / s.total_sales) * 100).toFixed(1) : 0}% persen untung`}
                   />
                 </>
               )}

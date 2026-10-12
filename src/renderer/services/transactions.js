@@ -26,6 +26,7 @@ export async function createTransaction(transactionData) {
     change,
     paymentMethod,
     customerName,
+    customerId,
     notes,
   } = transactionData;
 
@@ -44,14 +45,59 @@ export async function createTransaction(transactionData) {
 
     await window.electronAPI.run("BEGIN TRANSACTION");
 
-    // Insert transaction header (dengan created_at waktu lokal WIB)
+    let finalCustomerId = customerId || null;
+    let finalCustomerName = (customerName || "").trim();
+
+    // Auto-link or create customer jika transaksi Kasbon
+    if (paymentMethod === "kasbon") {
+      if (finalCustomerId) {
+        if (!finalCustomerName) {
+          const [c] = await window.electronAPI.query("SELECT name FROM customers WHERE id = ?", [finalCustomerId]);
+          if (c) finalCustomerName = c.name;
+        }
+      } else if (finalCustomerName) {
+        const [existing] = await window.electronAPI.query("SELECT id FROM customers WHERE LOWER(name) = LOWER(?)", [finalCustomerName]);
+        if (existing) {
+          finalCustomerId = existing.id;
+        } else {
+          const newCust = await window.electronAPI.run("INSERT INTO customers (name) VALUES (?)", [finalCustomerName]);
+          finalCustomerId = newCust.lastID;
+        }
+      }
+    }
+
+    // Insert transaction header (dengan created_at waktu lokal WIB dan customer_id)
     const txResult = await window.electronAPI.run(
       `INSERT INTO transactions
-         (invoice_no, subtotal, discount, total_amount, payment_amount, change_amount, payment_method, customer_name, notes, status, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'COMPLETED', ?)`,
-      [invoiceNo, subtotal, discount || 0, total, payment, change, paymentMethod, customerName || "", notes || "", createdAt]
+         (invoice_no, subtotal, discount, total_amount, payment_amount, change_amount, payment_method, customer_name, customer_id, notes, status, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'COMPLETED', ?)`,
+      [invoiceNo, subtotal, discount || 0, total, payment, change, paymentMethod, finalCustomerName, finalCustomerId, notes || "", createdAt]
     );
     const transactionId = txResult.lastID;
+
+    // Catat ke Buku Kasbon jika metode kasbon
+    if (paymentMethod === "kasbon" && finalCustomerId) {
+      const downPayment = Math.max(0, Number(payment) || 0);
+      const remainingDebt = Math.max(0, total - downPayment);
+      const debtStatus = remainingDebt === 0 ? "PAID" : (downPayment > 0 ? "PARTIAL" : "UNPAID");
+
+      const debtRes = await window.electronAPI.run(
+        `INSERT INTO customer_debts 
+           (customer_id, transaction_id, invoice_no, total_debt, remaining_debt, status, notes, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [finalCustomerId, transactionId, invoiceNo, total, remainingDebt, debtStatus, notes || "", createdAt]
+      );
+
+      // Jika ada uang muka (DP), catat juga sebagai pembayaran awal
+      if (downPayment > 0 && debtRes.lastID) {
+        await window.electronAPI.run(
+          `INSERT INTO debt_payments
+             (customer_id, debt_id, payment_amount, payment_method, notes, created_at)
+           VALUES (?, ?, ?, 'cash', 'Uang muka / DP saat nota kasbon dibuat', ?)`,
+          [finalCustomerId, debtRes.lastID, downPayment, createdAt]
+        );
+      }
+    }
 
     // Process each item
     for (const item of items) {
@@ -239,6 +285,7 @@ export async function cancelTransaction(transactionId) {
       console.log(`[cancelTransaction] Skipping restock for ${tx.invoice_no} as no physical deduction occurred (Ignore Stock mode was likely ON).`);
     }
 
+    await window.electronAPI.run("UPDATE customer_debts SET status = 'CANCELLED' WHERE transaction_id = ?", [transactionId]);
     const res = await window.electronAPI.run("UPDATE transactions SET status = 'CANCELLED' WHERE id = ?", [transactionId]);
     if (res.changes > 0) {
       import("./audit").then(({ logActivity, AUDIT_ACTIONS }) => {
@@ -351,6 +398,9 @@ export async function deleteTransaction(transactionId) {
       "DELETE FROM transaction_items WHERE transaction_id = ?",
       [transactionId]
     );
+
+    // Hapus hutang kasbon jika ada
+    await window.electronAPI.run("DELETE FROM customer_debts WHERE transaction_id = ?", [transactionId]);
 
     // Hapus transaksi
     const res = await window.electronAPI.run("DELETE FROM transactions WHERE id = ?", [transactionId]);

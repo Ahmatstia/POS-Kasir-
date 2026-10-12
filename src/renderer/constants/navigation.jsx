@@ -3,20 +3,18 @@ import {
   DashboardIcon, 
   CashierIcon, 
   ProductsIcon, 
-  InventoryIcon, 
   TransactionsIcon, 
+  DebtsIcon,
   ReportsIcon, 
-  CategoriesIcon,
   SettingsIcon
 } from '../components/Icons/AppIcons';
 
 export const NAV = [
-  { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
-  { id: 'cashier', label: 'Kasir', icon: <CashierIcon /> },
-  { id: 'products', label: 'Produk', icon: <ProductsIcon /> },
-  { id: 'inventory', label: 'Inventori', icon: <InventoryIcon /> },
-  { id: 'transactions', label: 'Transaksi', icon: <TransactionsIcon /> },
-  { id: 'reports', label: 'Laporan', icon: <ReportsIcon /> },
-  { id: 'categories', label: 'Kategori', icon: <CategoriesIcon /> },
-  { id: 'settings', label: 'Pengaturan', icon: <SettingsIcon /> },
+  { id: 'dashboard',    label: 'Beranda',       icon: <DashboardIcon /> },
+  { id: 'cashier',      label: 'Jual (Kasir)',  icon: <CashierIcon /> },
+  { id: 'products',     label: 'Barang',        icon: <ProductsIcon /> },
+  { id: 'transactions', label: 'Riwayat Nota',  icon: <TransactionsIcon /> },
+  { id: 'debts',        label: 'Buku Kasbon',   icon: <DebtsIcon /> },
+  { id: 'reports',      label: 'Laporan',       icon: <ReportsIcon /> },
+  { id: 'settings',     label: 'Pengaturan',    icon: <SettingsIcon /> },
 ];

@@ -448,7 +448,7 @@ function ProductList() {
             <div style={{ width: 28, height: 28, borderRadius: 8, background: T.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
               <ProductsIcon />
             </div>
-            <h2 style={{ fontSize: 22, fontWeight: 800, color: T.text, letterSpacing: '-0.01em' }}>Daftar Produk</h2>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: T.text, letterSpacing: '-0.01em' }}>Daftar Barang</h2>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {/* View toggle */}
@@ -508,14 +508,14 @@ function ProductList() {
               onMouseLeave={e => e.currentTarget.style.background = T.green + '14'}
             >
               <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 2v9M2 6.5h9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-              Tambah Produk
+              Tambah Barang Baru
             </button>
           </div>
         </div>
 
         {/* ── STAT CARDS ── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 18 }}>
-          <StatCard label="Total Produk" value={total} color={T.blue} icon={
+          <StatCard label="Total Jenis Barang" value={total} color={T.blue} icon={
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="6" height="6" rx="1.5" stroke={T.blue} strokeWidth="1.5"/><rect x="10" y="2" width="6" height="6" rx="1.5" stroke={T.blue} strokeWidth="1.5"/><rect x="2" y="10" width="6" height="6" rx="1.5" stroke={T.blue} strokeWidth="1.5"/><rect x="10" y="10" width="6" height="6" rx="1.5" stroke={T.blue} strokeWidth="1.5"/></svg>
           }/>
           <StatCard label="Stok Aman" value={aman} color={T.green} icon={

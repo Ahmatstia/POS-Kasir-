@@ -95,7 +95,7 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
         <div style={{ padding: '20px 22px', borderBottom: `1px solid ${T.border}` }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
             <div>
-              <p style={{ fontSize: 9, fontWeight: 700, color: T.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 4 }}>Stok Masuk</p>
+              <p style={{ fontSize: 9, fontWeight: 700, color: T.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 4 }}>Barang Masuk (Kulakan)</p>
               <p style={{ fontSize: 16, fontWeight: 800, color: T.text }}>{product.name}</p>
             </div>
             <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${T.border2}`, background: 'transparent', color: T.sub, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
@@ -236,7 +236,7 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginBottom: 4 }}>
                   <div>
                     <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.green, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
-                      Harga Beli / {isKg ? 'Kg' : 'Pcs'} (HPP)
+                      Modal Kulakan / {isKg ? 'Kg' : 'Pcs'}
                     </label>
                     <div style={{ position: 'relative' }}>
                       <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 13, fontWeight: 700, color: T.muted }}>Rp</span>
@@ -247,18 +247,18 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
                         style={{ ...inp, paddingLeft: 34 }}
                       />
                     </div>
-                    <p style={{ fontSize: 10, color: T.muted, marginTop: 6 }}>Opsional — untuk menghitung margin keuntungan</p>
+                    <p style={{ fontSize: 10, color: T.muted, marginTop: 6 }}>Harga modal kulakan untuk menghitung untung toko saat terjual</p>
                   </div>
                 </div>
               )}
 
               <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 12 }}>
                 <div>
-                   <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Tgl Kadaluarsa</label>
+                   <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Tgl Kedaluwarsa</label>
                    <input type="date" value={expiry} onChange={e => setExpiry(e.target.value)} style={inp} />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Kode Batch</label>
+                  <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Nomor Kiriman (Opsional)</label>
                   <input value={batchCode} onChange={e => setBatch(e.target.value)} placeholder="Misal: B-001" style={inp} />
                 </div>
               </div>
@@ -297,7 +297,7 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
 // ─── ADJUST MODAL ─────────────────────────────────────────────────────────────
 function AdjustModal({ product, onClose, onSuccess, showToast, isKg: isKgProp }) {
   // Preset reasons
-  const REASONS = ['Stok opname', 'Barang rusak/hilang', 'Pengembalian barang', 'Koreksi sistem', 'Lain-lain'];
+  const REASONS = ['Hitung Ulang Isi Rak', 'Barang Rusak / Bocor', 'Barang Hilang / Selisih', 'Koreksi Data', 'Lain-lain'];
 
   const hasUnitPrices = product.has_unit_price ?? ((Number(product.price_pcs) || 0) > 0 || (Number(product.price_pack) || 0) > 0 || (Number(product.price_dus) || 0) > 0);
   const hasWeightPrices = product.has_weight_price ?? ((Number(product.price_kg) || 0) > 0 || (Number(product.price_karung) || 0) > 0);
@@ -321,7 +321,7 @@ function AdjustModal({ product, onClose, onSuccess, showToast, isKg: isKgProp })
   }, [adjustUnit, currentBase]);
 
   const handleSave = async () => {
-    if (!reason.trim()) { setError('Alasan koreksi wajib diisi'); return; }
+    if (!reason.trim()) { setError('Alasan pencocokan stok wajib dipilih/diisi'); return; }
     if (newVal < 0)     { setError('Stok tidak boleh negatif'); return; }
     setError('');
     setSaving(true);
@@ -333,7 +333,7 @@ function AdjustModal({ product, onClose, onSuccess, showToast, isKg: isKgProp })
 
        setSaving(false);
        if (res.success) {
-         showToast('success', `✓ Stok ${product.name} dikoreksi ke ${newVal} ${adjustUnit === 'kg' ? 'Kg' : 'Pcs'}`);
+         showToast('success', `✓ Stok ${product.name} dicocokkan ke ${newVal} ${adjustUnit === 'kg' ? 'Kg' : 'Pcs'}`);
          onSuccess(); onClose();
        } else {
          setError('Gagal: ' + res.error);
@@ -350,7 +350,7 @@ function AdjustModal({ product, onClose, onSuccess, showToast, isKg: isKgProp })
 
         <div style={{ padding: '20px 22px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <p style={{ fontSize: 9, fontWeight: 700, color: T.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 4 }}>Koreksi Stok</p>
+            <p style={{ fontSize: 9, fontWeight: 700, color: T.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 4 }}>Cocokkan Stok dengan Isi Rak</p>
             <p style={{ fontSize: 16, fontWeight: 800, color: T.text }}>{product.name}</p>
           </div>
           <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${T.border2}`, background: 'transparent', color: T.sub, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>

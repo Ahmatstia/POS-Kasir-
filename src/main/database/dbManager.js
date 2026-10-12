@@ -34,6 +34,7 @@ class DatabaseManager {
             await this._runSQL("ALTER TABLE inventory_log ADD COLUMN purchase_price INTEGER DEFAULT 0", "FIX inventory_log.purchase_price");
             await this._runSQL("ALTER TABLE stocks ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "FIX stocks.updated_at");
             await this._runSQL("ALTER TABLE transactions ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "FIX transactions.updated_at");
+            await this._runSQL("ALTER TABLE transactions ADD COLUMN customer_id INTEGER", "FIX transactions.customer_id");
             await this._runSQL("ALTER TABLE inventory_log ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "FIX inventory_log.updated_at");
             await this._runSQL("ALTER TABLE transaction_items ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "FIX transaction_items.updated_at");
             await this._runSQL("ALTER TABLE transaction_items ADD COLUMN cost_price INTEGER DEFAULT 0", "FIX transaction_items.cost_price");
@@ -248,6 +249,51 @@ class DatabaseManager {
           await this._runSQL("ALTER TABLE transaction_items ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD transaction_items.created_at");
           await this._runSQL("ALTER TABLE transaction_items ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD transaction_items.updated_at");
 
+          // ── CUSTOMERS (PELANGGAN KASBON) ───────────────────────────────────
+          await this._runSQL(`
+            CREATE TABLE IF NOT EXISTS customers (
+              id          INTEGER PRIMARY KEY AUTOINCREMENT,
+              name        TEXT NOT NULL,
+              phone       TEXT,
+              address     TEXT,
+              debt_limit  INTEGER DEFAULT 0,
+              notes       TEXT,
+              created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+              updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`, "CREATE customers");
+
+          // ── CUSTOMER DEBTS (BUKU KASBON) ──────────────────────────────────
+          await this._runSQL(`
+            CREATE TABLE IF NOT EXISTS customer_debts (
+              id             INTEGER PRIMARY KEY AUTOINCREMENT,
+              customer_id    INTEGER NOT NULL,
+              transaction_id INTEGER,
+              invoice_no     TEXT,
+              total_debt     INTEGER NOT NULL,
+              remaining_debt INTEGER NOT NULL,
+              status         TEXT DEFAULT 'UNPAID' CHECK(status IN ('UNPAID','PARTIAL','PAID','CANCELLED')),
+              due_date       DATE,
+              notes          TEXT,
+              created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+              updated_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (customer_id) REFERENCES customers(id),
+              FOREIGN KEY (transaction_id) REFERENCES transactions(id)
+            )`, "CREATE customer_debts");
+
+          // ── DEBT PAYMENTS (PEMBAYARAN / CICILAN KASBON) ───────────────────
+          await this._runSQL(`
+            CREATE TABLE IF NOT EXISTS debt_payments (
+              id             INTEGER PRIMARY KEY AUTOINCREMENT,
+              customer_id    INTEGER NOT NULL,
+              debt_id        INTEGER,
+              payment_amount INTEGER NOT NULL,
+              payment_method TEXT DEFAULT 'cash',
+              notes          TEXT,
+              created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (customer_id) REFERENCES customers(id),
+              FOREIGN KEY (debt_id)     REFERENCES customer_debts(id)
+            )`, "CREATE debt_payments");
+
           // ── SETTINGS ─────────────────────────────────────────────────────────
           await this._runSQL(`
             CREATE TABLE IF NOT EXISTS settings (
@@ -268,6 +314,8 @@ class DatabaseManager {
           await this._runSQL("CREATE INDEX IF NOT EXISTS idx_inventory_log_ref_id ON inventory_log(reference_id)", "INDEX inventory_log.reference_id");
           await this._runSQL("CREATE INDEX IF NOT EXISTS idx_stocks_product_active ON stocks(product_id, is_active)", "INDEX stocks.product_active");
           await this._runSQL("CREATE INDEX IF NOT EXISTS idx_transaction_items_transaction_id ON transaction_items(transaction_id)", "INDEX transaction_items.transaction_id");
+          await this._runSQL("CREATE INDEX IF NOT EXISTS idx_customer_debts_customer ON customer_debts(customer_id)", "INDEX customer_debts.customer_id");
+          await this._runSQL("CREATE INDEX IF NOT EXISTS idx_debt_payments_customer ON debt_payments(customer_id)", "INDEX debt_payments.customer_id");
 
           // ── ENSURE DATA CONSISTENCY ──────────────────────────────────────────
           await this._runSQL("UPDATE transactions SET status = 'COMPLETED' WHERE status IS NULL", "FIX transactions.status");

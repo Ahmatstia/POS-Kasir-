@@ -7,13 +7,12 @@ import Sidebar from './components/Layout/Sidebar';
 import Header from './components/Layout/Header';
 
 // Feature Components
-import ProductList from './components/Products/ProductList';
+import GoodsHub from './components/Products/GoodsHub';
 import Cashier from './components/Cashier/Cashier';
 import Transactions from './components/Transactions/Transactions';
+import CustomerDebts from './components/Debts/CustomerDebts';
 import Dashboard from './components/Dashboard/Dashboard';
 import Reports from './components/Reports/Reports';
-import CategoryList from './components/Categories/CategoryList';
-import InventoryList from './components/Inventory/InventoryList';
 import Settings from './components/Settings/Settings';
 
 // Constants
@@ -28,7 +27,7 @@ function App() {
       <div style={{ display: 'flex', height: '100vh', background: T.bg }}>
         
         <Sidebar 
-          currentPage={currentPage} 
+          currentPage={currentPage === 'inventory' || currentPage === 'categories' ? 'products' : currentPage} 
           setCurrentPage={setCurrentPage} 
           sidebarOpen={sidebarOpen} 
           setSidebarOpen={setSidebarOpen} 
@@ -37,7 +36,7 @@ function App() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           
           <Header 
-            currentPageLabel={NAV.find(n => n.id === currentPage)?.label} 
+            currentPageLabel={NAV.find(n => n.id === (currentPage === 'inventory' || currentPage === 'categories' ? 'products' : currentPage))?.label || 'Barang'} 
             sidebarOpen={sidebarOpen} 
             setSidebarOpen={setSidebarOpen} 
           />
@@ -51,11 +50,12 @@ function App() {
             <div key={currentPage} className="page-content" style={{ maxWidth: 1400, margin: '0 auto' }}>
               {currentPage === 'dashboard'    && <Dashboard setCurrentPage={setCurrentPage} />}
               {currentPage === 'cashier'      && <Cashier />}
-              {currentPage === 'products'     && <ProductList />}
+              {currentPage === 'products'     && <GoodsHub defaultTab="products" />}
+              {currentPage === 'inventory'    && <GoodsHub defaultTab="inventory" />}
+              {currentPage === 'categories'   && <GoodsHub defaultTab="categories" />}
               {currentPage === 'transactions' && <Transactions />}
+              {currentPage === 'debts'        && <CustomerDebts />}
               {currentPage === 'reports'      && <Reports />}
-              {currentPage === 'inventory'    && <InventoryList />}
-              {currentPage === 'categories'   && <CategoryList />}
               {currentPage === 'settings'     && <Settings />}
             </div>
           </main>

@@ -116,6 +116,16 @@ const METHOD = {
       </svg>
     ),
   },
+  kasbon: {
+    label: "Kasbon",
+    color: T.orange,
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+      </svg>
+    ),
+  },
 };
 const getMethod = (m) => METHOD[m] || METHOD.cash;
 
@@ -297,7 +307,7 @@ function Transactions() {
                 <div style={{ width: 28, height: 28, borderRadius: 8, background: T.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
                   <TransactionsIcon />
                 </div>
-                <h2 style={{ fontSize: 22, fontWeight: 800, color: T.text, letterSpacing: '-0.01em' }}>Riwayat Transaksi</h2>
+                <h2 style={{ fontSize: 22, fontWeight: 800, color: T.text, letterSpacing: '-0.01em' }}>Riwayat Nota Penjualan</h2>
               </div>
               {/* Quick filter buttons */}
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -630,7 +640,7 @@ function Transactions() {
                         marginBottom: 4,
                       }}
                     >
-                      Invoice
+                      Nomor Nota
                     </p>
                     <p
                       style={{
@@ -677,7 +687,7 @@ function Transactions() {
                             background: T.red + '15', padding: '4px 8px', borderRadius: 6,
                             letterSpacing: '0.05em'
                         }}>
-                            DIBATALKAN (REFUND)
+                            NOTA DIBATALKAN (BARANG KEMBALI KE RAK)
                         </span>
                     )}
                    </div>
@@ -692,7 +702,7 @@ function Transactions() {
                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
                      </svg>
-                     HAPUS INVOICE
+                     BATALKAN NOTA INI
                    </button>
                 </div>
 
@@ -917,7 +927,18 @@ function Transactions() {
                   </span>
                 </div>
 
-                {[
+                {(selected.transaction.payment_method === 'kasbon' ? [
+                  {
+                    label: "Uang Muka (DP)",
+                    val: selected.transaction.payment_amount,
+                    color: T.sub,
+                  },
+                  {
+                    label: "Sisa Kasbon",
+                    val: Math.max(0, selected.transaction.total_amount - selected.transaction.payment_amount),
+                    color: T.orange,
+                  },
+                ] : [
                   {
                     label: "Dibayar",
                     val: selected.transaction.payment_amount,
@@ -928,7 +949,7 @@ function Transactions() {
                     val: selected.transaction.change_amount,
                     color: T.green,
                   },
-                ].map(({ label, val, color }) => (
+                ]).map(({ label, val, color }) => (
                   <div
                     key={label}
                     style={{ display: "flex", justifyContent: "space-between" }}
@@ -1077,25 +1098,25 @@ function Transactions() {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
             </div>
             <h3 style={{ margin: '0 0 8px 0', fontSize: 16, color: T.text, fontFamily: 'Syne, sans-serif' }}>
-                {deleteDialog.type === 'all' ? 'Hapus Semua Transaksi?' : 'Hapus Invoice Ini?'}
+                {deleteDialog.type === 'all' ? 'Hapus Semua Riwayat Nota?' : 'Batalkan Nota Ini?'}
             </h3>
             <p style={{ margin: '0 0 20px 0', fontSize: 12, color: T.muted, lineHeight: 1.5 }}>
                 {deleteDialog.type === 'all' 
-                 ? 'Aksi ini akan menghapus seluruh data transaksi. Laporan Omzet akan di-reset nol. Aksi ini tidak bisa dikembalikan.' 
-                 : 'Transaksi akan dihapus dari laporan dan produk yang terjual akan otomatis dikembalikan (restock) ke Gudang.'}
+                 ? 'Aksi ini akan menghapus seluruh data nota penjualan. Laporan omzet akan di-reset. Tindakan ini tidak dapat dibatalkan.' 
+                 : 'Nota belanja ini akan dibatalkan dari pembukuan, dan barang belanjaan akan otomatis dikembalikan ke stok rak.'}
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <button 
                 onClick={() => setDeleteDialog(null)}
                 style={{ padding: '10px 0', borderRadius: 10, background: T.bg, border: `1px solid ${T.border2}`, color: T.sub, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}
               >
-                Batal
+                Kembali
               </button>
               <button 
                 onClick={handleDelete}
                 style={{ padding: '10px 0', borderRadius: 10, background: T.red, border: 'none', color: '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}
               >
-                Ya, Hapus
+                {deleteDialog.type === 'all' ? 'Ya, Hapus Semua' : 'Ya, Batalkan Nota'}
               </button>
             </div>
           </div>

@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { getDashboardData } from '../../services/dashboard';
 import { isPrivacyModeEnabled, isStockManaged } from '../../services/settings';
+import { getDebtSummary } from '../../services/debts';
 import { T } from '../../theme';
 import { DashboardIcon } from '../Icons/AppIcons';
 
@@ -144,6 +145,7 @@ export default function Dashboard({ setCurrentPage }) {
   const [data, setData] = useState(null);
   const [hideCost, setHideCost] = useState(false);
   const [stockManaged, setStockManaged] = useState(true);
+  const [debtSummary, setDebtSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -155,14 +157,16 @@ export default function Dashboard({ setCurrentPage }) {
     setLoading(true);
     setError(null);
     try {
-      const [result, isPrivacy, isManaged] = await Promise.all([
+      const [result, isPrivacy, isManaged, debts] = await Promise.all([
         getDashboardData(),
         isPrivacyModeEnabled(),
-        isStockManaged()
+        isStockManaged(),
+        getDebtSummary(),
       ]);
       setData(result);
       setHideCost(isPrivacy);
       setStockManaged(isManaged);
+      setDebtSummary(debts);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -294,7 +298,7 @@ export default function Dashboard({ setCurrentPage }) {
                 <DashboardIcon />
               </div>
               <span style={{ fontSize: 18, fontWeight: 800, color: T.text, letterSpacing: '-0.01em' }}>
-                Analitik
+                Beranda (Ringkasan Hari Ini)
               </span>
             </div>
             <span style={{ fontSize: 12, color: T.muted, fontFamily: 'JetBrains Mono, monospace' }}>
@@ -314,7 +318,7 @@ export default function Dashboard({ setCurrentPage }) {
                 <path d="M1.5 5.5A4 4 0 115 1.7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
                 <path d="M1.5 2.5v3h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              Refresh
+              Segarkan
             </button>
             {/* Live indicator */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 100, background: T.green + '15', border: `1px solid ${T.green}30` }}>
@@ -327,29 +331,78 @@ export default function Dashboard({ setCurrentPage }) {
           </div>
         </div>
 
+        {/* ── KASBON ALERT BANNER ── */}
+        {debtSummary && debtSummary.totalUnpaidDebt > 0 && (
+          <div
+            style={{
+              marginBottom: 20,
+              padding: '14px 18px',
+              borderRadius: 14,
+              background: T.orange + '12',
+              border: `1px solid ${T.orange}40`,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 12,
+              animation: 'fadeUp 0.3s ease both',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 22 }}>📒</span>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 800, color: T.text, margin: '0 0 2px 0' }}>
+                  Perhatian: Ada Kasbon Pelanggan Belum Lunas Sebesar {fmt(debtSummary.totalUnpaidDebt)}
+                </p>
+                <p style={{ fontSize: 11, color: T.muted, margin: 0 }}>
+                  Tercatat {debtSummary.debtorsCount} orang pelanggan belum melunasi belanjaan mereka.
+                </p>
+              </div>
+            </div>
+            {setCurrentPage && (
+              <button
+                onClick={() => setCurrentPage('debts')}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 10,
+                  border: `1px solid ${T.orange}60`,
+                  background: T.orange,
+                  color: '#fff',
+                  fontSize: 12,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  fontFamily: 'Syne, sans-serif',
+                }}
+              >
+                Buka Buku Kasbon →
+              </button>
+            )}
+          </div>
+        )}
+
         {/* ── STAT CARDS ── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, marginBottom: 24 }}>
           <StatCard
-            index={0} label="Omzet Hari Ini" accent={T.accent}
+            index={0} label="Penjualan Hari Ini" accent={T.accent}
             value={data.todaySales || 0}
-            sub={<Chip color={T.accent}>{data.todayTransactions || 0} Transaksi</Chip>}
+            sub={<Chip color={T.accent}>{data.todayTransactions || 0} Nota Belanja</Chip>}
           />
           <StatCard
-            index={1} label="Omzet Bulan Ini" accent={T.blue}
+            index={1} label="Penjualan Bulan Ini" accent={T.blue}
             value={data.monthSales || 0}
-            sub={<span style={{ fontSize: 12, color: T.sub }}>Target: {fmtShort((data.monthSales || 0) * 1.2)}</span>}
+            sub={<span style={{ fontSize: 12, color: T.sub }}>Perkiraan: {fmtShort((data.monthSales || 0) * 1.2)}</span>}
           />
           {!hideCost && (
             <>
               <StatCard
-                index={2} label="Laba Hari Ini" accent={T.green}
+                index={2} label="Untung Hari Ini" accent={T.green}
                 value={data.todayProfit || 0}
-                sub={<Chip color={T.green}>Gross Profit</Chip>}
+                sub={<Chip color={T.green}>Laba Kotor Toko</Chip>}
               />
               <StatCard
-                index={3} label="Laba Bulan Ini" accent={T.purple}
+                index={3} label="Untung Bulan Ini" accent={T.purple}
                 value={data.monthProfit || 0}
-                sub={<span style={{ fontSize: 12, color: T.sub }}>Net Estimasi</span>}
+                sub={<span style={{ fontSize: 12, color: T.sub }}>Akumulasi Untung</span>}
               />
             </>
           )}

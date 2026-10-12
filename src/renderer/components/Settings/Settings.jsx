@@ -167,19 +167,18 @@ function Settings() {
             <div style={{ width: 28, height: 28, borderRadius: 8, background: T.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
               <SettingsIcon />
             </div>
-            <h2 style={{ fontSize: 22, fontWeight: 800, color: T.text, letterSpacing: '-0.01em' }}>Pengaturan</h2>
           </div>
           <div style={{ display: 'flex', background: T.surface, padding: 4, borderRadius: 12, border: `1px solid ${T.border}` }}>
             <button onClick={() => setActiveTab('general')} style={{ 
               padding: '8px 16px', borderRadius: 9, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none',
               background: activeTab === 'general' ? T.accent : 'transparent', color: activeTab === 'general' ? '#fff' : T.sub,
               transition: 'all 0.2s'
-            }}>Umum</button>
+            }}>Toko & Mode Jual</button>
             <button onClick={() => setActiveTab('security')} style={{ 
               padding: '8px 16px', borderRadius: 9, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none',
               background: activeTab === 'security' ? T.accent : 'transparent', color: activeTab === 'security' ? '#fff' : T.sub,
               transition: 'all 0.2s'
-            }}>Database & Keamanan</button>
+            }}>Cadangan Data & Catatan</button>
           </div>
         </div>
 
@@ -190,11 +189,11 @@ function Settings() {
               <div style={{ marginBottom: 18 }}>
                 <p style={{ fontSize: 15, fontWeight: 800, color: T.text, marginBottom: 4 }}>🏪 Profil & Identitas Struk Toko</p>
                 <p style={{ fontSize: 12, color: T.sub, lineHeight: 1.5 }}>
-                  Atur nama toko, alamat, dan nomor telepon yang akan dicetak pada kepala struk (Thermal & Standar).
+                  Atur nama toko, alamat, dan nomor kontak yang akan dicetak pada kepala struk nota belanja.
                 </p>
               </div>
 
-              <form onSubmit={handleSaveStoreProfile} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <form onSubmit={handleSaveStoreProfile} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: T.muted, textTransform: 'uppercase', marginBottom: 6 }}>
                     Nama Toko
@@ -248,7 +247,7 @@ function Settings() {
 
                 <div style={{ gridColumn: 'span 2' }}>
                   <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: T.muted, textTransform: 'uppercase', marginBottom: 6 }}>
-                    Pesan Footer Struk (Penutup)
+                    Pesan Kaki Struk (Penutup Nota)
                   </label>
                   <input
                     type="text"
@@ -288,9 +287,9 @@ function Settings() {
             <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, padding: 24 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <div>
-                  <p style={{ fontSize: 14, fontWeight: 800, color: T.text, marginBottom: 4 }}>Mode Abaikan Stok (Unlimited)</p>
+                  <p style={{ fontSize: 14, fontWeight: 800, color: T.text, marginBottom: 4 }}>Boleh Jual Walau Stok Komputer 0</p>
                   <p style={{ fontSize: 12, color: T.sub, lineHeight: 1.5 }}>
-                    Jika dinyalakan, kasir bisa melakukan transaksi meskipun stok kosong (Unlimited).
+                    Jika dinyalakan, kasir tetap bisa melayani penjualan meskipun stok di komputer tercatat kosong.
                   </p>
                 </div>
                 <label className="toggle-switch">
@@ -317,12 +316,12 @@ function Settings() {
                 </div>
                 <div>
                   <p style={{ fontSize: 11, fontWeight: 800, color: ignoreStock ? T.accent : T.green, marginBottom: 4 }}>
-                    Status: {ignoreStock ? 'Mode Abaikan Stok Aktif' : 'Mode Validasi Stok Aktif'}
+                    Status: {ignoreStock ? 'Jual Bebas (Stok 0 Tetap Bisa Jual)' : 'Validasi Stok Ketat'}
                   </p>
                   <p style={{ fontSize: 11, color: T.sub, lineHeight: 1.4 }}>
                     {ignoreStock 
-                      ? 'Kasir dizinkan menjual produk meskipun stok di sistem Nol.' 
-                      : 'Aplikasi akan memvalidasi sisa stok saat transaksi.'}
+                      ? 'Kasir dizinkan menjual produk meskipun stok fisik baru datang dan belum diinput ke komputer.' 
+                      : 'Aplikasi membatasi kasir jika jumlah barang melebihi sisa stok di komputer.'}
                   </p>
                 </div>
               </div>
@@ -332,9 +331,9 @@ function Settings() {
             <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, padding: 24 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <div>
-                  <p style={{ fontSize: 14, fontWeight: 800, color: T.text, marginBottom: 4 }}>Mode Privasi (Sembunyikan Modal)</p>
+                  <p style={{ fontSize: 14, fontWeight: 800, color: T.text, marginBottom: 4 }}>Sembunyikan Modal dan Untung</p>
                   <p style={{ fontSize: 12, color: T.sub, lineHeight: 1.5 }}>
-                    Sembunyikan Harga Beli, Modal, dan Laba dari layar Kasir & Laporan.
+                    Sembunyikan harga modal beli dan angka keuntungan dari layar monitor agar aman dari pandangan pembeli.
                   </p>
                 </div>
                 <label className="toggle-switch">
@@ -355,19 +354,19 @@ function Settings() {
                   color: hideCost ? T.red : T.green,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                 }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
                     <line x1="1" y1="1" x2="23" y2="23"></line>
                   </svg>
                 </div>
                 <div>
                   <p style={{ fontSize: 11, fontWeight: 800, color: hideCost ? T.red : T.green, marginBottom: 4 }}>
-                    Status: {hideCost ? 'Mode Privasi Aktif' : 'Mode Transparan Aktif'}
+                    Status: {hideCost ? 'Modal & Untung Disembunyikan' : 'Modal & Untung Ditampilkan'}
                   </p>
                   <p style={{ fontSize: 11, color: T.sub, lineHeight: 1.4 }}>
                     {hideCost 
-                      ? 'Data modal & keuntungan tidak tampil di layar.' 
-                      : 'Semua data keuangan (modal & laba) dapat dilihat di laporan.'}
+                      ? 'Layar monitor aman dilihat pembeli; angka modal & untung ditutup tanda bintang/titik.' 
+                      : 'Semua angka modal dan keuntungan terlihat normal di laporan.'}
                   </p>
                 </div>
               </div>
@@ -382,8 +381,8 @@ function Settings() {
                    <div style={{ width: 60, height: 60, borderRadius: '50%', background: T.purple + '10', color: T.purple, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
                       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
                    </div>
-                   <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 8, color: T.text }}>Cadangan Database</h3>
-                   <p style={{ fontSize: 12, color: T.sub, marginBottom: 20, lineHeight: 1.5 }}>Simpan salinan data Anda sekarang untuk menjaga keamanan informasi toko.</p>
+                   <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 8, color: T.text }}>Simpan Cadangan Data</h3>
+                   <p style={{ fontSize: 12, color: T.sub, marginBottom: 20, lineHeight: 1.5 }}>Amankan seluruh data jualan dan stok toko ke file cadangan (.db).</p>
                    <div style={{ display: 'flex', gap: 12, width: '100%', marginBottom: 16 }}>
                      <button 
                       onClick={handleBackup} disabled={backingUp}
@@ -396,7 +395,7 @@ function Settings() {
                         {backingUp ? '...' : (
                           <>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-                            Backup
+                            Cadangkan
                           </>
                         )}
                      </button>
@@ -411,7 +410,7 @@ function Settings() {
                        onMouseLeave={e => { e.currentTarget.style.background = T.surface; }}
                       >
                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
-                         Folder
+                         Buka Folder
                       </button>
                    </div>
 
@@ -427,17 +426,16 @@ function Settings() {
                      onMouseEnter={e => { e.currentTarget.style.background = T.red; e.currentTarget.style.color = '#fff'; }}
                      onMouseLeave={e => { e.currentTarget.style.background = T.red + '10'; e.currentTarget.style.color = T.red; }}
                     >
-                       📥 Impor Data / Perbarui Database
+                       📥 Pulihkan Data dari Cadangan (.db)
                     </button>
                  </div>
 
                 <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, padding: 24, display: 'flex', gap: 20, alignItems: 'center' }}>
                    <div style={{ flex: 1 }}>
-                      <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 8, color: T.text }}>Keamanan Audit</h3>
-                      <p style={{ fontSize: 12, color: T.sub, lineHeight: 1.6 }}>System Audit Trail akan mencatat setiap tindakan penting seperti penghapusan transaksi dan perubahan stok. Ini membantu Anda melacak jika ada ketidaksesuaian data.</p>
+                      <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 8, color: T.text }}>Catatan Kejadian (Audit Trail)</h3>
+                      <p style={{ fontSize: 12, color: T.sub, lineHeight: 1.6 }}>Mencatat setiap tindakan penting seperti pembatalan nota belanja, cadangan data, atau hapus database untuk keamanan toko Anda.</p>
                        <div style={{ marginTop: 16, display: 'flex', gap: 12 }}>
                           <div style={{ padding: '6px 12px', borderRadius: 8, background: T.bg, border: `1px solid ${T.border2}`, fontSize: 11, color: T.sub }}>Pencatatan: <b>Aktif</b></div>
-                          <div style={{ padding: '6px 12px', borderRadius: 8, background: T.bg, border: `1px solid ${T.border2}`, fontSize: 11, color: T.sub }}>Riwayat: <b>5 Backup Terbaru</b></div>
                        </div>
                    </div>
                    <div style={{ width: 120, height: 120, opacity: 0.1, color: T.accent }}>

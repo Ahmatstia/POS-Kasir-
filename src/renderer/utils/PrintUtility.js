@@ -172,19 +172,31 @@ export const printReceipt = (transaction, items, storeProfile = null) => {
           <span>TOTAL:</span>
           <span>${formatPrice(transaction.total_amount)}</span>
         </div>
+        ${transaction.payment_method === 'kasbon' ? `
+        <div class="total-row" style="color: #c00; font-weight: bold; border-top: 1px dashed #000; padding-top: 4px; margin-top: 4px;">
+          <span>STATUS NOTA:</span>
+          <span>KASBON (BELUM LUNAS)</span>
+        </div>
         <div class="total-row">
-          <span>Tunai:</span>
+          <span>Uang Muka / DP:</span>
+          <span>${formatPrice(transaction.payment_amount)}</span>
+        </div>
+        <div class="total-row" style="font-weight: bold;">
+          <span>Sisa Kasbon:</span>
+          <span>${formatPrice(Math.max(0, transaction.total_amount - transaction.payment_amount))}</span>
+        </div>` : `
+        <div class="total-row">
+          <span>Bayar:</span>
           <span>${formatPrice(transaction.payment_amount)}</span>
         </div>
         <div class="total-row">
           <span>Kembali:</span>
           <span>${formatPrice(transaction.change_amount)}</span>
-        </div>
+        </div>`}
       </div>
 
       <div class="footer">
-        <p>Metode Pembayaran: ${transaction.payment_method.toUpperCase()}</p>
-        <p>${transaction.payment_method === 'cash' ? 'Tunai' : transaction.payment_method === 'debit' ? 'Kartu Debit' : 'QRIS'}</p>
+        <p>Metode: ${transaction.payment_method === 'kasbon' ? 'KASBON (UTANG PELANGGAN)' : transaction.payment_method === 'cash' ? 'TUNAI' : transaction.payment_method === 'debit' ? 'DEBIT' : 'QRIS'}</p>
       </div>
 
       <div class="thankyou">
@@ -300,12 +312,98 @@ export const printThermalReceipt = (transaction, items, storeProfile = null) => 
         <tr><td>Subtotal</td><td>${formatPrice(transaction.subtotal)}</td></tr>
         ${transaction.discount > 0 ? `<tr><td>Diskon</td><td>-${formatPrice(transaction.discount)}</td></tr>` : ''}
         <tr><td><b>TOTAL</b></td><td><b>${formatPrice(transaction.total_amount)}</b></td></tr>
+        ${transaction.payment_method === 'kasbon' ? `
+        <tr><td colspan="2" style="font-weight:bold;color:#c00">STATUS: KASBON</td></tr>
+        <tr><td>Uang Muka / DP</td><td>${formatPrice(transaction.payment_amount)}</td></tr>
+        <tr><td><b>Sisa Kasbon</b></td><td><b>${formatPrice(Math.max(0, transaction.total_amount - transaction.payment_amount))}</b></td></tr>
+        ` : `
         <tr><td>Tunai</td><td>${formatPrice(transaction.payment_amount)}</td></tr>
         <tr><td>Kembali</td><td>${formatPrice(transaction.change_amount)}</td></tr>
+        `}
       </table>
       <div class="center" style="margin-top:6px">
+        <p style="margin:2px 0">Metode: ${transaction.payment_method === 'kasbon' ? 'KASBON' : transaction.payment_method.toUpperCase()}</p>
         <p style="margin:2px 0">Terima Kasih</p>
         <p style="margin:2px 0;font-style:italic">${escapeHtml(store.footer)}</p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(receiptContent);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+  printWindow.close();
+};
+
+// ─── PRINT BUKTI PEMBAYARAN KASBON ───────────────────────────────────────────
+export const printDebtPaymentReceipt = (payment, customer, remainingDebt, storeProfile = null) => {
+  const store = {
+    name: storeProfile?.name || 'TOKO BUMBU',
+    address: storeProfile?.address || 'Jl. Imam Bonjol, Muara Sabak Barat, Tanjung Jabung Timur',
+    phone: storeProfile?.phone || '0822-8324-8946',
+  };
+  const formatPrice = (price) => `Rp ${Number(price || 0).toLocaleString('id-ID')}`;
+  const escapeHtml = (text) => text ? String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;") : "";
+
+  const receiptContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Bukti Pembayaran Kasbon</title>
+      <style>
+        @page { size: auto; margin: 10mm; }
+        body { font-family: 'Courier New', monospace; width: 300px; margin: 0 auto; padding: 15px; font-size: 13px; }
+        .header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 12px; }
+        .line { border-top: 1px dashed #000; margin: 8px 0; }
+        .row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .highlight { font-weight: bold; font-size: 14px; }
+        .footer { text-align: center; margin-top: 16px; border-top: 1px dashed #000; padding-top: 8px; font-size: 11px; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h2 style="margin:0;font-size:16px">${escapeHtml(store.name)}</h2>
+        ${store.address ? `<p style="margin:2px 0;font-size:11px">${escapeHtml(store.address)}</p>` : ''}
+        ${store.phone ? `<p style="margin:2px 0;font-size:11px">Telp: ${escapeHtml(store.phone)}</p>` : ''}
+      </div>
+
+      <div style="text-align:center;margin-bottom:10px">
+        <h3 style="margin:0;font-size:14px">BUKTI PEMBAYARAN KASBON</h3>
+        <p style="margin:2px 0;font-size:11px">${payment.created_at || new Date().toLocaleString('id-ID')}</p>
+      </div>
+
+      <div class="line"></div>
+      <div class="row"><span>Nama Pelanggan:</span><b>${escapeHtml(customer?.name || '-')}</b></div>
+      ${customer?.phone ? `<div class="row"><span>No. HP:</span><span>${escapeHtml(customer.phone)}</span></div>` : ''}
+      ${payment.invoice_no ? `<div class="row"><span>Nota Terkait:</span><span>${escapeHtml(payment.invoice_no)}</span></div>` : ''}
+      <div class="line"></div>
+
+      <div class="row highlight">
+        <span>JUMLAH DIBAYAR:</span>
+        <span>${formatPrice(payment.payment_amount)}</span>
+      </div>
+      <div class="row">
+        <span>Metode:</span>
+        <span>${payment.payment_method === 'cash' ? 'Tunai' : payment.payment_method?.toUpperCase()}</span>
+      </div>
+      ${payment.notes ? `<div class="row"><span>Catatan:</span><span>${escapeHtml(payment.notes)}</span></div>` : ''}
+
+      <div class="line"></div>
+      <div class="row highlight" style="color:${remainingDebt === 0 ? '#080' : '#b00'}">
+        <span>SISA KASBON:</span>
+        <span>${formatPrice(remainingDebt)}</span>
+      </div>
+      <div style="text-align:center;margin-top:4px;font-size:11px">
+        ${remainingDebt === 0 ? '🎉 KASBON SUDAH LUNAS' : '⚠️ Masih ada sisa kasbon'}
+      </div>
+
+      <div class="footer">
+        <p>Simpan tanda terima ini sebagai bukti sah pembayaran.</p>
+        <p>Terima Kasih</p>
       </div>
     </body>
     </html>

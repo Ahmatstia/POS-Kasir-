@@ -42,6 +42,8 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
   const totalPcs = (dusVal * pd * pp) + (packVal * pp) + pcsVal;
   const totalKg  = kgVal;
 
+  const isKg = isKgOnly || (totalKg > 0 && totalPcs === 0);
+
   const totalDisplay = [
     totalKg > 0 ? `${totalKg} Kg` : '',
     totalPcs > 0 ? `${totalPcs} Pcs` : ''
@@ -293,7 +295,7 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
 }
 
 // ─── ADJUST MODAL ─────────────────────────────────────────────────────────────
-function AdjustModal({ product, onClose, onSuccess, showToast, isKg }) {
+function AdjustModal({ product, onClose, onSuccess, showToast, isKg: isKgProp }) {
   // Preset reasons
   const REASONS = ['Stok opname', 'Barang rusak/hilang', 'Pengembalian barang', 'Koreksi sistem', 'Lain-lain'];
 
@@ -301,6 +303,7 @@ function AdjustModal({ product, onClose, onSuccess, showToast, isKg }) {
   const hasWeightPrices = product.has_weight_price ?? ((Number(product.price_kg) || 0) > 0 || (Number(product.price_karung) || 0) > 0);
   const isHybrid = hasUnitPrices && hasWeightPrices;
 
+  const isKg = isKgProp ?? (product?.sell_per_unit === 'kg');
   const [adjustUnit, setAdjustUnit] = useState(isKg ? 'kg' : 'pcs');
   const currentBase = adjustUnit === 'kg' ? (product.stock_kg || 0) : (product.stock || 0);
 
@@ -330,7 +333,7 @@ function AdjustModal({ product, onClose, onSuccess, showToast, isKg }) {
 
        setSaving(false);
        if (res.success) {
-         showToast('success', `✓ Stok ${product.name} dikoreksi ke ${newVal} ${isKg ? 'Kg' : 'Pcs'}`);
+         showToast('success', `✓ Stok ${product.name} dikoreksi ke ${newVal} ${adjustUnit === 'kg' ? 'Kg' : 'Pcs'}`);
          onSuccess(); onClose();
        } else {
          setError('Gagal: ' + res.error);
@@ -392,7 +395,7 @@ function AdjustModal({ product, onClose, onSuccess, showToast, isKg }) {
               fontSize: 13, fontWeight: 800, color: isPlus ? T.green : T.red, 
               fontFamily: 'JetBrains Mono, monospace', border: `1px dashed ${isPlus ? T.green : T.red}30`
             }}>
-              {isPlus ? 'BERTAMBAH' : 'BERKURANG'} {isKg ? Math.abs(diff).toFixed(2) : numFmt(Math.abs(diff))} {isKg ? 'Kg' : 'Pcs'}
+              {isPlus ? 'BERTAMBAH' : 'BERKURANG'} {adjustUnit === 'kg' ? Math.abs(diff).toFixed(2) : numFmt(Math.abs(diff))} {adjustUnit === 'kg' ? 'Kg' : 'Pcs'}
             </div>
           )}
 
@@ -1022,7 +1025,7 @@ function InventoryList() {
       </div>
 
       {stockInProduct && <StockInModal product={stockInProduct} hideCost={hideCost} onClose={() => setStockInProduct(null)} onSuccess={load} showToast={showToast} />}
-      {adjustProduct  && <AdjustModal  product={adjustProduct}  onClose={() => setAdjustProduct(null)}  onSuccess={load} showToast={showToast} />}
+      {adjustProduct  && <AdjustModal  product={adjustProduct} isKg={adjustProduct.sell_per_unit === 'kg'} onClose={() => setAdjustProduct(null)}  onSuccess={load} showToast={showToast} />}
     </>
   );
 }

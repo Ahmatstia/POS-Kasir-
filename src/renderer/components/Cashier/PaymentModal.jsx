@@ -29,23 +29,30 @@ const METHODS = [
 ];
 
 function PaymentModal({ total, onClose, onConfirm, loading = false }) {
-  const [payment, setPayment]           = useState('');
+  const [customerName, setCustomerName]   = useState('');
+  const [discount, setDiscount]           = useState('');
+  const [payment, setPayment]             = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
-  const [autoPrint, setAutoPrint]       = useState(true);
-  const [printType, setPrintType]       = useState('thermal'); // 'thermal' or 'normal'
+  const [autoPrint, setAutoPrint]         = useState(true);
+  const [printType, setPrintType]         = useState('thermal'); // 'thermal' or 'normal'
   const inputRef = useRef(null);
 
-  const paymentNum = Number(payment) || 0;
-  const change     = paymentNum - total;
-  const isValid    = paymentNum >= total;
-  const shortfall  = isValid ? 0 : total - paymentNum;
+  const discountNum = Math.max(0, Number(discount) || 0);
+  const finalTotal  = Math.max(0, total - discountNum);
+  const paymentNum  = Number(payment) || 0;
+  const change      = paymentNum - finalTotal;
+  const isValid     = paymentNum >= finalTotal;
+  const shortfall   = isValid ? 0 : finalTotal - paymentNum;
 
   useEffect(() => {
     setTimeout(() => inputRef.current?.focus(), 80);
   }, []);
 
   const quickAmounts = [
-    { label: 'Uang Pas',  value: total              },
+    { label: 'Uang Pas',  value: finalTotal         },
+    { label: '5k',        value: 5_000              },
+    { label: '10k',       value: 10_000             },
+    { label: '20k',       value: 20_000             },
     { label: '50k',       value: 50_000             },
     { label: '100k',      value: 100_000            },
     { label: '200k',      value: 200_000            },
@@ -54,8 +61,16 @@ function PaymentModal({ total, onClose, onConfirm, loading = false }) {
   ];
 
   const handleConfirm = () => {
-    if (!isValid) return;
-    onConfirm({ payment: paymentNum, change, method: paymentMethod, autoPrint, printType });
+    if (!isValid || loading) return;
+    onConfirm({
+      payment: paymentNum,
+      change,
+      method: paymentMethod,
+      autoPrint,
+      printType,
+      discount: discountNum,
+      customerName: customerName.trim(),
+    });
   };
 
   // close on backdrop click
@@ -103,9 +118,9 @@ function PaymentModal({ total, onClose, onConfirm, loading = false }) {
       >
         {/* Modal card */}
         <div style={{
-          width: '100%', maxWidth: 420,
+          width: '100%', maxWidth: 440, maxHeight: '92vh', overflowY: 'auto',
           background: T.surface, border: `1px solid ${T.border2}`,
-          borderRadius: 20, overflow: 'hidden',
+          borderRadius: 20,
           animation: 'modalIn 0.25s cubic-bezier(0.16,1,0.3,1) both',
           boxShadow: '0 32px 80px rgba(0,0,0,0.6)',
         }}>
@@ -115,6 +130,7 @@ function PaymentModal({ total, onClose, onConfirm, loading = false }) {
             padding: '18px 22px 16px',
             borderBottom: `1px solid ${T.border}`,
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            position: 'sticky', top: 0, background: T.surface, zIndex: 2,
           }}>
             <div>
               <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: T.muted, marginBottom: 2 }}>
@@ -141,7 +157,7 @@ function PaymentModal({ total, onClose, onConfirm, loading = false }) {
             </button>
           </div>
 
-          <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
             {/* ── TOTAL BANNER ── */}
             <div style={{
@@ -152,11 +168,18 @@ function PaymentModal({ total, onClose, onConfirm, loading = false }) {
             }}>
               <div>
                 <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.accent + 'AA', marginBottom: 4 }}>
-                  Total Belanja
+                  {discountNum > 0 ? `Total Tagihan (Diskon -${fmt(discountNum)})` : 'Total Belanja'}
                 </p>
-                <p style={{ fontSize: 28, fontWeight: 800, color: T.accent, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '-0.02em' }}>
-                  {fmt(total)}
-                </p>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+                  <p style={{ fontSize: 28, fontWeight: 800, color: T.accent, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '-0.02em' }}>
+                    {fmt(finalTotal)}
+                  </p>
+                  {discountNum > 0 && (
+                    <span style={{ fontSize: 13, textDecoration: 'line-through', color: T.muted, fontFamily: 'JetBrains Mono, monospace' }}>
+                      {fmt(total)}
+                    </span>
+                  )}
+                </div>
               </div>
               <div style={{
                 width: 44, height: 44, borderRadius: 12,
@@ -167,9 +190,55 @@ function PaymentModal({ total, onClose, onConfirm, loading = false }) {
               </div>
             </div>
 
+            {/* ── PELANGGAN & DISKON ── */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: T.muted, display: 'block', marginBottom: 6 }}>
+                  Pelanggan (Opsional)
+                </label>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={e => setCustomerName(e.target.value)}
+                  placeholder="Nama pembeli / umum"
+                  style={{
+                    width: '100%', padding: '9px 12px',
+                    borderRadius: 9, border: `1px solid ${T.border2}`,
+                    background: T.bg, color: T.text,
+                    fontSize: 12, outline: 'none',
+                    fontFamily: 'Syne, sans-serif'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: T.muted, display: 'block', marginBottom: 6 }}>
+                  Potongan Diskon (Rp)
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <span style={{
+                    position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)',
+                    fontSize: 11, fontWeight: 700, color: T.muted, pointerEvents: 'none'
+                  }}>Rp</span>
+                  <input
+                    type="number"
+                    value={discount}
+                    onChange={e => setDiscount(e.target.value)}
+                    placeholder="0"
+                    style={{
+                      width: '100%', padding: '9px 10px 9px 32px',
+                      borderRadius: 9, border: `1px solid ${T.border2}`,
+                      background: T.bg, color: T.text,
+                      fontSize: 13, fontWeight: 700, outline: 'none',
+                      fontFamily: 'JetBrains Mono, monospace'
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
             {/* ── PAYMENT METHOD ── */}
             <div>
-              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.muted, marginBottom: 10 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.muted, marginBottom: 8 }}>
                 Metode Pembayaran
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
@@ -179,7 +248,12 @@ function PaymentModal({ total, onClose, onConfirm, loading = false }) {
                     <button
                       key={m.key}
                       className="method-btn"
-                      onClick={() => setPaymentMethod(m.key)}
+                      onClick={() => {
+                        setPaymentMethod(m.key);
+                        if (m.key !== 'cash' && (!payment || payment === '0')) {
+                          setPayment(finalTotal.toString());
+                        }
+                      }}
                       style={{
                         padding: '10px 8px', borderRadius: 11,
                         border: `1px solid ${active ? T.blue + '50' : T.border2}`,
@@ -200,16 +274,16 @@ function PaymentModal({ total, onClose, onConfirm, loading = false }) {
 
             {/* ── QUICK AMOUNTS ── */}
             <div>
-              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.muted, marginBottom: 10 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.muted, marginBottom: 8 }}>
                 Nominal Cepat
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
                 {quickAmounts.map((a) => {
-                  const isExact  = a.value === total;
+                  const isExact  = a.value === finalTotal;
                   const selected = paymentNum === a.value;
                   return (
                     <button
-                      key={a.value}
+                      key={a.label}
                       className="quick-btn"
                       onClick={() => setPayment(a.value.toString())}
                       style={{

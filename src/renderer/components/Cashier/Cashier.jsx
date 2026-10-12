@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { getProducts } from "../../services/database";
-import { createTransaction } from "../../services/transactions";
+import { createTransaction, getLocalDatetimeStr } from "../../services/transactions";
 import { getStoreProfile } from "../../services/settings";
 import { printReceipt, printThermalReceipt } from "../../utils/PrintUtility";
 import PaymentModal from "./PaymentModal";
@@ -683,13 +683,23 @@ function Cashier() {
   const total = cart.reduce((sum, item) => sum + item.subtotal, 0);
 
   const handlePayment = async (paymentData) => {
+    if (loading) return;
     setLoading(true);
     const cartSnapshot = [...cart];
-    const totalSnapshot = total;
+    const subtotalSnapshot = total;
+    const discountSnapshot = Number(paymentData.discount) || 0;
+    const finalTotal = Math.max(0, subtotalSnapshot - discountSnapshot);
+
     const result = await createTransaction({
-      items: cartSnapshot, subtotal: totalSnapshot, discount: 0, total: totalSnapshot,
-      payment: paymentData.payment, change: paymentData.change,
-      paymentMethod: paymentData.method, customerName: '', notes: '',
+      items: cartSnapshot,
+      subtotal: subtotalSnapshot,
+      discount: discountSnapshot,
+      total: finalTotal,
+      payment: paymentData.payment,
+      change: paymentData.change,
+      paymentMethod: paymentData.method,
+      customerName: paymentData.customerName || '',
+      notes: paymentData.notes || '',
     });
     if (result.success) {
       if (paymentData.autoPrint) {
@@ -697,10 +707,11 @@ function Cashier() {
           const store = await getStoreProfile();
           const txData = {
             invoice_no: result.invoiceNo,
-            created_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
-            subtotal: totalSnapshot,
-            discount: 0,
-            total_amount: totalSnapshot,
+            created_at: getLocalDatetimeStr(),
+            customer_name: paymentData.customerName || '',
+            subtotal: subtotalSnapshot,
+            discount: discountSnapshot,
+            total_amount: finalTotal,
             payment_amount: paymentData.payment,
             change_amount: paymentData.change,
             payment_method: paymentData.method,

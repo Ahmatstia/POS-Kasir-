@@ -43,6 +43,10 @@ export const printReceipt = (transaction, items, storeProfile = null) => {
       <meta charset="UTF-8">
       <title>Struk Pembayaran</title>
       <style>
+        @page {
+          size: auto;
+          margin: 10mm;
+        }
         body {
           font-family: 'Courier New', monospace;
           width: 300px;
@@ -130,6 +134,7 @@ export const printReceipt = (transaction, items, storeProfile = null) => {
         <h3>STRUK PEMBAYARAN</h3>
         <p>No. ${escapeHtml(transaction.invoice_no)}</p>
         <p>${escapeHtml(formattedDate)}</p>
+        ${transaction.customer_name ? `<p>Pelanggan: ${escapeHtml(transaction.customer_name)}</p>` : ''}
       </div>
 
       <table class="items">
@@ -158,10 +163,11 @@ export const printReceipt = (transaction, items, storeProfile = null) => {
           <span>Subtotal:</span>
           <span>${formatPrice(transaction.subtotal)}</span>
         </div>
+        ${transaction.discount > 0 ? `
         <div class="total-row">
           <span>Diskon:</span>
-          <span>${formatPrice(transaction.discount)}</span>
-        </div>
+          <span>-${formatPrice(transaction.discount)}</span>
+        </div>` : ''}
         <div class="grand-total total-row">
           <span>TOTAL:</span>
           <span>${formatPrice(transaction.total_amount)}</span>
@@ -240,11 +246,15 @@ export const printThermalReceipt = (transaction, items, storeProfile = null) => 
     <head>
       <meta charset="UTF-8">
       <style>
+        @page {
+          size: auto;
+          margin: 0mm;
+        }
         body {
           font-family: 'Arial', monospace;
           width: 58mm;
           margin: 0;
-          padding: 5px;
+          padding: 4px;
           font-size: 10px;
         }
         .center {
@@ -252,7 +262,7 @@ export const printThermalReceipt = (transaction, items, storeProfile = null) => 
         }
         .line {
           border-top: 1px dashed #000;
-          margin: 5px 0;
+          margin: 4px 0;
         }
         table {
           width: 100%;
@@ -271,6 +281,7 @@ export const printThermalReceipt = (transaction, items, storeProfile = null) => 
         <div class="line"></div>
         <p style="margin:2px 0">${escapeHtml(transaction.invoice_no)}</p>
         <p style="margin:2px 0">${formattedDate}</p>
+        ${transaction.customer_name ? `<p style="margin:2px 0;font-size:9px">Pelanggan: ${escapeHtml(transaction.customer_name)}</p>` : ''}
       </div>
       <div class="line"></div>
       <table>
@@ -287,7 +298,7 @@ export const printThermalReceipt = (transaction, items, storeProfile = null) => 
       <div class="line"></div>
       <table>
         <tr><td>Subtotal</td><td>${formatPrice(transaction.subtotal)}</td></tr>
-        <tr><td>Diskon</td><td>${formatPrice(transaction.discount)}</td></tr>
+        ${transaction.discount > 0 ? `<tr><td>Diskon</td><td>-${formatPrice(transaction.discount)}</td></tr>` : ''}
         <tr><td><b>TOTAL</b></td><td><b>${formatPrice(transaction.total_amount)}</b></td></tr>
         <tr><td>Tunai</td><td>${formatPrice(transaction.payment_amount)}</td></tr>
         <tr><td>Kembali</td><td>${formatPrice(transaction.change_amount)}</td></tr>

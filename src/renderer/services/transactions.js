@@ -57,55 +57,32 @@ export async function createTransaction(transactionData) {
     for (const item of items) {
       let costPrice = 0;
 
-      // Deduct stock (FIFO) only if manageStock is ON and product_id exists
+      // Deduct stock (FIFO) for all valid products (allowing negative stock if ignore_stock is active)
       if (item.product_id) {
-        if (manageStock) {
-          if (item.unit === 'kg' || item.unit === 'karung') {
-            let kgToDeduct = item.quantity;
-            if (item.unit === 'karung') {
-              const [prod] = await window.electronAPI.query("SELECT kg_per_karung FROM products WHERE id = ?", [item.product_id]);
-              kgToDeduct = item.quantity * (prod?.kg_per_karung || 25);
-            }
-            costPrice = await deductStockFIFOKg(item.product_id, kgToDeduct, invoiceNo, createdAt);
-          } else {
-            // Calculate pcs to deduct based on unit
-            const [productInfo] = await window.electronAPI.query(
-              "SELECT pcs_per_pack, pack_per_dus FROM products WHERE id = ?",
-              [item.product_id]
-            );
-            const pcsPerPack = productInfo?.pcs_per_pack || 1;
-            const packPerDus = productInfo?.pack_per_dus || 1;
+        const allowNegative = !manageStock;
 
-            let pcsToDeduct = item.quantity;
-            if (item.unit === "pack") pcsToDeduct = item.quantity * pcsPerPack;
-            else if (item.unit === "dus") pcsToDeduct = item.quantity * packPerDus * pcsPerPack;
-
-            // FIFO deduction from stocks table
-            costPrice = await deductStockFIFO(item.product_id, pcsToDeduct, invoiceNo, createdAt);
+        if (item.unit === 'kg' || item.unit === 'karung') {
+          let kgToDeduct = item.quantity;
+          if (item.unit === 'karung') {
+            const [prod] = await window.electronAPI.query("SELECT kg_per_karung FROM products WHERE id = ?", [item.product_id]);
+            kgToDeduct = item.quantity * (prod?.kg_per_karung || 25);
           }
+          costPrice = await deductStockFIFOKg(item.product_id, kgToDeduct, invoiceNo, createdAt, allowNegative);
         } else {
-          // If manageStock is OFF, use default purchasePrice from product table as fallback for profit reporting
+          // Calculate pcs to deduct based on unit
           const [productInfo] = await window.electronAPI.query(
-            "SELECT purchase_price, pcs_per_pack, pack_per_dus, kg_per_karung FROM products WHERE id = ?",
+            "SELECT pcs_per_pack, pack_per_dus FROM products WHERE id = ?",
             [item.product_id]
           );
-          const basePrice = productInfo?.purchase_price || 0;
-          
-          if (item.unit === 'kg') {
-            costPrice = Math.round(basePrice * item.quantity);
-          } else if (item.unit === 'karung') {
-            const kgPerKarung = productInfo?.kg_per_karung || 25;
-            costPrice = Math.round(basePrice * item.quantity * kgPerKarung);
-          } else if (item.unit === 'pack') {
-            const pcsPerPack = productInfo?.pcs_per_pack || 1;
-            costPrice = Math.round(basePrice * item.quantity * pcsPerPack);
-          } else if (item.unit === 'dus') {
-            const pcsPerPack = productInfo?.pcs_per_pack || 1;
-            const packPerDus = productInfo?.pack_per_dus || 1;
-            costPrice = Math.round(basePrice * item.quantity * packPerDus * pcsPerPack);
-          } else {
-            costPrice = Math.round(basePrice * item.quantity);
-          }
+          const pcsPerPack = productInfo?.pcs_per_pack || 1;
+          const packPerDus = productInfo?.pack_per_dus || 1;
+
+          let pcsToDeduct = item.quantity;
+          if (item.unit === "pack") pcsToDeduct = item.quantity * pcsPerPack;
+          else if (item.unit === "dus") pcsToDeduct = item.quantity * packPerDus * pcsPerPack;
+
+          // FIFO deduction from stocks table (with negative support if ignore_stock is on)
+          costPrice = await deductStockFIFO(item.product_id, pcsToDeduct, invoiceNo, createdAt, allowNegative);
         }
       }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { getInventorySummary, getLowStockProducts, addStock, adjustStock } from "../../services/inventory";
 import { getCategories } from "../../services/database";
 import { isPrivacyModeEnabled } from "../../services/settings";
@@ -17,13 +17,13 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
   const [qtyPcs, setQtyPcs]     = useState('');
   const [qtyKg, setQtyKg]       = useState('');
   const [qtyKarung, setQtyKarung] = useState('');
-  const [purchasePrice, setPurchasePrice] = useState(product?.purchase_price ? String(product.purchase_price) : '');
   const [notes, setNotes]       = useState('');
   const [saving, setSaving]     = useState(false);
   const [error, setError]       = useState('');
 
   const pp = product.pcs_per_pack || 1;
   const pd = product.pack_per_dus || 1;
+  const kgPerKarung = product.kg_per_karung || 25;
   
   // Revised Hybrid Detection: use flags from service if available, fallback to prices
   const hasUnitPrices = product.has_unit_price ?? ((Number(product.price_pcs) || 0) > 0 || (Number(product.price_pack) || 0) > 0 || (Number(product.price_dus) || 0) > 0);
@@ -31,6 +31,44 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
   
   const isKgOnly = product?.sell_per_unit === 'kg';
   const isHybrid = hasUnitPrices && hasWeightPrices;
+
+  // Available cost units (Dus, Pack, Pcs or Karung, Kg)
+  const costUnitOptions = useMemo(() => {
+    if (isKgOnly) {
+      const opts = [];
+      if (kgPerKarung > 1) opts.push({ key: 'karung', label: 'Per Karung', mult: kgPerKarung });
+      opts.push({ key: 'kg', label: 'Per Kg', mult: 1 });
+      return opts;
+    }
+    const opts = [];
+    if (pd > 1) opts.push({ key: 'dus', label: 'Per Dus', mult: pd * pp });
+    if (pp > 1) opts.push({ key: 'pack', label: 'Per Pack', mult: pp });
+    opts.push({ key: 'pcs', label: 'Per Pcs', mult: 1 });
+    return opts;
+  }, [isKgOnly, kgPerKarung, pd, pp]);
+
+  const defaultCostUnit = costUnitOptions[0]?.key || (isKgOnly ? 'kg' : 'pcs');
+  const [costUnit, setCostUnit] = useState(defaultCostUnit);
+
+  const baseMaster = Number(product?.purchase_price) || 0;
+  const initMult = costUnitOptions.find(o => o.key === defaultCostUnit)?.mult || 1;
+  const [purchasePrice, setPurchasePrice] = useState(baseMaster > 0 ? String(Math.round(baseMaster * initMult)) : '');
+
+  const handleCostUnitChange = (newUnit) => {
+    const curMult = costUnitOptions.find(o => o.key === costUnit)?.mult || 1;
+    const newMult = costUnitOptions.find(o => o.key === newUnit)?.mult || 1;
+    const curVal = parseNominal(purchasePrice);
+    if (curVal > 0) {
+      const base = curVal / curMult;
+      const converted = Math.round(base * newMult);
+      setPurchasePrice(String(converted));
+    }
+    setCostUnit(newUnit);
+  };
+
+  const curMult = costUnitOptions.find(o => o.key === costUnit)?.mult || 1;
+  const enteredVal = parseNominal(purchasePrice);
+  const computedBasePrice = enteredVal > 0 ? Math.round(enteredVal / curMult) : baseMaster;
   
   const dusVal  = parseInt(qtyDus)  || 0;
   const packVal = parseInt(qtyPack) || 0;
@@ -51,11 +89,9 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
     if (totalPcs <= 0 && totalKg <= 0) { setError('Masukkan jumlah stok yang valid'); return; }
     setError('');
     setSaving(true);
-    const parsedCost = parseNominal(purchasePrice);
-    const costToUse = parsedCost > 0 ? parsedCost : (Number(product?.purchase_price) || 0);
     const res = await addStock(product.id, {
       qty_dus: dusVal, qty_pack: packVal, qty_pcs: pcsVal, qty_kg: kgVal,
-      purchase_price: costToUse,
+      purchase_price: computedBasePrice,
       notes,
     }, product);
     setSaving(false);
@@ -178,19 +214,38 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
             </span>
           </div>
 
-          {/* Purchase Price Input */}
+          {/* Purchase Price Input with Auto-Calculator */}
           {!hideCost && (
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+            <div style={{ background: T.bg2, padding: '14px 16px', borderRadius: 14, border: `1px solid ${T.border2}` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                 <label style={{ fontSize: 10, fontWeight: 800, color: T.green, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                  Harga Modal / {isKg ? 'Kg' : 'Pcs'}
+                  Harga Modal Kulakan
                 </label>
-                {product?.purchase_price > 0 && (
-                  <span style={{ fontSize: 11, color: T.muted }}>
-                    Master: Rp {Number(product.purchase_price).toLocaleString('id-ID')}
-                  </span>
+                {/* Unit Switcher */}
+                {costUnitOptions.length > 1 && (
+                  <div style={{ display: 'flex', gap: 4, background: T.surface, padding: 3, borderRadius: 8, border: `1px solid ${T.border}` }}>
+                    {costUnitOptions.map(opt => {
+                      const isSel = costUnit === opt.key;
+                      return (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          onClick={() => handleCostUnitChange(opt.key)}
+                          style={{
+                            padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700,
+                            background: isSel ? T.green : 'transparent',
+                            color: isSel ? '#fff' : T.sub,
+                            border: 'none', cursor: 'pointer', transition: 'all 0.15s'
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
+
               <div style={{ position: 'relative' }}>
                 <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 13, fontWeight: 700, color: T.muted }}>Rp</span>
                 <input
@@ -199,12 +254,21 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
                   value={formatNominal(purchasePrice)}
                   onChange={e => setPurchasePrice(e.target.value.replace(/\D/g, ''))}
                   placeholder="0"
-                  style={{ ...inp, paddingLeft: 34 }}
+                  style={{ ...inp, paddingLeft: 34, fontSize: 15 }}
                 />
               </div>
-              <p style={{ fontSize: 10, color: T.muted, marginTop: 4 }}>
-                Otomatis terisi dari master. Ubah hanya jika harga kulakan berubah.
-              </p>
+
+              {/* Dynamic conversion indicator */}
+              <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: T.green, fontFamily: 'JetBrains Mono, monospace' }}>
+                  ✓ Modal Eceran: Rp {formatNominal(computedBasePrice)} / {isKgOnly ? 'Kg' : 'Pcs'}
+                </span>
+                {curMult > 1 && (
+                  <span style={{ fontSize: 10, color: T.muted }}>
+                    (Otomatis dibagi {curMult} dari harga {costUnit})
+                  </span>
+                )}
+              </div>
             </div>
           )}
 

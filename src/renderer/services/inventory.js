@@ -11,6 +11,7 @@ export async function getInventorySummary() {
         p.id, p.name, p.category_id, p.min_stock, p.min_stock_kg, p.sell_per_unit,
         p.pcs_per_pack, p.pack_per_dus,
         p.price_pcs, p.price_pack, p.price_dus, p.price_kg, p.price_karung, p.kg_per_karung,
+        p.purchase_price,
         c.name as category_name, c.color as category_color,
         COALESCE(SUM(s.quantity), 0) as stock,
         COALESCE(SUM(s.qty_kg), 0) as stock_kg,
@@ -145,6 +146,13 @@ export async function addStock(productId, {
       [productId, stockId, isKg ? totalKg : totalPcs, isKg ? 'kg' : 'pcs', totalPcs, totalKg, finalStockBefore, finalStockAfter,
        finalPurchasePrice, autoCode, expiry_date || null, notes, nowStr]
     );
+
+    if (finalPurchasePrice > 0) {
+      await window.electronAPI.run(
+        "UPDATE products SET purchase_price = ?, updated_at = ? WHERE id = ?",
+        [finalPurchasePrice, nowStr, productId]
+      );
+    }
 
     await window.electronAPI.run("COMMIT");
     return { success: true, batchCode: autoCode, totalPcs };

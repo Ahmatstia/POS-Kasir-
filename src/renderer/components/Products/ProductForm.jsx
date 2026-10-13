@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { getCategories, addProduct } from '../../services/database';
 import { isPrivacyModeEnabled } from '../../services/settings';
 import { useToast } from '../Toast';
@@ -114,6 +114,47 @@ function ProductForm({ onClose, onSuccess }) {
   const [purchasePrice, setPurchasePrice] = useState(0);
   const pp = Number(pcsPerPack) || 1;
   const pd = Number(packPerDus) || 1;
+  const isKg = sellPerUnit === 'kg';
+  const kgKarungNum = Number(kgPerKarung) || 25;
+
+  const costUnitOptions = useMemo(() => {
+    if (isKg) {
+      const opts = [];
+      if (kgKarungNum > 1) opts.push({ key: 'karung', label: 'Per Karung', mult: kgKarungNum });
+      opts.push({ key: 'kg', label: 'Per Kg', mult: 1 });
+      return opts;
+    }
+    const opts = [];
+    if (pd > 1) opts.push({ key: 'dus', label: 'Per Dus', mult: pd * pp });
+    if (pp > 1) opts.push({ key: 'pack', label: 'Per Pack', mult: pp });
+    opts.push({ key: 'pcs', label: 'Per Pcs', mult: 1 });
+    return opts;
+  }, [isKg, kgKarungNum, pd, pp]);
+
+  const [costUnit, setCostUnit] = useState(isKg ? 'kg' : 'pcs');
+
+  // Keep costUnit valid when options change
+  useEffect(() => {
+    if (!costUnitOptions.some(o => o.key === costUnit)) {
+      setCostUnit(costUnitOptions[0]?.key || (isKg ? 'kg' : 'pcs'));
+    }
+  }, [costUnitOptions, isKg]);
+
+  const handleCostUnitChange = (newUnit) => {
+    const curMult = costUnitOptions.find(o => o.key === costUnit)?.mult || 1;
+    const newMult = costUnitOptions.find(o => o.key === newUnit)?.mult || 1;
+    const curVal = parseNominal(purchasePrice);
+    if (curVal > 0) {
+      const base = curVal / curMult;
+      const converted = Math.round(base * newMult);
+      setPurchasePrice(converted);
+    }
+    setCostUnit(newUnit);
+  };
+
+  const curMult = costUnitOptions.find(o => o.key === costUnit)?.mult || 1;
+  const enteredVal = parseNominal(purchasePrice);
+  const computedBasePrice = enteredVal > 0 ? Math.round(enteredVal / curMult) : 0;
 
   useEffect(() => {
     Promise.all([
@@ -132,7 +173,7 @@ function ProductForm({ onClose, onSuccess }) {
     if (!categoryId)    errs.category = 'Kategori harus dipilih';
     const prices = [parseNominal(pricePcs), parseNominal(pricePack), parseNominal(priceDus), parseNominal(priceKarung), parseNominal(priceKg)];
     if (prices.every(p => p <= 0)) errs.price = 'Minimal satu harga jual harus diisi';
-    if (!hideCost && parseNominal(purchasePrice) <= 0) {
+    if (!hideCost && computedBasePrice <= 0) {
       errs.purchasePrice = 'Harga modal wajib diisi lebih dari Rp 0';
     }
     return errs;
@@ -158,7 +199,7 @@ function ProductForm({ onClose, onSuccess }) {
       kg_per_karung: Number(kgPerKarung) || 25,
       min_stock:    Number(minStock)    || 0,
       min_stock_kg: Number(minStockKg)  || 0,
-      purchase_price: parseNominal(purchasePrice),
+      purchase_price: computedBasePrice,
       notes,
     });
     setLoading(false);
@@ -308,13 +349,54 @@ function ProductForm({ onClose, onSuccess }) {
         {/* Prices Section */}
         <div style={{ padding: '16px', borderRadius: 16, background: T.bg2, border: `1px solid ${T.border2}`, marginTop: 4 }}>
           {!hideCost && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-              <Field label="Harga Modal / Beli (Per Satuan Utama)" required={!hideCost} hint="Harga beli barang dari supplier / agen" error={errors.purchasePrice}>
-                <div style={{ position: 'relative' }}>
-                  <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 11, fontWeight: 700, color: T.muted }}>Rp</span>
-                  <input type="text" inputMode="numeric" value={formatNominal(purchasePrice)} onChange={e => setPurchasePrice(e.target.value.replace(/\D/g, ''))} className="form-field" style={{ ...fieldStyle, paddingLeft: 32 }} placeholder="0" />
-                </div>
-              </Field>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <Field label="Harga Modal Kulakan" required={!hideCost} hint="Harga kulakan dari supplier / nota belanja" error={errors.purchasePrice} />
+                {costUnitOptions.length > 1 && (
+                  <div style={{ display: 'flex', gap: 4, background: T.surface, padding: 3, borderRadius: 8, border: `1px solid ${T.border}` }}>
+                    {costUnitOptions.map(opt => {
+                      const isSel = costUnit === opt.key;
+                      return (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          onClick={() => handleCostUnitChange(opt.key)}
+                          style={{
+                            padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700,
+                            background: isSel ? T.green : 'transparent',
+                            color: isSel ? '#fff' : T.sub,
+                            border: 'none', cursor: 'pointer', transition: 'all 0.15s'
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              <div style={{ position: 'relative', maxWidth: 320 }}>
+                <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 11, fontWeight: 700, color: T.muted }}>Rp</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={formatNominal(purchasePrice)}
+                  onChange={e => { setPurchasePrice(e.target.value.replace(/\D/g, '')); setErrors(v => ({...v, purchasePrice: ''})); }}
+                  className="form-field"
+                  style={{ ...fieldStyle, paddingLeft: 32 }}
+                  placeholder="0"
+                />
+              </div>
+              <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: T.green, fontFamily: 'JetBrains Mono, monospace' }}>
+                  ✓ Modal Satuan Dasar: Rp {formatNominal(computedBasePrice)} / {isKg ? 'Kg' : 'Pcs'}
+                </span>
+                {curMult > 1 && (
+                  <span style={{ fontSize: 10, color: T.muted }}>
+                    (Otomatis dibagi {curMult} untuk penjualan eceran)
+                  </span>
+                )}
+              </div>
             </div>
           )}
 

@@ -11,7 +11,7 @@ import { printReceipt, printThermalReceipt } from "../../utils/PrintUtility";
 import { T } from "../../theme";
 import { useToast } from "../Toast";
 import { isPrivacyModeEnabled, getStoreProfile } from "../../services/settings";
-import { TransactionsIcon } from "../Icons/AppIcons";
+import { TransactionsIcon, RefreshIcon } from "../Icons/AppIcons";
 
 const fmt = (n) => `Rp ${Number(n || 0).toLocaleString("id-ID")}`;
 const fmtDt = (str) => {
@@ -307,43 +307,43 @@ function Transactions() {
                 <div style={{ width: 28, height: 28, borderRadius: 8, background: T.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
                   <TransactionsIcon />
                 </div>
-                <h2 style={{ fontSize: 22, fontWeight: 800, color: T.text, letterSpacing: '-0.01em' }}>Riwayat Nota Penjualan</h2>
+                <h2 style={{ fontSize: 20, fontWeight: 800, color: T.text, margin: 0, letterSpacing: '-0.01em' }}>Riwayat Transaksi</h2>
               </div>
               {/* Quick filter buttons */}
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                 <button
                   onClick={() => { setStartDate(todayStr); setEndDate(todayStr); }}
                   style={{
-                    padding: "5px 12px", borderRadius: 10,
+                    padding: "6px 12px", borderRadius: 8,
                     border: `1px solid ${startDate === todayStr && endDate === todayStr ? T.accent + '40' : T.border2}`,
                     background: startDate === todayStr && endDate === todayStr ? T.accent + '10' : 'transparent',
                     color: startDate === todayStr && endDate === todayStr ? T.accent : T.sub,
-                    fontSize: 10, fontWeight: 800, cursor: 'pointer', fontFamily: 'Syne, sans-serif'
+                    fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'Syne, sans-serif'
                   }}
-                >HARI INI</button>
+                >Hari Ini</button>
                 <button
                   onClick={() => { setStartDate(''); setEndDate(''); }}
                   style={{
-                    padding: "5px 12px", borderRadius: 10,
+                    padding: "6px 12px", borderRadius: 8,
                     border: `1px solid ${!startDate ? T.accent + '40' : T.border2}`,
                     background: !startDate ? T.accent + '10' : 'transparent',
                     color: !startDate ? T.accent : T.sub,
-                    fontSize: 10, fontWeight: 800, cursor: 'pointer', fontFamily: 'Syne, sans-serif'
+                    fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'Syne, sans-serif'
                   }}
-                >SEMUA</button>
+                >Semua</button>
                 <div style={{ width: 1, height: 14, background: T.border2 }} />
                 <button
                   onClick={loadTransactions}
-                  title="Refresh Data"
+                  title="Segarkan Data"
                   style={{
-                    width: 30, height: 30, borderRadius: 9, border: `1px solid ${T.border2}`,
+                    width: 30, height: 30, borderRadius: 8, border: `1px solid ${T.border2}`,
                     background: 'transparent', color: T.sub, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s'
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s'
                   }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = T.accent; e.currentTarget.style.color = T.accent; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = T.border2; e.currentTarget.style.color = T.sub; }}
                 >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                  <RefreshIcon size={14} />
                 </button>
               </div>
             </div>

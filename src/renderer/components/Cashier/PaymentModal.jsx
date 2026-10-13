@@ -427,7 +427,7 @@ function PaymentModal({ total, onClose, onConfirm, loading = false }) {
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <label style={{ fontSize: 10, fontWeight: 800, color: T.orange, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                    Pelanggan Kasbon (Wajib Dipilih) ✱
+                    Pelanggan Kasbon (Wajib Dipilih) *
                   </label>
                   <button
                     type="button"
@@ -535,7 +535,7 @@ function PaymentModal({ total, onClose, onConfirm, loading = false }) {
                       fontWeight: 700,
                     }}
                   >
-                    ⚠️ Peringatan: Tambahan kasbon ini melebihi batas utang pelanggan ({fmt(debtLimit)})!
+                    Peringatan: Tambahan kasbon ini melebihi batas utang pelanggan ({fmt(debtLimit)})!
                   </div>
                 )}
               </div>
@@ -873,7 +873,7 @@ function PaymentModal({ total, onClose, onConfirm, loading = false }) {
                   onChange={(e) => setAutoPrint(e.target.checked)}
                   style={{ accentColor: T.green, width: 16, height: 16, cursor: "pointer" }}
                 />
-                🖨️ Cetak Struk
+                Cetak Struk
               </label>
 
               {autoPrint && (

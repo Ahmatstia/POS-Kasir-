@@ -96,7 +96,7 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
     }, product);
     setSaving(false);
     if (res.success) {
-      showToast('success', `✓ Stok ${product.name} bertambah ${totalDisplay}`);
+      showToast('success', `Stok ${product.name} bertambah ${totalDisplay}`);
       onSuccess(); onClose();
     } else {
       setError('Gagal menyimpan: ' + res.error);
@@ -152,7 +152,7 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
             {(isKgOnly || isHybrid) && (
               <div style={{ padding: 14, background: T.purple + '06', border: `1.5px dashed ${T.purple}30`, borderRadius: 14 }}>
                 <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.purple, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
-                  📦 Stok Timbangan (Kg / Karung)
+                  Stok Timbangan (Kg / Karung)
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 10 }}>
                   <div style={{ position: 'relative' }}>
@@ -178,7 +178,7 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
             {(!isKgOnly || isHybrid) && (
               <div style={{ padding: 14, background: T.blue + '06', border: `1.5px dashed ${T.blue}30`, borderRadius: 14 }}>
                 <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.blue, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
-                  📦 Stok Kemasan (Pcs / Pack / Dus)
+                  Stok Kemasan (Pcs / Pack / Dus)
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
                   <div>
@@ -261,7 +261,7 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
               {/* Dynamic conversion indicator */}
               <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: T.green, fontFamily: 'JetBrains Mono, monospace' }}>
-                  ✓ Modal Eceran: Rp {formatNominal(computedBasePrice)} / {isKgOnly ? 'Kg' : 'Pcs'}
+                  Modal Eceran: Rp {formatNominal(computedBasePrice)} / {isKgOnly ? 'Kg' : 'Pcs'}
                 </span>
                 {curMult > 1 && (
                   <span style={{ fontSize: 10, color: T.muted }}>
@@ -280,7 +280,7 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
             <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Misal: Dari Toko Makmur / Grosir Jaya" style={inp} />
           </div>
 
-          {error && <div style={{ padding: '10px 14px', borderRadius: 10, background: T.red + '0A', border: `1px solid ${T.red}20`, fontSize: 12, color: T.red, fontWeight: 700 }}>⚠ {error}</div>}
+          {error && <div style={{ padding: '10px 14px', borderRadius: 10, background: T.red + '0A', border: `1px solid ${T.red}20`, fontSize: 12, color: T.red, fontWeight: 700 }}>{error}</div>}
 
           {/* Footer Action Buttons */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 10, marginTop: 4 }}>
@@ -351,7 +351,7 @@ function AdjustModal({ product, onClose, onSuccess, showToast, isKg: isKgProp })
 
        setSaving(false);
        if (res.success) {
-         showToast('success', `✓ Stok ${product.name} dicocokkan ke ${newVal} ${adjustUnit === 'kg' ? 'Kg' : 'Pcs'}`);
+         showToast('success', `Stok ${product.name} dicocokkan ke ${newVal} ${adjustUnit === 'kg' ? 'Kg' : 'Pcs'}`);
          onSuccess(); onClose();
        } else {
          setError('Gagal: ' + res.error);
@@ -456,7 +456,7 @@ function AdjustModal({ product, onClose, onSuccess, showToast, isKg: isKgProp })
               placeholder="Atau masukkan alasan manual…"
               style={{ ...inp, fontFamily: 'Syne, sans-serif', fontSize: 13, padding: '12px', borderRadius: 12, borderColor: error ? T.red : undefined }}
             />
-            {error && <p style={{ fontSize: 11, color: T.red, marginTop: 8, fontWeight: 700 }}>⚠️ {error}</p>}
+            {error && <p style={{ fontSize: 11, color: T.red, marginTop: 8, fontWeight: 700 }}>️ {error}</p>}
           </div>
 
           {/* Action buttons */}
@@ -475,7 +475,7 @@ function AdjustModal({ product, onClose, onSuccess, showToast, isKg: isKgProp })
               }}>
               {saving ? (
                 <><div style={{ width: 16, height: 16, border: `2px solid #ffffff40`, borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}/>Menyimpan…</>
-              ) : diff === 0 ? 'Input Stok Baru' : '✓ Simpan Penyesuaian'}
+              ) : diff === 0 ? 'Input Stok Baru' : 'Simpan Penyesuaian'}
             </button>
           </div>
         </div>

@@ -74,19 +74,19 @@ export function Field({ label, required, hint, error, children }) {
     <div>
       <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: error ? T.red : T.muted, marginBottom: 7 }}>
         {label}
-        {required && <span style={{ color: T.accent, fontSize: 10 }}>✱</span>}
+        {required && <span style={{ color: T.accent, fontSize: 10 }}>*</span>}
         {hint    && <span style={{ color: T.muted, fontWeight: 400, letterSpacing: 0, textTransform: 'none', fontSize: 9, marginLeft: 2 }}>({hint})</span>}
       </label>
       {children}
-      {error && <p style={{ fontSize: 10, color: T.red, marginTop: 4, fontWeight: 600 }}>⚠ {error}</p>}
+      {error && <p style={{ fontSize: 10, color: T.red, marginTop: 4, fontWeight: 600 }}>{error}</p>}
     </div>
   );
 }
 
 // sell_per_unit options
 export const SELL_UNIT_OPTIONS = [
-  { value: 'all',  label: '📦 Kemasan / Biji (Pcs, Pack, Dus)' },
-  { value: 'kg',   label: '⚖️ Timbangan / Curah (Gram, Ons, Kg)' },
+  { value: 'all',  label: 'Kemasan (Pcs, Pack, Dus)' },
+  { value: 'kg',   label: 'Timbangan / Curah (Kg)' },
 ];
 
 // ─── PRODUCT FORM (Add New Product) ─────────────────────────────────────────
@@ -389,7 +389,7 @@ function ProductForm({ onClose, onSuccess }) {
               </div>
               <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: T.green, fontFamily: 'JetBrains Mono, monospace' }}>
-                  ✓ Modal Satuan Dasar: Rp {formatNominal(computedBasePrice)} / {isKg ? 'Kg' : 'Pcs'}
+                  Modal Satuan Dasar: Rp {formatNominal(computedBasePrice)} / {isKg ? 'Kg' : 'Pcs'}
                 </span>
                 {curMult > 1 && (
                   <span style={{ fontSize: 10, color: T.muted }}>
@@ -402,7 +402,7 @@ function ProductForm({ onClose, onSuccess }) {
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
             <p style={{ fontSize: 9, fontWeight: 700, color: errors.price ? T.red : T.muted, textTransform: 'uppercase' }}>Harga Jual Produk</p>
-            {errors.price && <p style={{ fontSize: 10, color: T.red, fontWeight: 600 }}>⚠ {errors.price}</p>}
+            {errors.price && <p style={{ fontSize: 10, color: T.red, fontWeight: 600 }}>{errors.price}</p>}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: sellPerUnit === 'kg' ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: 8 }}>
             {[
@@ -450,7 +450,7 @@ function ProductForm({ onClose, onSuccess }) {
           <p style={{ fontSize: 11, color: T.blue }}>Stok awal diisi lewat menu <strong>Barang Masuk</strong> setelah barang disimpan.</p>
         </div>
 
-        <FormActions onClose={onClose} loading={loading} submitLabel="✓ Simpan Produk" loadingLabel="Menyimpan…" />
+        <FormActions onClose={onClose} loading={loading} submitLabel="Simpan Produk" loadingLabel="Menyimpan…" />
       </form>
     </FormModal>
   );

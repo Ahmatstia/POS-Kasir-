@@ -18,10 +18,10 @@ function Header({ currentPageLabel, sidebarOpen, setSidebarOpen }) {
         <button className="toggle-btn" onClick={() => setSidebarOpen(!sidebarOpen)}>
           <MenuIcon />
         </button>
-        <div>
-          <p style={{ fontSize: 15, fontWeight: 800, color: T.text }}>
-            {currentPageLabel}
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: T.muted }}>POS Kasir</span>
+          <span style={{ fontSize: 12, color: T.border2 }}>/</span>
+          <span style={{ fontSize: 14, fontWeight: 800, color: T.text }}>{currentPageLabel}</span>
         </div>
       </div>
 

@@ -14,7 +14,8 @@ import { getStoreProfile } from "../../services/settings";
 import { printDebtPaymentReceipt } from "../../utils/PrintUtility";
 import { useToast } from "../Toast";
 import { T } from "../../theme";
-import { DebtsIcon } from "../Icons/AppIcons";
+import { DebtsIcon, EditIcon, TrashIcon, CloseIcon, RefreshIcon, PlusIcon } from "../Icons/AppIcons";
+import PageHeader from "../Layout/PageHeader";
 import { formatNominal, parseNominal } from "../../utils/format";
 
 const fmt = (n) => `Rp ${Number(n || 0).toLocaleString("id-ID")}`;
@@ -285,102 +286,65 @@ function CustomerDebts() {
 
       <div style={{ animation: "fadeUp 0.35s ease both", fontFamily: "Syne, sans-serif" }}>
         {/* ── PAGE HEADER ── */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            marginBottom: 20,
-            flexWrap: "wrap",
-            gap: 12,
-          }}
-        >
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-              <div
+        <PageHeader
+          title="Buku Kasbon"
+          description="Pencatatan kasbon pelanggan, pembayaran cicilan, dan tanda terima resmi"
+          actions={
+            <>
+              <button
+                onClick={loadData}
+                title="Segarkan Data"
                 style={{
-                  width: 32,
-                  height: 32,
+                  width: 36,
+                  height: 36,
                   borderRadius: 10,
-                  background: T.orange,
+                  border: `1px solid ${T.border2}`,
+                  background: T.surface,
+                  color: T.sub,
+                  cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  color: "#fff",
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = T.accent;
+                  e.currentTarget.style.borderColor = T.accent;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = T.sub;
+                  e.currentTarget.style.borderColor = T.border2;
                 }}
               >
-                <DebtsIcon />
-              </div>
-              <h2 style={{ fontSize: 24, fontWeight: 800, color: T.text, margin: 0 }}>
-                Buku Kasbon (Utang Pelanggan)
-              </h2>
-            </div>
-            <p style={{ fontSize: 12, color: T.muted, margin: 0 }}>
-              Pencatatan kasbon belanja pelanggan warung, pembayaran cicilan, dan tanda terima resmi.
-            </p>
-          </div>
+                <RefreshIcon size={15} />
+              </button>
 
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <button
-              onClick={loadData}
-              title="Segarkan Data"
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 10,
-                border: `1px solid ${T.border2}`,
-                background: T.surface,
-                color: T.sub,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                transition: "all 0.15s",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = T.accent;
-                e.currentTarget.style.borderColor = T.accent;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = T.sub;
-                e.currentTarget.style.borderColor = T.border2;
-              }}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M23 4v6h-6"></path>
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-              </svg>
-            </button>
-
-            <button
-              onClick={openAddCustomer}
-              style={{
-                padding: "9px 18px",
-                borderRadius: 10,
-                cursor: "pointer",
-                fontFamily: "Syne, sans-serif",
-                fontSize: 12,
-                fontWeight: 800,
-                letterSpacing: "0.03em",
-                transition: "all 0.15s",
-                border: `1px solid ${T.orange}50`,
-                background: T.orange + "18",
-                color: T.orange,
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = T.orange + "28")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = T.orange + "18")}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-              Tambah Pelanggan Baru
-            </button>
-          </div>
-        </div>
+              <button
+                onClick={openAddCustomer}
+                style={{
+                  padding: "9px 18px",
+                  borderRadius: 10,
+                  cursor: "pointer",
+                  fontFamily: "Syne, sans-serif",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  transition: "all 0.15s",
+                  border: "none",
+                  background: T.accent,
+                  color: "#fff",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = T.accentL)}
+                onMouseLeave={(e) => (e.currentTarget.style.background = T.accent)}
+              >
+                <PlusIcon size={14} />
+                Tambah Pelanggan Baru
+              </button>
+            </>
+          }
+        />
 
         {/* ── STAT CARDS ── */}
         <div
@@ -825,11 +789,11 @@ function CustomerDebts() {
                             </h4>
                             <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 11, color: T.muted }}>
                               {c.phone ? (
-                                <span>📞 {c.phone}</span>
+                                <span>{c.phone}</span>
                               ) : (
                                 <span style={{ fontStyle: "italic" }}>Tanpa nomor HP</span>
                               )}
-                              {c.address && <span>· 🏠 {c.address}</span>}
+                              {c.address && <span>· {c.address}</span>}
                             </div>
                           </div>
                         </div>
@@ -852,7 +816,7 @@ function CustomerDebts() {
                               justifyContent: "center",
                             }}
                           >
-                            ✎
+                            <EditIcon size={13} />
                           </button>
                           {debt === 0 && (
                             <button
@@ -871,7 +835,7 @@ function CustomerDebts() {
                                 justifyContent: "center",
                               }}
                             >
-                              🗑
+                              <TrashIcon size={13} />
                             </button>
                           )}
                         </div>
@@ -1133,7 +1097,7 @@ function CustomerDebts() {
                     justifyContent: "center",
                   }}
                 >
-                  ✕
+                  <CloseIcon size={16} />
                 </button>
               </div>
 
@@ -1190,7 +1154,7 @@ function CustomerDebts() {
                   {/* Amount input */}
                   <div>
                     <label style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", display: "block", marginBottom: 6 }}>
-                      Jumlah Yang Dibayarkan (Rp) ✱
+                      Jumlah Yang Dibayarkan (Rp) *
                     </label>
                     <div style={{ position: "relative" }}>
                       <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 12, fontWeight: 700, color: T.muted }}>
@@ -1220,7 +1184,7 @@ function CustomerDebts() {
                     </div>
                     {parseNominal(payAmount) > (payTargetCustomer.total_debt || 0) && (
                       <p style={{ fontSize: 11, color: T.red, fontWeight: 700, margin: "6px 0 0 0" }}>
-                        ⚠️ Nominal melebihi sisa kasbon! Maksimal pembayaran adalah {fmt(payTargetCustomer.total_debt)}.
+                        Nominal melebihi sisa kasbon! Maksimal pembayaran adalah {fmt(payTargetCustomer.total_debt)}.
                       </p>
                     )}
                   </div>
@@ -1317,7 +1281,7 @@ function CustomerDebts() {
                       onChange={(e) => setPayAutoPrint(e.target.checked)}
                       style={{ accentColor: T.green, width: 16, height: 16, cursor: "pointer" }}
                     />
-                    🖨️ Cetak Tanda Terima Kwitansi Pembayaran Kasbon
+                    Cetak Tanda Terima Kwitansi Pembayaran Kasbon
                   </label>
                 </div>
 
@@ -1364,7 +1328,7 @@ function CustomerDebts() {
                       letterSpacing: "0.02em",
                     }}
                   >
-                    {paying ? "Menyimpan…" : `✓ Simpan Pembayaran (${fmt(payAmount)})`}
+                    {paying ? "Menyimpan…" : `Simpan Pembayaran (${fmt(payAmount)})`}
                   </button>
                 </div>
               </form>
@@ -1449,7 +1413,7 @@ function CustomerDebts() {
                     justifyContent: "center",
                   }}
                 >
-                  ✕
+                  <CloseIcon size={16} />
                 </button>
               </div>
 
@@ -1625,7 +1589,7 @@ function CustomerDebts() {
                     justifyContent: "center",
                   }}
                 >
-                  ✕
+                  <CloseIcon size={16} />
                 </button>
               </div>
 
@@ -1643,7 +1607,7 @@ function CustomerDebts() {
                 <div style={{ padding: "18px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
                   <div>
                     <label style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", display: "block", marginBottom: 6 }}>
-                      Nama Lengkap Pelanggan ✱
+                      Nama Lengkap Pelanggan *
                     </label>
                     <input
                       type="text"
@@ -1800,7 +1764,7 @@ function CustomerDebts() {
                       cursor: savingCust ? "wait" : "pointer",
                     }}
                   >
-                    {savingCust ? "Menyimpan…" : "✓ Simpan Data Pelanggan"}
+                    {savingCust ? "Menyimpan…" : "Simpan Data Pelanggan"}
                   </button>
                 </div>
               </form>
@@ -1851,7 +1815,7 @@ function CustomerDebts() {
                   marginBottom: 16,
                 }}
               >
-                🗑
+                <TrashIcon size={20} />
               </div>
               <h3 style={{ margin: "0 0 8px 0", fontSize: 16, color: T.text }}>
                 Hapus Pelanggan Ini?

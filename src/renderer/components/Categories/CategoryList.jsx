@@ -31,7 +31,7 @@ function CategoryForm({ initial = {}, onSave, onCancel, loading }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
         <div>
           <label style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>
-            Nama Kategori ✱
+            Nama Kategori *
           </label>
           <input
             value={name}
@@ -90,7 +90,7 @@ function CategoryForm({ initial = {}, onSave, onCancel, loading }) {
             transition: 'all 0.15s',
           }}
         >
-          {loading ? 'Menyimpan…' : (initial.id ? '✓ Simpan Perubahan' : '+ Simpan Kategori')}
+          {loading ? 'Menyimpan…' : (initial.id ? 'Simpan Perubahan' : 'Simpan Kategori')}
         </button>
       </div>
     </form>

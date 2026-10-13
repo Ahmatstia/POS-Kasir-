@@ -15,6 +15,8 @@ import { getStoreProfile } from "../../services/settings";
 import { printShiftReceipt } from "../../utils/PrintUtility";
 import { useToast } from "../Toast";
 import { formatNominal, parseNominal } from "../../utils/format";
+import PageHeader from "../Layout/PageHeader";
+import { CashIcon, PrinterIcon, CloseIcon, ShiftsIcon } from "../Icons/AppIcons";
 
 const fmt = (n) => `Rp ${Number(n || 0).toLocaleString("id-ID")}`;
 
@@ -71,34 +73,11 @@ export default function ShiftsManagement() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24, paddingBottom: 40 }}>
       {/* ─── HEADER ─── */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: 16,
-        }}
-      >
-        <div>
-          <h1
-            style={{
-              fontSize: 24,
-              fontWeight: 800,
-              color: T.text,
-              margin: "0 0 6px",
-              fontFamily: "Syne, sans-serif",
-            }}
-          >
-            Shift Kasir
-          </h1>
-          <p style={{ fontSize: 13, color: T.sub, margin: 0 }}>
-            Kelola modal awal kembalian, pantau uang laci real-time, dan cocokkan fisik uang saat tutup toko.
-          </p>
-        </div>
-
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          {activeShift ? (
+      <PageHeader
+        title="Shift Kasir"
+        description="Kelola modal awal kembalian, pantau uang laci real-time, dan cocokkan fisik uang saat tutup toko"
+        actions={
+          activeShift ? (
             <>
               <button
                 onClick={() => {
@@ -113,7 +92,7 @@ export default function ShiftsManagement() {
                   color: T.accent,
                   fontFamily: "Syne, sans-serif",
                   fontSize: 12,
-                  fontWeight: 800,
+                  fontWeight: 700,
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
@@ -121,7 +100,7 @@ export default function ShiftsManagement() {
                   transition: "all 0.15s",
                 }}
               >
-                💸 Catat Kas Masuk / Keluar
+                <CashIcon size={14} /> Catat Kas Laci
               </button>
               {((activeShift.summary?.transactionCount || 0) === 0 && (activeShift.summary?.debtCollected || 0) === 0) && (
                 <button
@@ -153,7 +132,7 @@ export default function ShiftsManagement() {
                     e.currentTarget.style.background = "transparent";
                   }}
                 >
-                  ✕ Batal Buka Shift
+                  Batal Buka Shift
                 </button>
               )}
               <button
@@ -165,44 +144,42 @@ export default function ShiftsManagement() {
                   background: T.red,
                   color: "#fff",
                   fontFamily: "Syne, sans-serif",
-                  fontSize: 13,
-                  fontWeight: 800,
+                  fontSize: 12,
+                  fontWeight: 700,
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
                   gap: 6,
-                  boxShadow: `0 4px 14px ${T.red}40`,
                   transition: "all 0.15s",
                 }}
               >
-                🔒 Tutup Kasir & Hitung Laci
+                Tutup Shift & Hitung Laci
               </button>
             </>
           ) : (
             <button
               onClick={() => setShowOpenModal(true)}
               style={{
-                padding: "11px 20px",
-                borderRadius: 12,
+                padding: "10px 18px",
+                borderRadius: 10,
                 border: "none",
                 background: T.green,
                 color: "#fff",
                 fontFamily: "Syne, sans-serif",
-                fontSize: 13,
-                fontWeight: 800,
+                fontSize: 12,
+                fontWeight: 700,
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 gap: 8,
-                boxShadow: `0 4px 16px ${T.green}40`,
                 transition: "all 0.15s",
               }}
             >
-            Buka Shift Kasir Baru
+              Buka Shift Baru
             </button>
-          )}
-        </div>
-      </div>
+          )
+        }
+      />
 
       {/* ─── ACTIVE SHIFT CARD / HERO ─── */}
       {activeShift ? (
@@ -269,7 +246,7 @@ export default function ShiftsManagement() {
                 gap: 6,
               }}
             >
-              🖨 Cetak Rekap Berjalan
+              <PrinterIcon size={14} /> Cetak Rekap Berjalan
             </button>
           </div>
 
@@ -359,7 +336,7 @@ export default function ShiftsManagement() {
               }}
             >
               <span style={{ fontSize: 11, fontWeight: 800, color: T.accent, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                💵 Uang Seharusnya di Laci
+                Uang Seharusnya di Laci
               </span>
               <p style={{ margin: "6px 0 0", fontSize: 24, fontWeight: 900, color: T.accent, fontFamily: "JetBrains Mono, monospace" }}>
                 {fmt(activeShift.summary?.expectedCash)}
@@ -392,7 +369,7 @@ export default function ShiftsManagement() {
               </span>
               {activeShift.summary?.debtCollected > 0 && (
                 <span style={{ color: T.text, fontWeight: 600 }}>
-                  📒 Pembayaran Kasbon Masuk:{" "}
+                  Pembayaran Kasbon Masuk:{" "}
                   <b style={{ color: T.green, fontFamily: "JetBrains Mono, monospace" }}>
                     +{fmt(activeShift.summary?.debtCollected)}
                   </b>
@@ -400,7 +377,7 @@ export default function ShiftsManagement() {
               )}
             </div>
             <span style={{ color: T.sub, fontSize: 11, fontWeight: 600 }}>
-              💡 Non-tunai langsung masuk rekening/e-wallet, tidak memengaruhi fisik laci.
+              Non-tunai langsung masuk rekening/e-wallet, tidak memengaruhi fisik laci.
             </span>
           </div>
 
@@ -499,7 +476,7 @@ export default function ShiftsManagement() {
               fontSize: 26,
             }}
           >
-            🏪
+            <ShiftsIcon />
           </div>
           <h2 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0 }}>
             Belum Ada Shift Kasir yang Buka
@@ -565,7 +542,6 @@ export default function ShiftsManagement() {
 
         {shiftHistory.length === 0 ? (
           <div style={{ textAlign: "center", padding: "40px 20px", color: T.muted }}>
-            <span style={{ fontSize: 32, display: "block", marginBottom: 8 }}>📋</span>
             <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>Belum ada riwayat shift yang tercatat.</p>
           </div>
         ) : (
@@ -692,7 +668,7 @@ export default function ShiftsManagement() {
                               cursor: "pointer",
                             }}
                           >
-                            🖨
+                            <PrinterIcon size={14} />
                           </button>
                         </div>
                       </td>
@@ -827,10 +803,12 @@ export function CancelShiftModal({ shift, onClose, onSuccess }) {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 20,
+              fontSize: 16,
+              fontWeight: 800,
+              color: canCancel ? T.orange : T.red,
             }}
           >
-            {canCancel ? "⚠️" : "🚫"}
+            !
           </div>
           <div>
             <h3 style={{ fontSize: 17, fontWeight: 800, color: T.text, margin: 0 }}>
@@ -876,7 +854,7 @@ export function CancelShiftModal({ shift, onClose, onSuccess }) {
 
         {canCancel ? (
           <p style={{ fontSize: 12, color: T.muted, margin: "0 0 20px", lineHeight: 1.5 }}>
-            💡 Pembatalan ini akan <b>menghapus catatan shift</b> yang belum dipakai belanja, sehingga laporan keuangan tidak kotor. Meja kasir akan kembali terkunci.
+            Pembatalan ini akan <b>menghapus catatan shift</b> yang belum dipakai belanja, sehingga laporan keuangan tidak kotor. Meja kasir akan kembali terkunci.
           </p>
         ) : (
           <div style={{
@@ -889,7 +867,7 @@ export function CancelShiftModal({ shift, onClose, onSuccess }) {
             lineHeight: 1.5,
             marginBottom: 20,
           }}>
-            ❌ Shift ini sudah memiliki catatan transaksi belanja! Untuk menjaga akurasi pembukuan dan uang kas, shift ini tidak boleh dibatalkan. Silakan gunakan tombol <b>"Tutup Kasir & Hitung Laci"</b>.
+            Shift ini sudah memiliki catatan transaksi belanja! Untuk menjaga akurasi pembukuan dan uang kas, shift ini tidak boleh dibatalkan. Silakan gunakan tombol <b>"Tutup Kasir & Hitung Laci"</b>.
           </div>
         )}
 
@@ -1002,8 +980,8 @@ export function OpenShiftModal({ onClose, onSuccess }) {
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
           <div>
-            <h3 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ color: T.green }}>🟢</span> Buka Shift Kasir Baru
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0 }}>
+              Buka Shift Baru
             </h3>
             <p style={{ fontSize: 12, color: T.sub, margin: "4px 0 0" }}>
               Masukkan uang modal kembalian yang dimasukkan ke laci kasir.
@@ -1021,7 +999,7 @@ export function OpenShiftModal({ onClose, onSuccess }) {
               borderRadius: 8,
             }}
           >
-            ✕
+            <CloseIcon size={16} />
           </button>
         </div>
 
@@ -1249,7 +1227,7 @@ export function CashMovementModal({ shiftId, initialType, onClose, onSuccess }) 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
           <div>
             <h3 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0 }}>
-              {type === "IN" ? "📥 Catat Kas Masuk Laci" : "📤 Catat Uang Keluar Laci"}
+              {type === "IN" ? "Catat Kas Masuk Laci" : "Catat Uang Keluar Laci"}
             </h3>
             <p style={{ fontSize: 12, color: T.sub, margin: "4px 0 0" }}>
               Catat uang tunai yang masuk atau diambil dari laci di luar belanja nota.
@@ -1267,7 +1245,7 @@ export function CashMovementModal({ shiftId, initialType, onClose, onSuccess }) 
               borderRadius: 8,
             }}
           >
-            ✕
+            <CloseIcon size={16} />
           </button>
         </div>
 
@@ -1288,7 +1266,7 @@ export function CashMovementModal({ shiftId, initialType, onClose, onSuccess }) 
               cursor: "pointer",
             }}
           >
-            📤 Uang Keluar (Ambil Kasir)
+            Uang Keluar (Ambil Kasir)
           </button>
           <button
             type="button"
@@ -1305,7 +1283,7 @@ export function CashMovementModal({ shiftId, initialType, onClose, onSuccess }) 
               cursor: "pointer",
             }}
           >
-            📥 Kas Masuk (Tambah Modal)
+            Kas Masuk (Tambah Modal)
           </button>
         </div>
 
@@ -1545,8 +1523,8 @@ export function CloseShiftModal({ shift, movements, onClose, onSuccess }) {
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
           <div>
-            <h3 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ color: T.red }}>🔒</span> Tutup Kasir & Hitung Uang Laci
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0 }}>
+              Tutup Shift & Hitung Uang Laci
             </h3>
             <p style={{ fontSize: 12, color: T.sub, margin: "4px 0 0" }}>
               Hitung uang fisik yang ada di laci kasir saat toko tutup atau pergantian shift.
@@ -1564,7 +1542,7 @@ export function CloseShiftModal({ shift, movements, onClose, onSuccess }) {
               borderRadius: 8,
             }}
           >
-            ✕
+            <CloseIcon size={16} />
           </button>
         </div>
 
@@ -1585,7 +1563,7 @@ export function CloseShiftModal({ shift, movements, onClose, onSuccess }) {
               cursor: "pointer",
             }}
           >
-            🧮 Kalkulator Pecahan Lembar & Koin
+            Kalkulator Pecahan Lembar & Koin
           </button>
           <button
             type="button"
@@ -1602,7 +1580,7 @@ export function CloseShiftModal({ shift, movements, onClose, onSuccess }) {
               cursor: "pointer",
             }}
           >
-            ✍️ Masukkan Total Langsung
+            Masukkan Total Langsung
           </button>
         </div>
 
@@ -1933,7 +1911,7 @@ function ShiftDetailModal({ shift, onClose, onPrint }) {
               borderRadius: 8,
             }}
           >
-            ✕
+            <CloseIcon size={16} />
           </button>
         </div>
 
@@ -2030,7 +2008,7 @@ function ShiftDetailModal({ shift, onClose, onPrint }) {
               gap: 6,
             }}
           >
-            🖨 Cetak Struk Rekap
+            <PrinterIcon size={14} /> Cetak Struk Rekap
           </button>
         </div>
       </div>

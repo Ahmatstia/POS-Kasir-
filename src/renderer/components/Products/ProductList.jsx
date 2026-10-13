@@ -72,8 +72,6 @@ function ProductCard({ product, onEdit, onDelete, isDeleting, isConfirmingDelete
     { key: 'kg',   label: 'Kg',   price: product.price_kg,   color: T.purple },
   ].filter(u => u.price > 0);
 
-  const sellUnit = product.sell_per_unit || 'all';
-
   return (
     <div style={{
       background: T.card,
@@ -93,22 +91,10 @@ function ProductCard({ product, onEdit, onDelete, isDeleting, isConfirmingDelete
           <p style={{
             fontSize: 14, fontWeight: 700, color: T.text,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            marginBottom: 4,
+            margin: 0,
           }}>
             {product.name}
           </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            {/* Sell unit badge */}
-            {sellUnit !== 'all' && (
-              <span style={{
-                fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
-                padding: '2px 8px', borderRadius: 100,
-                background: T.purple + '12', border: `1px solid ${T.purple}25`, color: T.purple,
-              }}>
-                {sellUnit}
-              </span>
-            )}
-          </div>
         </div>
 
         {/* Stock badge */}

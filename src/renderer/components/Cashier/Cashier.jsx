@@ -310,7 +310,7 @@ function HeldCartsListModal({ heldCarts, onClose, onRestore, onDelete }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
           <div>
             <h3 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ color: T.orange }}>📂</span> Daftar Nota Tertahan ({heldCarts.length})
+              Daftar Nota Tertahan ({heldCarts.length})
             </h3>
             <p style={{ fontSize: 12, color: T.sub, margin: '4px 0 0' }}>
               Klik "Buka Nota" untuk melanjutkan pembayaran transaksi pembeli.
@@ -329,7 +329,7 @@ function HeldCartsListModal({ heldCarts, onClose, onRestore, onDelete }) {
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, paddingRight: 4 }}>
           {heldCarts.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 20px', color: T.muted }}>
-              <span style={{ fontSize: 32, display: 'block', marginBottom: 8 }}>🧺</span>
+              
               <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>Tidak ada transaksi yang sedang ditahan.</p>
             </div>
           ) : (
@@ -360,7 +360,7 @@ function HeldCartsListModal({ heldCarts, onClose, onRestore, onDelete }) {
 
                 {item.note && (
                   <div style={{ fontSize: 12, color: T.sub, fontStyle: 'italic', background: T.surface, padding: '4px 8px', borderRadius: 6 }}>
-                    💬 {item.note}
+                    Catatan: {item.note}
                   </div>
                 )}
 
@@ -512,7 +512,7 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef, ign
             flexShrink: 0,
           }}
         >
-          {showManual ? '✕ Batal' : '✏️ Kustom'}
+          {showManual ? 'Batal' : 'Kustom'}
         </button>
       </div>
 
@@ -971,7 +971,7 @@ function Cashier({ setCurrentPage }) {
     setCart([...cart, {
       id: 'manual-' + Date.now() + Math.random(),
       product_id: product.id,
-      name: `${product.name} ✎`,
+      name: `${product.name} (Manual)`,
       unit, price, quantity,
       subtotal: Math.round(price * quantity),
     }]);
@@ -1233,7 +1233,7 @@ function Cashier({ setCurrentPage }) {
                   transition: 'all 0.15s',
                 }}
               >
-                💸 Kas Masuk / Keluar
+                Catat Kas Laci
               </button>
               {((activeShift.summary?.transactionCount || 0) === 0 && (activeShift.summary?.debtCollected || 0) === 0) && (
                 <button
@@ -1251,7 +1251,7 @@ function Cashier({ setCurrentPage }) {
                   onMouseEnter={e => { e.currentTarget.style.color = T.red; e.currentTarget.style.borderColor = T.red + '50'; e.currentTarget.style.background = T.red + '10'; }}
                   onMouseLeave={e => { e.currentTarget.style.color = T.muted; e.currentTarget.style.borderColor = T.muted + '35'; e.currentTarget.style.background = 'transparent'; }}
                 >
-                  ✕ Batal Buka Shift
+                  Batal Buka Shift
                 </button>
               )}
               <button
@@ -1267,7 +1267,7 @@ function Cashier({ setCurrentPage }) {
                   transition: 'all 0.15s',
                 }}
               >
-                🔒 Tutup Shift
+                Tutup Shift
               </button>
             </>
           ) : (
@@ -1310,9 +1310,12 @@ function Cashier({ setCurrentPage }) {
             width: 76, height: 76, borderRadius: '50%',
             background: T.orange + '15', border: `2px solid ${T.orange}35`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 34, marginBottom: 18,
+            marginBottom: 18,
           }}>
-            🔒
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke={T.orange} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
           </div>  
 
           <h2 style={{ fontSize: 24, fontWeight: 900, color: T.text, margin: '0 0 8px' }}>
@@ -1520,7 +1523,7 @@ function Cashier({ setCurrentPage }) {
                     onMouseEnter={e => e.currentTarget.style.background = T.orange + '28'}
                     onMouseLeave={e => e.currentTarget.style.background = T.orange + '18'}
                   >
-                    <span>📂</span> {heldCarts.length} Tertahan
+                    {heldCarts.length} Nota Ditahan
                   </button>
                 )}
               </div>

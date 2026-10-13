@@ -348,7 +348,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
               </div>
               <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: T.green, fontFamily: 'JetBrains Mono, monospace' }}>
-                  ✓ Modal Satuan Dasar: Rp {formatNominal(computedBasePrice)} / {isKg ? 'Kg' : 'Pcs'}
+                  Modal Satuan Dasar: Rp {formatNominal(computedBasePrice)} / {isKg ? 'Kg' : 'Pcs'}
                 </span>
                 {curMult > 1 && (
                   <span style={{ fontSize: 10, color: T.muted }}>
@@ -361,7 +361,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
             <p style={{ fontSize: 9, fontWeight: 700, color: errors.price ? T.red : T.muted, textTransform: 'uppercase' }}>Harga Jual Produk</p>
-            {errors.price && <p style={{ fontSize: 10, color: T.red, fontWeight: 600 }}>⚠ {errors.price}</p>}
+            {errors.price && <p style={{ fontSize: 10, color: T.red, fontWeight: 600 }}>{errors.price}</p>}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: sellPerUnit === 'kg' ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: 8 }}>
             {[
@@ -409,7 +409,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
           <p style={{ fontSize: 11, color: T.blue }}>Untuk mengubah stok, gunakan halaman <strong>Inventori</strong>.</p>
         </div>
 
-        <FormActions onClose={onClose} loading={saving} submitLabel="✓ Simpan Perubahan" loadingLabel="Menyimpan…" />
+        <FormActions onClose={onClose} loading={saving} submitLabel="Simpan Perubahan" loadingLabel="Menyimpan…" />
       </form>
     </FormModal>
   );

@@ -22,7 +22,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { T } from "../../theme";
-import { ReportsIcon } from "../Icons/AppIcons";
+import { ReportsIcon, PrinterIcon } from "../Icons/AppIcons";
+import PageHeader from "../Layout/PageHeader";
 
 const PALETTE = [
   T.accent,
@@ -443,69 +444,58 @@ function Reports() {
         }}
       >
         {/* ── HEADER ── */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            marginBottom: 24,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 8, background: T.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-              <ReportsIcon />
+        <PageHeader
+          title="Laporan Bisnis"
+          description="Ringkasan performa omzet penjualan, laba kotor, dan kesehatan stok toko"
+          actions={
+            <div className="no-print" style={{ display: "flex", gap: 8 }}>
+              <button
+                className="action-btn"
+                onClick={handleExport}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  border: `1px solid ${T.border2}`,
+                  background: T.surface,
+                  color: T.sub,
+                  fontFamily: "Syne, sans-serif",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  transition: "all 0.15s",
+                }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                Ekspor CSV
+              </button>
+              <button
+                className="action-btn"
+                onClick={() => window.print()}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 10,
+                  border: "none",
+                  background: T.accent,
+                  color: "#fff",
+                  fontFamily: "Syne, sans-serif",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  transition: "all 0.15s",
+                }}
+              >
+                <PrinterIcon size={14} />
+                Cetak Laporan
+              </button>
             </div>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text, letterSpacing: '-0.01em' }}>Laporan</h1>
-          </div>
-          <div className="no-print" style={{ display: "flex", gap: 8 }}>
-            <button
-              className="action-btn"
-              onClick={handleExport}
-              style={{
-                padding: "7px 14px",
-                borderRadius: 9,
-                border: `1px solid ${T.green}35`,
-                background: T.green + "10",
-                color: T.green,
-                fontFamily: "Syne, sans-serif",
-                fontSize: 11,
-                fontWeight: 700,
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.background = T.green + "20")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.background = T.green + "10")
-              }
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-              Export CSV
-            </button>
-            <button
-              className="action-btn"
-              onClick={() => window.print()}
-              style={{
-                padding: "7px 14px",
-                borderRadius: 9,
-                border: `1px solid ${T.blue}35`,
-                background: T.blue + "10",
-                color: T.blue,
-                fontFamily: "Syne, sans-serif",
-                fontSize: 11,
-                fontWeight: 700,
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.background = T.blue + "20")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.background = T.blue + "10")
-              }
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-              Cetak
-            </button>
-          </div>
-        </div>
+          }
+        />
 
         {/* ── TABS ── */}
         <div

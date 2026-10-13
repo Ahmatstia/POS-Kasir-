@@ -5,6 +5,7 @@ import { useToast } from "../Toast";
 import ActivityLogs from "../Security/ActivityLogs";
 import { logActivity, AUDIT_ACTIONS, clearLogs } from "../../services/audit";
 import { SettingsIcon } from "../Icons/AppIcons";
+import PageHeader from "../Layout/PageHeader";
 
 function Settings() {
   const { showToast } = useToast();
@@ -94,7 +95,7 @@ function Settings() {
       const res = await window.electronAPI.invoke("db:backup", ts);
       
       if (res.success) {
-        showToast('success', '✅ Database berhasil diamankan: ' + res.filename);
+        showToast('success', 'Database berhasil diamankan: ' + res.filename);
         setRefreshKey(prev => prev + 1); // Trigger activity log refresh
       } else {
         showToast('error', 'Gagal membuat backup: ' + res.error);
@@ -108,7 +109,7 @@ function Settings() {
 
   const handleRestore = async () => {
     const confirm = window.confirm(
-      "⚠ PERINGATAN KRITIS!\n\n" +
+      "Peringatan Penting:\n\n" +
       "Proses ini akan MENGHAPUS SEMUA DATA saat ini dan menggantinya dengan data dari file backup.\n" +
       "Aplikasi akan menutup dan memulai ulang (Restart) otomatis setelah proses selesai.\n\n" +
       "Apakah Anda yakin ingin melanjutkan?"
@@ -162,32 +163,31 @@ function Settings() {
       `}</style>
 
       <div style={{ animation: 'fadeUp 0.4s ease both', fontFamily: 'Syne, sans-serif' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 8, background: T.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-              <SettingsIcon />
+        <PageHeader
+          title="Pengaturan Sistem"
+          description="Konfigurasi identitas toko, struk kasir, pencadangan database, dan keamanan"
+          actions={
+            <div style={{ display: 'flex', background: T.surface, padding: 4, borderRadius: 12, border: `1px solid ${T.border}` }}>
+              <button onClick={() => setActiveTab('general')} style={{ 
+                padding: '8px 16px', borderRadius: 9, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none',
+                background: activeTab === 'general' ? T.accent : 'transparent', color: activeTab === 'general' ? '#fff' : T.sub,
+                transition: 'all 0.15s'
+              }}>Toko & Mode Jual</button>
+              <button onClick={() => setActiveTab('security')} style={{ 
+                padding: '8px 16px', borderRadius: 9, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none',
+                background: activeTab === 'security' ? T.accent : 'transparent', color: activeTab === 'security' ? '#fff' : T.sub,
+                transition: 'all 0.15s'
+              }}>Cadangan Data & Audit</button>
             </div>
-          </div>
-          <div style={{ display: 'flex', background: T.surface, padding: 4, borderRadius: 12, border: `1px solid ${T.border}` }}>
-            <button onClick={() => setActiveTab('general')} style={{ 
-              padding: '8px 16px', borderRadius: 9, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none',
-              background: activeTab === 'general' ? T.accent : 'transparent', color: activeTab === 'general' ? '#fff' : T.sub,
-              transition: 'all 0.2s'
-            }}>Toko & Mode Jual</button>
-            <button onClick={() => setActiveTab('security')} style={{ 
-              padding: '8px 16px', borderRadius: 9, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none',
-              background: activeTab === 'security' ? T.accent : 'transparent', color: activeTab === 'security' ? '#fff' : T.sub,
-              transition: 'all 0.2s'
-            }}>Cadangan Data & Catatan</button>
-          </div>
-        </div>
+          }
+        />
 
         {activeTab === 'general' ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 1000, animation: 'fadeUp 0.3s ease' }}>
             {/* Store Profile Section */}
             <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, padding: 24 }}>
               <div style={{ marginBottom: 18 }}>
-                <p style={{ fontSize: 15, fontWeight: 800, color: T.text, marginBottom: 4 }}>🏪 Profil & Identitas Struk Toko</p>
+                <p style={{ fontSize: 15, fontWeight: 800, color: T.text, marginBottom: 4 }}>Profil & Identitas Struk Toko</p>
                 <p style={{ fontSize: 12, color: T.sub, lineHeight: 1.5 }}>
                   Atur nama toko, alamat, dan nomor kontak yang akan dicetak pada kepala struk nota belanja.
                 </p>
@@ -426,7 +426,7 @@ function Settings() {
                      onMouseEnter={e => { e.currentTarget.style.background = T.red; e.currentTarget.style.color = '#fff'; }}
                      onMouseLeave={e => { e.currentTarget.style.background = T.red + '10'; e.currentTarget.style.color = T.red; }}
                     >
-                       📥 Pulihkan Data dari Cadangan (.db)
+                       Pulihkan Data dari Cadangan (.db)
                     </button>
                  </div>
 

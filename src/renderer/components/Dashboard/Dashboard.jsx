@@ -7,7 +7,8 @@ import { getDashboardData } from '../../services/dashboard';
 import { isPrivacyModeEnabled, isStockManaged } from '../../services/settings';
 import { getDebtSummary } from '../../services/debts';
 import { T } from '../../theme';
-import { DashboardIcon } from '../Icons/AppIcons';
+import { DashboardIcon, DebtsIcon, RefreshIcon } from '../Icons/AppIcons';
+import PageHeader from '../Layout/PageHeader';
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 const fmt = (n) => `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
@@ -288,37 +289,37 @@ export default function Dashboard({ setCurrentPage }) {
         }
       `}</style>
 
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 24px', minHeight: '100vh' }}>
-
-        {/* ── TOP NAV ── */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30, animation: 'fadeUp 0.4s ease both' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-              <div style={{ width: 28, height: 28, borderRadius: 8, background: T.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-                <DashboardIcon />
-              </div>
-              <span style={{ fontSize: 18, fontWeight: 800, color: T.text, letterSpacing: '-0.01em' }}>
-                Beranda
-              </span>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {/* Refresh */}
-            <button onClick={loadDashboard} style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '6px 12px', borderRadius: 100,
-              background: T.border, border: `1px solid ${T.border2}`,
-              color: T.sub, fontFamily: 'Syne, sans-serif', fontSize: 11, fontWeight: 700, cursor: 'pointer',
-            }}>
-              <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                <path d="M1.5 5.5A4 4 0 115 1.7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-                <path d="M1.5 2.5v3h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Segarkan
+      <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+        {/* ── PAGE HEADER ── */}
+        <PageHeader
+          title="Beranda"
+          description="Ringkasan penjualan, performa laba kotor, dan aktivitas toko hari ini"
+          actions={
+            <button
+              onClick={loadDashboard}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '8px 14px',
+                borderRadius: 10,
+                background: T.surface,
+                border: `1px solid ${T.border2}`,
+                color: T.sub,
+                fontFamily: 'Syne, sans-serif',
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = T.accent; e.currentTarget.style.borderColor = T.accent; }}
+              onMouseLeave={e => { e.currentTarget.style.color = T.sub; e.currentTarget.style.borderColor = T.border2; }}
+            >
+              <RefreshIcon size={14} />
+              Segarkan Data
             </button>
-          </div>
-        </div>
+          }
+        />
 
         {/* ── KASBON ALERT BANNER ── */}
         {debtSummary && debtSummary.totalUnpaidDebt > 0 && (
@@ -338,7 +339,13 @@ export default function Dashboard({ setCurrentPage }) {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 22 }}>📒</span>
+              <div style={{
+                width: 36, height: 36, borderRadius: 10,
+                background: T.orange, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', flexShrink: 0,
+              }}>
+                <DebtsIcon />
+              </div>
               <div>
                 <p style={{ fontSize: 13, fontWeight: 800, color: T.text, margin: '0 0 2px 0' }}>
                   Perhatian: Ada Kasbon Pelanggan Belum Lunas Sebesar {fmt(debtSummary.totalUnpaidDebt)}
@@ -538,14 +545,14 @@ export default function Dashboard({ setCurrentPage }) {
 
             {/* Low Stock */}
             <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: '24px', animation: 'fadeUp 0.5s ease 0.6s both' }}>
-              <SectionTitle icon="⚠">Stok Menipis</SectionTitle>
+              <SectionTitle>Stok Menipis</SectionTitle>
               {!stockManaged ? (
                 <div style={{ textAlign: 'center', padding: '20px 0' }}>
                   <p style={{ fontSize: 13, fontWeight: 700, color: T.accent, marginBottom: 4 }}>Mode Abaikan Stok Aktif</p>
                   <p style={{ fontSize: 11, color: T.muted }}>Peringatan stok saat ini dinonaktifkan.</p>
                 </div>
               ) : (data.lowStock || []).length === 0 ? (
-                <p style={{ fontSize: 12, color: T.muted, textAlign: 'center', padding: '20px 0' }}>Semua stok aman ✓</p>
+                <p style={{ fontSize: 12, color: T.muted, textAlign: 'center', padding: '20px 0' }}>Semua stok barang aman</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {data.lowStock.slice(0, 5).map((p) => {

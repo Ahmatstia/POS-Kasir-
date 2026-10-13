@@ -3,6 +3,7 @@ import ProductList from './ProductList';
 import InventoryList from '../Inventory/InventoryList';
 import CategoryList from '../Categories/CategoryList';
 import { ProductsIcon, InventoryIcon, CategoriesIcon } from '../Icons/AppIcons';
+import PageHeader from '../Layout/PageHeader';
 import { T } from '../../theme';
 
 function GoodsHub({ defaultTab = 'products' }) {
@@ -36,7 +37,12 @@ function GoodsHub({ defaultTab = 'products' }) {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <PageHeader
+        title="Produk & Inventori"
+        description="Kelola data master produk, stok rak & gudang, serta kategori barang"
+      />
+
       {/* ── SUB-NAVIGATION TABS ── */}
       <div style={{
         background: T.surface,

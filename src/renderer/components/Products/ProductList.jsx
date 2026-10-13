@@ -101,10 +101,10 @@ function ProductCard({ product, onEdit, onDelete, isDeleting, isConfirmingDelete
             {/* Category chip */}
             <span style={{
               fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
-              padding: '2px 8px', borderRadius: 100,
-              background: (product.category_color || T.blue) + '16',
-              border: `1px solid ${(product.category_color || T.blue)}28`,
-              color: product.category_color || T.blue,
+              padding: '2px 8px', borderRadius: 6,
+              background: T.border,
+              border: `1px solid ${T.border2}`,
+              color: T.sub,
             }}>
               {product.category_name || '—'}
             </span>
@@ -331,8 +331,7 @@ function ProductList() {
     const catMap = Object.fromEntries(categoriesData.map(c => [c.id, c]));
     const merged = productsData.map(p => ({
       ...p,
-      category_name:  catMap[p.category_id]?.name  || '—',
-      category_color: catMap[p.category_id]?.color || T.blue,
+      category_name: catMap[p.category_id]?.name || '—',
     }));
     setProducts(merged);
     setFilteredProducts(merged);
@@ -666,7 +665,7 @@ function ProductList() {
                       <tr key={p.id}>
                         <td><span style={{ fontWeight: 700, color: T.text, fontSize: 13 }}>{p.name}</span></td>
                         <td>
-                          <span style={{ padding: '2px 8px', borderRadius: 100, fontSize: 10, fontWeight: 700, background: (p.category_color || T.blue) + '16', border: `1px solid ${(p.category_color || T.blue)}25`, color: p.category_color || T.blue }}>
+                          <span style={{ padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: T.border, border: `1px solid ${T.border2}`, color: T.sub }}>
                             {p.category_name || '—'}
                           </span>
                         </td>

@@ -715,10 +715,10 @@ function InventoryList() {
                 className="inv-input" 
                 style={{ cursor: 'pointer', padding: '12px', borderRadius: 12, backgroundColor: T.bg, border: `1px solid ${T.border2}` }}
               >
-                <option value="">Semua Status Stok</option>
-                <option value="aman">✅ Stok Aman</option>
-                <option value="menipis">⚠️ Stok Menipis</option>
-                <option value="habis">❌ Stok Habis</option>
+                <option value="">Semua Status</option>
+                <option value="aman">Stok Aman</option>
+                <option value="menipis">Stok Menipis</option>
+                <option value="habis">Stok Habis</option>
               </select>
               <button 
                 onClick={() => { setSearchTerm(''); setFilterCat(''); setFilterUnit(''); setFilterStatus(''); }} 

@@ -16,11 +16,11 @@ export async function getCategories() {
   }
 }
 
-export async function addCategory({ name, description = "", color = "#5B8AF5" }) {
+export async function addCategory({ name, description = "" }) {
   try {
     const result = await window.electronAPI.run(
-      "INSERT INTO categories (name, description, color) VALUES (?, ?, ?)",
-      [name.trim(), description.trim(), color]
+      "INSERT INTO categories (name, description) VALUES (?, ?)",
+      [name.trim(), description.trim()]
     );
     return { success: true, id: result.lastID };
   } catch (error) {
@@ -29,12 +29,12 @@ export async function addCategory({ name, description = "", color = "#5B8AF5" })
   }
 }
 
-export async function updateCategory(id, { name, description, color }) {
+export async function updateCategory(id, { name, description }) {
   try {
     // 1. Update main data first (without updated_at) to avoid crashing if column missing
     await window.electronAPI.run(
-      "UPDATE categories SET name = ?, description = ?, color = ? WHERE id = ?",
-      [name.trim(), description?.trim() || "", color || "#5B8AF5", id]
+      "UPDATE categories SET name = ?, description = ? WHERE id = ?",
+      [name.trim(), description?.trim() || "", id]
     );
 
     // 2. Try to update updated_at separately

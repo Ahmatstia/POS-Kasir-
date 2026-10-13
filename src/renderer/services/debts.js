@@ -185,11 +185,17 @@ export async function payDebt({
 
     await window.electronAPI.run("BEGIN TRANSACTION");
 
-    // Catat riwayat pembayaran
+    let currentShiftId = null;
+    try {
+      const [activeShift] = await window.electronAPI.query("SELECT id FROM cash_shifts WHERE status = 'OPEN' ORDER BY id DESC LIMIT 1");
+      if (activeShift) currentShiftId = activeShift.id;
+    } catch (e) {}
+
+    // Catat riwayat pembayaran (terikat ke shift jika ada)
     const payResult = await window.electronAPI.run(
-      `INSERT INTO debt_payments (customer_id, debt_id, payment_amount, payment_method, notes, created_at)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [customerId, debtId || null, payAmount, paymentMethod, (notes || "").trim(), createdAt]
+      `INSERT INTO debt_payments (customer_id, debt_id, payment_amount, payment_method, notes, created_at, shift_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [customerId, debtId || null, payAmount, paymentMethod, (notes || "").trim(), createdAt, currentShiftId]
     );
     const paymentRecordId = payResult.lastID;
 

@@ -754,7 +754,7 @@ export default function ShiftsManagement() {
 }
 
 // ─── MODAL BUKA SHIFT KASIR ───────────────────────────────────────────────────
-function OpenShiftModal({ onClose, onSuccess }) {
+export function OpenShiftModal({ onClose, onSuccess }) {
   const [cashierName, setCashierName] = useState("Kasir 1");
   const [startingCash, setStartingCash] = useState(200000);
   const [notes, setNotes] = useState("");
@@ -986,7 +986,7 @@ function OpenShiftModal({ onClose, onSuccess }) {
 }
 
 // ─── MODAL KAS MASUK / KELUAR LACI ───────────────────────────────────────────
-function CashMovementModal({ shiftId, initialType, onClose, onSuccess }) {
+export function CashMovementModal({ shiftId, initialType, onClose, onSuccess }) {
   const [type, setType] = useState(initialType);
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
@@ -1246,7 +1246,7 @@ function CashMovementModal({ shiftId, initialType, onClose, onSuccess }) {
 }
 
 // ─── MODAL TUTUP KASIR & HITUNG FISIK LACI (BLIND RECONCILIATION) ─────────────
-function CloseShiftModal({ shift, movements, onClose, onSuccess }) {
+export function CloseShiftModal({ shift, movements, onClose, onSuccess }) {
   const [mode, setMode] = useState("calculator"); // "calculator" or "direct"
   const [directAmount, setDirectAmount] = useState("");
   const [autoPrint, setAutoPrint] = useState(true);

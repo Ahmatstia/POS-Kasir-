@@ -351,6 +351,8 @@ class DatabaseManager {
           await this._runSQL("CREATE INDEX IF NOT EXISTS idx_cash_shifts_status ON cash_shifts(status)", "INDEX cash_shifts.status");
           await this._runSQL("CREATE INDEX IF NOT EXISTS idx_cash_movements_shift ON cash_movements(shift_id)", "INDEX cash_movements.shift_id");
           await this._runSQL("ALTER TABLE transactions ADD COLUMN shift_id INTEGER", "ADD transactions.shift_id");
+          await this._runSQL("ALTER TABLE debt_payments ADD COLUMN shift_id INTEGER", "ADD debt_payments.shift_id");
+          await this._runSQL("CREATE INDEX IF NOT EXISTS idx_debt_payments_shift ON debt_payments(shift_id)", "INDEX debt_payments.shift_id");
 
           // ── ENSURE DATA CONSISTENCY ──────────────────────────────────────────
           await this._runSQL("UPDATE transactions SET status = 'COMPLETED' WHERE status IS NULL", "FIX transactions.status");

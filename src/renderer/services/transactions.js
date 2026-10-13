@@ -40,6 +40,24 @@ export async function createTransaction(transactionData) {
   const createdAt = nowStr; // waktu lokal WIB untuk disimpan ke DB
 
   try {
+    // ─── WAJIB ADA SHIFT KASIR AKTIF (HARD GATEKEEPER) ───
+    let currentShiftId = transactionData.shiftId || null;
+    if (!currentShiftId) {
+      try {
+        const [activeShift] = await window.electronAPI.query("SELECT id FROM cash_shifts WHERE status = 'OPEN' ORDER BY id DESC LIMIT 1");
+        if (activeShift) currentShiftId = activeShift.id;
+      } catch (e) {
+        // fail-safe
+      }
+    }
+
+    if (!currentShiftId) {
+      return {
+        success: false,
+        error: "Shift kasir belum dibuka! Silakan buka shift kasir terlebih dahulu sebelum memproses transaksi.",
+      };
+    }
+
     const ignoreStockVal = await window.electronAPI.query("SELECT value FROM settings WHERE key = 'ignore_stock'");
     const manageStock = (ignoreStockVal[0]?.value || '0') === '0'; // true (restricted) if ignore_stock is '0'
 
@@ -66,17 +84,6 @@ export async function createTransaction(transactionData) {
       }
     }
 
-    // Auto-detect current active shift
-    let currentShiftId = transactionData.shiftId || null;
-    if (!currentShiftId) {
-      try {
-        const [activeShift] = await window.electronAPI.query("SELECT id FROM cash_shifts WHERE status = 'OPEN' ORDER BY id DESC LIMIT 1");
-        if (activeShift) currentShiftId = activeShift.id;
-      } catch (e) {
-        // fail-safe if shift table not ready
-      }
-    }
-
     // Insert transaction header (dengan created_at waktu lokal WIB, customer_id, dan shift_id)
     const txResult = await window.electronAPI.run(
       `INSERT INTO transactions
@@ -99,13 +106,13 @@ export async function createTransaction(transactionData) {
         [finalCustomerId, transactionId, invoiceNo, total, remainingDebt, debtStatus, notes || "", createdAt]
       );
 
-      // Jika ada uang muka (DP), catat juga sebagai pembayaran awal
+      // Jika ada uang muka (DP), catat juga sebagai pembayaran awal terikat ke shift
       if (downPayment > 0 && debtRes.lastID) {
         await window.electronAPI.run(
           `INSERT INTO debt_payments
-             (customer_id, debt_id, payment_amount, payment_method, notes, created_at)
-           VALUES (?, ?, ?, 'cash', 'Uang muka / DP saat nota kasbon dibuat', ?)`,
-          [finalCustomerId, debtRes.lastID, downPayment, createdAt]
+             (customer_id, debt_id, payment_amount, payment_method, notes, created_at, shift_id)
+           VALUES (?, ?, ?, 'cash', 'Uang muka / DP saat nota kasbon dibuat', ?, ?)`,
+          [finalCustomerId, debtRes.lastID, downPayment, createdAt, currentShiftId]
         );
       }
     }
@@ -207,15 +214,18 @@ export async function getTransactionDetail(transactionId) {
 // Cancel transaction (restore stock)
 export async function cancelTransaction(transactionId) {
   try {
+    const [tx] = await window.electronAPI.query(
+      "SELECT invoice_no, shift_id, status FROM transactions WHERE id = ?",
+      [transactionId]
+    );
+    if (!tx) return { success: false, error: "Transaksi tidak ditemukan." };
+    if (tx.status === 'CANCELLED') return { success: false, error: "Transaksi ini sudah dibatalkan sebelumnya." };
+
     await window.electronAPI.run("BEGIN TRANSACTION");
 
     // Get items
     const items = await window.electronAPI.query(
       "SELECT * FROM transaction_items WHERE transaction_id = ?",
-      [transactionId]
-    );
-    const [tx] = await window.electronAPI.query(
-      "SELECT invoice_no FROM transactions WHERE id = ?",
       [transactionId]
     );
 
@@ -410,7 +420,8 @@ export async function deleteTransaction(transactionId) {
       [transactionId]
     );
 
-    // Hapus hutang kasbon jika ada
+    // Hapus cicilan hutang dan hutang kasbon jika ada
+    await window.electronAPI.run("DELETE FROM debt_payments WHERE debt_id IN (SELECT id FROM customer_debts WHERE transaction_id = ?)", [transactionId]);
     await window.electronAPI.run("DELETE FROM customer_debts WHERE transaction_id = ?", [transactionId]);
 
     // Hapus transaksi

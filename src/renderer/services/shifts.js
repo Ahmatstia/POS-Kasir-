@@ -67,9 +67,8 @@ export async function calculateShiftSummary(shiftId) {
          COUNT(id) AS count_payments
        FROM debt_payments
        WHERE payment_method = 'cash'
-         AND created_at >= ? 
-         AND (created_at <= ? OR ? IS NULL)`,
-      [shift.opened_at, shift.closed_at, shift.closed_at]
+         AND (shift_id = ? OR (shift_id IS NULL AND created_at >= ? AND (created_at <= ? OR ? IS NULL)))`,
+      [shiftId, shift.opened_at, shift.closed_at, shift.closed_at]
     );
 
     // 4. Kas Masuk Laci Lainnya (Kas Masuk Manual / Tambahan Modal)
@@ -88,12 +87,25 @@ export async function calculateShiftSummary(shiftId) {
       [shiftId]
     );
 
+    // 6. Transaksi Void / Batal Tunai
+    const [voidTx] = await window.electronAPI.query(
+      `SELECT 
+         COALESCE(SUM(total_amount), 0) AS total_void_cash,
+         COUNT(id) AS count_void
+       FROM transactions 
+       WHERE status = 'CANCELLED' 
+         AND payment_method = 'cash' 
+         AND (shift_id = ? OR (shift_id IS NULL AND created_at >= ? AND (created_at <= ? OR ? IS NULL)))`,
+      [shiftId, shift.opened_at, shift.closed_at, shift.closed_at]
+    );
+
     const startingCash = Number(shift.starting_cash || 0);
     const cashSales = Number(cashTx?.total_cash || 0);
     const nonCashSales = Number(nonCashTx?.total_non_cash || 0);
     const debtCollected = Number(debtColl?.total_debt_collected || 0);
     const totalCashIn = Number(cashIn?.total_in || 0);
     const totalCashOut = Number(cashOut?.total_out || 0);
+    const totalVoidCash = Number(voidTx?.total_void_cash || 0);
 
     // Uang fisik yang seharusnya ada di laci kasir saat ini
     const expectedCash = startingCash + cashSales + debtCollected + totalCashIn - totalCashOut;
@@ -108,6 +120,8 @@ export async function calculateShiftSummary(shiftId) {
       debtCollected,
       totalCashIn,
       totalCashOut,
+      totalVoidCash,
+      voidTxCount: voidTx?.count_void || 0,
       expectedCash,
     };
   } catch (error) {
@@ -282,5 +296,28 @@ export async function getShiftById(id) {
   } catch (error) {
     console.error("Error getting shift by id:", error);
     return null;
+  }
+}
+
+/**
+ * Membatalkan/menghapus shift (HANYA BOLEH jika belum ada transaksi di dalamnya!)
+ * Mengatasi celah BUG 5.2 dari audit Flutter POS (Mencegah Orphaned Transactions).
+ */
+export async function cancelOrDeleteShift(shiftId) {
+  try {
+    const [txCheck] = await window.electronAPI.query(
+      "SELECT COUNT(id) AS count FROM transactions WHERE shift_id = ?",
+      [shiftId]
+    );
+    if (txCheck && txCheck.count > 0) {
+      throw new Error(`Shift #${shiftId} tidak dapat dibatalkan karena sudah memiliki ${txCheck.count} transaksi! Silakan gunakan menu "Tutup Kasir & Hitung Laci".`);
+    }
+
+    await window.electronAPI.run("DELETE FROM cash_movements WHERE shift_id = ?", [shiftId]);
+    await window.electronAPI.run("DELETE FROM cash_shifts WHERE id = ?", [shiftId]);
+    return { success: true };
+  } catch (err) {
+    console.error("Gagal membatalkan shift:", err);
+    return { success: false, message: err.message };
   }
 }

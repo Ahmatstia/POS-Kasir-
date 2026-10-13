@@ -3,8 +3,9 @@ import { createPortal } from "react-dom";
 import { getProducts } from "../../services/database";
 import { createTransaction, getLocalDatetimeStr } from "../../services/transactions";
 import { getStoreProfile } from "../../services/settings";
-import { printReceipt, printThermalReceipt } from "../../utils/PrintUtility";
-import { getCurrentShift } from "../../services/shifts";
+import { printReceipt, printThermalReceipt, printShiftReceipt } from "../../utils/PrintUtility";
+import { getCurrentShift, getCashMovements } from "../../services/shifts";
+import { OpenShiftModal, CashMovementModal, CloseShiftModal } from "../Shifts/ShiftsManagement";
 import PaymentModal from "./PaymentModal";
 import { useToast } from "../Toast";
 import { T } from "../../theme";
@@ -704,6 +705,11 @@ function Cashier({ setCurrentPage }) {
   const { showToast } = useToast();
 
   const [activeShift, setActiveShift]               = useState(null);
+  const [showOpenShiftModal, setShowOpenShiftModal] = useState(false);
+  const [showMovementModal, setShowMovementModal]   = useState(false);
+  const [movementType, setMovementType]             = useState('OUT');
+  const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
+  const [shiftMovements, setShiftMovements]         = useState([]);
   const [allProducts, setAllProducts]               = useState([]);
   const [displayedProducts, setDisplayedProducts]   = useState([]);
   const [searchTerm, setSearchTerm]                 = useState('');
@@ -754,9 +760,33 @@ function Cashier({ setCurrentPage }) {
     try {
       const s = await getCurrentShift();
       setActiveShift(s);
+      return s;
     } catch (e) {
       console.error("Gagal cek shift kasir:", e);
+      return null;
     }
+  };
+
+  const handleOpenMovement = (type) => {
+    if (!activeShift) {
+      showToast('error', 'Buka shift kasir terlebih dahulu!');
+      setShowOpenShiftModal(true);
+      return;
+    }
+    setMovementType(type);
+    setShowMovementModal(true);
+  };
+
+  const handleOpenCloseShift = async () => {
+    if (!activeShift) return;
+    try {
+      const movs = await getCashMovements(activeShift.id);
+      setShiftMovements(movs);
+    } catch (e) {
+      console.error("Gagal memuat catatan uang laci:", e);
+      setShiftMovements([]);
+    }
+    setShowCloseShiftModal(true);
   };
 
   useEffect(() => { 
@@ -829,6 +859,11 @@ function Cashier({ setCurrentPage }) {
   };
 
   const addToCart = (product, unit) => {
+    if (!activeShift) {
+      showToast('error', 'Buka shift kasir terlebih dahulu sebelum melayani penjualan!');
+      setShowOpenShiftModal(true);
+      return;
+    }
     const u = UNITS.find(x => x.key === unit);
     const price = product[u.priceKey];
     if (!price || price <= 0) return;
@@ -900,6 +935,11 @@ function Cashier({ setCurrentPage }) {
   };
 
   const addManualToCart = (product, { price, quantity, unit }) => {
+    if (!activeShift) {
+      showToast('error', 'Buka shift kasir terlebih dahulu sebelum melayani penjualan!');
+      setShowOpenShiftModal(true);
+      return false;
+    }
     // Check Kg vs Pcs
     if (!ignoreStock) {
       if (unit === 'kg' || unit === 'karung') {
@@ -1003,6 +1043,11 @@ function Cashier({ setCurrentPage }) {
   };
 
   const handleRestoreHeldCart = (holdId) => {
+    if (!activeShift) {
+      showToast('error', 'Buka shift kasir terlebih dahulu sebelum memuat nota tersimpan!');
+      setShowOpenShiftModal(true);
+      return;
+    }
     const target = heldCarts.find(h => h.id === holdId);
     if (!target) return;
 
@@ -1141,6 +1186,7 @@ function Cashier({ setCurrentPage }) {
         background: activeShift ? T.surface : T.orange + '10',
         border: `1px solid ${activeShift ? T.border : T.orange + '35'}`,
         fontFamily: 'Syne, sans-serif',
+        flexWrap: 'wrap', gap: 10,
       }}>
         {activeShift ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -1151,49 +1197,235 @@ function Cashier({ setCurrentPage }) {
               padding: '3px 10px', borderRadius: 100, textTransform: 'uppercase'
             }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: T.green, display: 'inline-block' }} />
-              Shift Kasir Aktif (#{activeShift.id})
+              Shift Aktif (#{activeShift.id})
             </span>
             <span style={{ fontSize: 12, fontWeight: 700, color: T.text }}>
-              Petugas: <b style={{ color: T.accent }}>{activeShift.cashier_name}</b>
+              Kasir: <b style={{ color: T.accent }}>{activeShift.cashier_name}</b>
             </span>
             <span style={{ fontSize: 11, color: T.muted }}>
-              Modal: {fmt(activeShift.summary?.startingCash)} • Uang Laci: <b style={{ color: T.green, fontFamily: 'JetBrains Mono, monospace' }}>{fmt(activeShift.summary?.expectedCash)}</b>
+              Modal: {fmt(activeShift.summary?.startingCash || activeShift.starting_cash)}
+            </span>
+            <span style={{ fontSize: 11, color: T.muted }}>
+              Uang di Laci: <b style={{ color: T.green, fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>{fmt(activeShift.summary?.expectedCash || activeShift.starting_cash)}</b>
             </span>
           </div>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 15 }}>⚠️</span>
+            <span style={{ fontSize: 16 }}>⚠️</span>
             <span style={{ fontSize: 12, fontWeight: 700, color: T.orange }}>
-              Shift kasir belum dibuka hari ini. Disarankan mencatat modal awal kasir sebelum melayani pembeli.
+              Laci kasir belum dibuka. Masukkan modal awal kembalian untuk membuka akses penjualan.
             </span>
           </div>
         )}
 
-        {setCurrentPage && (
-          <button
-            onClick={() => setCurrentPage('shifts')}
-            title="Buka menu Kas Harian & Shift Kasir"
-            style={{
-              padding: '6px 14px', borderRadius: 8,
-              border: `1px solid ${activeShift ? T.accent + '40' : T.orange + '40'}`,
-              background: activeShift ? T.accent + '15' : T.orange + '15',
-              color: activeShift ? T.accent : T.orange,
-              fontSize: 11, fontWeight: 800, cursor: 'pointer',
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              transition: 'all 0.15s',
-            }}
-          >
-            {activeShift ? '⚙️ Kelola Kas & Shift →' : '🟢 Buka Shift Sekarang →'}
-          </button>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {activeShift ? (
+            <>
+              <button
+                onClick={() => handleOpenMovement('IN')}
+                title="Catat uang masuk ke laci (misal suntikan modal / tukar uang)"
+                style={{
+                  padding: '6px 12px', borderRadius: 8,
+                  border: `1px solid ${T.blue}40`,
+                  background: T.blue + '15',
+                  color: T.blue,
+                  fontSize: 11, fontWeight: 800, cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  transition: 'all 0.15s',
+                }}
+              >
+                + Kas Masuk
+              </button>
+              <button
+                onClick={() => handleOpenMovement('OUT')}
+                title="Catat uang keluar dari laci (misal beli kresek, es batu, galon)"
+                style={{
+                  padding: '6px 12px', borderRadius: 8,
+                  border: `1px solid ${T.orange}40`,
+                  background: T.orange + '15',
+                  color: T.orange,
+                  fontSize: 11, fontWeight: 800, cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  transition: 'all 0.15s',
+                }}
+              >
+                - Ambil Kasir
+              </button>
+              <button
+                onClick={handleOpenCloseShift}
+                title="Tutup shift kasir & hitung fisik uang di laci"
+                style={{
+                  padding: '6px 13px', borderRadius: 8,
+                  border: `1px solid ${T.red}40`,
+                  background: T.red + '15',
+                  color: T.red,
+                  fontSize: 11, fontWeight: 800, cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  transition: 'all 0.15s',
+                }}
+              >
+                🔒 Tutup Kasir & Hitung Laci
+              </button>
+              {setCurrentPage && (
+                <button
+                  onClick={() => setCurrentPage('shifts')}
+                  title="Buka menu Kas Harian & Laporan Shift lengkap"
+                  style={{
+                    padding: '6px 12px', borderRadius: 8,
+                    border: `1px solid ${T.border2}`,
+                    background: T.bg,
+                    color: T.sub,
+                    fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                  }}
+                >
+                  ⚙️ Detail →
+                </button>
+              )}
+            </>
+          ) : (
+            <button
+              onClick={() => setShowOpenShiftModal(true)}
+              style={{
+                padding: '7px 16px', borderRadius: 8,
+                border: 'none',
+                background: T.green,
+                color: '#fff',
+                fontSize: 12, fontWeight: 800, cursor: 'pointer',
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                boxShadow: `0 2px 10px ${T.green}40`,
+                transition: 'all 0.15s',
+              }}
+            >
+              🟢 Buka Shift Kasir Sekarang
+            </button>
+          )}
+        </div>
       </div>
 
-      <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 420px',
-        gap: 16, height: 'calc(100vh - 195px)',
-        fontFamily: 'Syne, sans-serif',
-        animation: 'fadeUp 0.4s ease both',
-      }}>
+      {!activeShift ? (
+        <div style={{
+          background: T.surface,
+          border: `1px solid ${T.border2}`,
+          borderRadius: 20,
+          padding: '44px 28px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          textAlign: 'center',
+          minHeight: 'calc(100vh - 200px)',
+          boxShadow: '0 12px 36px rgba(0,0,0,0.12)',
+          animation: 'fadeUp 0.35s ease both',
+          fontFamily: 'Syne, sans-serif',
+        }}>
+          <div style={{
+            width: 76, height: 76, borderRadius: '50%',
+            background: T.orange + '15', border: `2px solid ${T.orange}35`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 34, marginBottom: 18,
+          }}>
+            🔒
+          </div>
+
+          <span style={{
+            fontSize: 11, fontWeight: 800, color: T.orange,
+            background: T.orange + '18', border: `1px solid ${T.orange}40`,
+            padding: '4px 14px', borderRadius: 100, textTransform: 'uppercase',
+            letterSpacing: '0.08em', marginBottom: 12,
+          }}>
+            Akses Kasir Terkunci
+          </span>
+
+          <h2 style={{ fontSize: 24, fontWeight: 900, color: T.text, margin: '0 0 8px' }}>
+            Shift Kasir Belum Dibuka
+          </h2>
+
+          <p style={{ fontSize: 13, color: T.sub, maxWidth: 540, lineHeight: 1.6, margin: '0 0 24px' }}>
+            Untuk memastikan uang di laci tidak tercecer dan selisih kas fisik terhitung akurat, 
+            silakan buka shift kasir dan catat modal awal kembalian sebelum mulai melayani pembeli.
+          </p>
+
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 36, flexWrap: 'wrap', justifyContent: 'center' }}>
+            <button
+              onClick={() => setShowOpenShiftModal(true)}
+              style={{
+                padding: '13px 26px', borderRadius: 12, border: 'none',
+                background: T.green, color: '#fff', fontSize: 14, fontWeight: 800,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+                boxShadow: `0 6px 20px ${T.green}45`, transition: 'all 0.15s',
+              }}
+            >
+              🟢 Buka Shift Kasir Sekarang
+            </button>
+
+            {setCurrentPage && (
+              <button
+                onClick={() => setCurrentPage('shifts')}
+                style={{
+                  padding: '13px 20px', borderRadius: 12,
+                  border: `1px solid ${T.border2}`, background: T.bg,
+                  color: T.sub, fontSize: 13, fontWeight: 700,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+                }}
+              >
+                📋 Buka Menu Kas & Shift →
+              </button>
+            )}
+          </div>
+
+          {/* 3 Value propositions */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: 16, width: '100%', maxWidth: 760, textAlign: 'left',
+          }}>
+            <div style={{
+              padding: '16px 18px', borderRadius: 14, background: T.bg,
+              border: `1px solid ${T.border}`,
+            }}>
+              <div style={{ fontSize: 22, marginBottom: 8 }}>💵</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: T.text, marginBottom: 4 }}>
+                Modal Uang Pecahan
+              </div>
+              <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.5 }}>
+                Catat uang kembalian (misal Rp 200.000) yang disiapkan di laci agar tidak tercampur modal pribadi.
+              </div>
+            </div>
+
+            <div style={{
+              padding: '16px 18px', borderRadius: 14, background: T.bg,
+              border: `1px solid ${T.border}`,
+            }}>
+              <div style={{ fontSize: 22, marginBottom: 8 }}>🧾</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: T.text, marginBottom: 4 }}>
+                Hitungan Kas Otomatis
+              </div>
+              <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.5 }}>
+                Setiap nota tunai, QRIS, cicilan kasbon, dan uang kembalian terhitung rapi per nama kasir.
+              </div>
+            </div>
+
+            <div style={{
+              padding: '16px 18px', borderRadius: 14, background: T.bg,
+              border: `1px solid ${T.border}`,
+            }}>
+              <div style={{ fontSize: 22, marginBottom: 8 }}>⚖️</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: T.text, marginBottom: 4 }}>
+                Cek Selisih Saat Tutup
+              </div>
+              <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.5 }}>
+                Saat tutup toko, sistem otomatis membandingkan uang fisik di laci dengan hitungan sistem komputer.
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 420px',
+          gap: 16, height: 'calc(100vh - 195px)',
+          fontFamily: 'Syne, sans-serif',
+          animation: 'fadeUp 0.4s ease both',
+        }}>
 
         {/* ── LEFT: PRODUCT LIST ── */}
         <div style={{
@@ -1483,6 +1715,7 @@ function Cashier({ setCurrentPage }) {
           )}
         </div>
       </div>
+      )}
 
       {showPayment && (
         <PaymentModal
@@ -1545,6 +1778,56 @@ function Cashier({ setCurrentPage }) {
           onClose={() => setShowHeldListModal(false)}
           onRestore={handleRestoreHeldCart}
           onDelete={handleDeleteHeldCart}
+        />
+      )}
+
+      {/* ─── MODAL BUKA SHIFT KASIR ─── */}
+      {showOpenShiftModal && (
+        <OpenShiftModal
+          onClose={() => setShowOpenShiftModal(false)}
+          onSuccess={async () => {
+            setShowOpenShiftModal(false);
+            const s = await checkShift();
+            showToast('success', `Shift kasir #${s?.id || ''} berhasil dibuka! Selamat bertugas.`);
+          }}
+        />
+      )}
+
+      {/* ─── MODAL KAS MASUK / KELUAR LACI ─── */}
+      {showMovementModal && activeShift && (
+        <CashMovementModal
+          shiftId={activeShift.id}
+          initialType={movementType}
+          onClose={() => setShowMovementModal(false)}
+          onSuccess={async () => {
+            setShowMovementModal(false);
+            await checkShift();
+            showToast('success', 'Catatan mutasi uang kas berhasil disimpan!');
+          }}
+        />
+      )}
+
+      {/* ─── MODAL TUTUP KASIR & HITUNG LACI ─── */}
+      {showCloseShiftModal && activeShift && (
+        <CloseShiftModal
+          shift={activeShift}
+          movements={shiftMovements}
+          onClose={() => setShowCloseShiftModal(false)}
+          onSuccess={async (closedData) => {
+            setShowCloseShiftModal(false);
+            setActiveShift(null);
+            setCart([]);
+            showToast('success', 'Shift kasir resmi ditutup & laporan tersimpan!');
+            if (closedData?.autoPrint) {
+              try {
+                const store = await getStoreProfile();
+                printShiftReceipt(closedData.shift, closedData.summary, shiftMovements, store);
+              } catch (printErr) {
+                console.error("Gagal cetak rekap shift:", printErr);
+              }
+            }
+            await checkShift();
+          }}
         />
       )}
     </>

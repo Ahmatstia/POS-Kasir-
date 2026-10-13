@@ -9,6 +9,7 @@ import {
   getCashMovements,
   getShiftHistory,
   getShiftById,
+  cancelOrDeleteShift,
 } from "../../services/shifts";
 import { getStoreProfile } from "../../services/settings";
 import { printShiftReceipt } from "../../utils/PrintUtility";
@@ -28,6 +29,7 @@ export default function ShiftsManagement() {
   // Modals
   const [showOpenModal, setShowOpenModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [showMovementModal, setShowMovementModal] = useState(false);
   const [movementType, setMovementType] = useState("OUT"); // "IN" or "OUT"
   const [selectedShiftDetail, setSelectedShiftDetail] = useState(null);
@@ -143,6 +145,39 @@ export default function ShiftsManagement() {
               >
                 - Ambil Kasir / Keluar
               </button>
+              {((activeShift.summary?.transactionCount || 0) === 0 && (activeShift.summary?.debtCollected || 0) === 0) && (
+                <button
+                  onClick={() => setShowCancelModal(true)}
+                  title="Batalkan pembukaan shift ini jika salah input (hanya bisa jika belum ada transaksi belanja)"
+                  style={{
+                    padding: "9px 14px",
+                    borderRadius: 10,
+                    border: `1px solid ${T.muted}40`,
+                    background: "transparent",
+                    color: T.muted,
+                    fontFamily: "Syne, sans-serif",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    transition: "all 0.15s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = T.red;
+                    e.currentTarget.style.borderColor = T.red + "50";
+                    e.currentTarget.style.background = T.red + "10";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = T.muted;
+                    e.currentTarget.style.borderColor = T.muted + "40";
+                    e.currentTarget.style.background = "transparent";
+                  }}
+                >
+                  ✕ Batal Buka Shift
+                </button>
+              )}
               <button
                 onClick={() => setShowCloseModal(true)}
                 style={{
@@ -742,6 +777,18 @@ export default function ShiftsManagement() {
         />
       )}
 
+      {showCancelModal && activeShift && (
+        <CancelShiftModal
+          shift={activeShift}
+          onClose={() => setShowCancelModal(false)}
+          onSuccess={() => {
+            setShowCancelModal(false);
+            loadData();
+            showToast("info", "Pembukaan shift kasir berhasil dibatalkan.");
+          }}
+        />
+      )}
+
       {selectedShiftDetail && (
         <ShiftDetailModal
           shift={selectedShiftDetail}
@@ -750,6 +797,177 @@ export default function ShiftsManagement() {
         />
       )}
     </div>
+  );
+}
+
+// ─── MODAL BATALKAN PEMBUKAAN SHIFT ──────────────────────────────────────────
+export function CancelShiftModal({ shift, onClose, onSuccess }) {
+  const [loading, setLoading] = useState(false);
+  const txCount = (shift.summary?.transactionCount || 0);
+  const debtColl = (shift.summary?.debtCollected || 0);
+  const canCancel = txCount === 0 && debtColl === 0;
+
+  const handleConfirm = async () => {
+    if (loading || !canCancel) return;
+    setLoading(true);
+    const res = await cancelOrDeleteShift(shift.id);
+    setLoading(false);
+    if (res.success) {
+      onSuccess();
+    } else {
+      alert(res.message);
+    }
+  };
+
+  return createPortal(
+    <div
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        background: "rgba(15, 23, 42, 0.72)",
+        backdropFilter: "blur(6px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+        fontFamily: "Syne, sans-serif",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 440,
+          background: T.surface,
+          border: `1px solid ${T.border2}`,
+          borderRadius: 20,
+          padding: 24,
+          boxShadow: "0 24px 48px rgba(0, 0, 0, 0.45)",
+          animation: "modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1) both",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: "50%",
+              background: canCancel ? T.orange + "15" : T.red + "15",
+              border: `1px solid ${canCancel ? T.orange : T.red}35`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 20,
+            }}
+          >
+            {canCancel ? "⚠️" : "🚫"}
+          </div>
+          <div>
+            <h3 style={{ fontSize: 17, fontWeight: 800, color: T.text, margin: 0 }}>
+              {canCancel ? "Batalkan Pembukaan Shift?" : "Shift Tidak Dapat Dibatalkan"}
+            </h3>
+            <p style={{ fontSize: 11, color: T.muted, margin: "2px 0 0" }}>
+              Shift #{shift.id} • Petugas: {shift.cashier_name}
+            </p>
+          </div>
+        </div>
+
+        <div
+          style={{
+            background: T.bg,
+            border: `1px solid ${T.border}`,
+            borderRadius: 12,
+            padding: "14px 16px",
+            marginBottom: 18,
+            fontSize: 12,
+            lineHeight: 1.6,
+            color: T.sub,
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+            <span>Modal Terinput:</span>
+            <b style={{ color: T.text, fontFamily: "JetBrains Mono, monospace" }}>
+              {fmt(shift.summary?.startingCash || shift.starting_cash)}
+            </b>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+            <span>Waktu Dibuka:</span>
+            <b style={{ color: T.text }}>{shift.opened_at}</b>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>Jumlah Transaksi:</span>
+            {canCancel ? (
+              <b style={{ color: T.green }}>0 transaksi (Aman dibatalkan)</b>
+            ) : (
+              <b style={{ color: T.red }}>{txCount} transaksi {debtColl > 0 ? '+ cicilan kasbon' : ''} (Terkunci)</b>
+            )}
+          </div>
+        </div>
+
+        {canCancel ? (
+          <p style={{ fontSize: 12, color: T.muted, margin: "0 0 20px", lineHeight: 1.5 }}>
+            💡 Pembatalan ini akan <b>menghapus catatan shift</b> yang belum dipakai belanja, sehingga laporan keuangan tidak kotor. Meja kasir akan kembali terkunci.
+          </p>
+        ) : (
+          <div style={{
+            padding: "10px 14px",
+            borderRadius: 10,
+            background: T.red + "12",
+            border: `1px solid ${T.red}35`,
+            color: T.red,
+            fontSize: 12,
+            lineHeight: 1.5,
+            marginBottom: 20,
+          }}>
+            ❌ Shift ini sudah memiliki catatan transaksi belanja! Untuk menjaga akurasi pembukuan dan uang kas, shift ini tidak boleh dibatalkan. Silakan gunakan tombol <b>"Tutup Kasir & Hitung Laci"</b>.
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            style={{
+              flex: 1,
+              padding: "11px",
+              borderRadius: 10,
+              border: `1px solid ${T.border2}`,
+              background: "transparent",
+              color: T.sub,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            {canCancel ? "Kembali" : "Tutup Dialog"}
+          </button>
+          {canCancel && (
+            <button
+              type="button"
+              onClick={handleConfirm}
+              disabled={loading}
+              style={{
+                flex: 1.4,
+                padding: "11px",
+                borderRadius: 10,
+                border: "none",
+                background: T.red,
+                color: "#fff",
+                fontSize: 13,
+                fontWeight: 800,
+                cursor: loading ? "not-allowed" : "pointer",
+                boxShadow: `0 4px 14px ${T.red}40`,
+              }}
+            >
+              {loading ? "Membatalkan..." : "Ya, Batalkan Shift"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
 

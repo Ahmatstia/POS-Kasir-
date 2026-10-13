@@ -116,6 +116,7 @@ export async function calculateShiftSummary(shiftId) {
       cashTxCount: cashTx?.count_cash || 0,
       nonCashSales,
       nonCashTxCount: nonCashTx?.count_non_cash || 0,
+      transactionCount: (cashTx?.count_cash || 0) + (nonCashTx?.count_non_cash || 0),
       totalSales: cashSales + nonCashSales,
       debtCollected,
       totalCashIn,
@@ -310,7 +311,15 @@ export async function cancelOrDeleteShift(shiftId) {
       [shiftId]
     );
     if (txCheck && txCheck.count > 0) {
-      throw new Error(`Shift #${shiftId} tidak dapat dibatalkan karena sudah memiliki ${txCheck.count} transaksi! Silakan gunakan menu "Tutup Kasir & Hitung Laci".`);
+      throw new Error(`Shift #${shiftId} tidak dapat dibatalkan karena sudah memiliki ${txCheck.count} transaksi belanja! Silakan gunakan menu "Tutup Kasir & Hitung Laci".`);
+    }
+
+    const [debtCheck] = await window.electronAPI.query(
+      "SELECT COUNT(id) AS count FROM debt_payments WHERE shift_id = ?",
+      [shiftId]
+    );
+    if (debtCheck && debtCheck.count > 0) {
+      throw new Error(`Shift #${shiftId} tidak dapat dibatalkan karena sudah memiliki ${debtCheck.count} penerimaan kasbon! Silakan gunakan menu "Tutup Kasir & Hitung Laci".`);
     }
 
     await window.electronAPI.run("DELETE FROM cash_movements WHERE shift_id = ?", [shiftId]);

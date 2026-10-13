@@ -181,6 +181,30 @@ export async function payDebt({
     const payAmount = Math.max(0, Number(amount) || 0);
     if (payAmount <= 0) throw new Error("Nominal pembayaran harus lebih dari Rp 0");
 
+    // Validasi pencegahan bayar melebihi sisa hutang (Anti-Overpayment)
+    if (debtId) {
+      const [targetDebt] = await window.electronAPI.query(
+        "SELECT remaining_debt FROM customer_debts WHERE id = ?",
+        [debtId]
+      );
+      if (!targetDebt) throw new Error("Nota kasbon tidak ditemukan.");
+      const maxPayable = Number(targetDebt.remaining_debt || 0);
+      if (maxPayable <= 0) throw new Error("Nota kasbon ini sudah lunas!");
+      if (payAmount > maxPayable) {
+        throw new Error(`Nominal pembayaran (Rp ${payAmount.toLocaleString('id-ID')}) melebihi sisa hutang nota ini (Rp ${maxPayable.toLocaleString('id-ID')})!`);
+      }
+    } else {
+      const [debtSum] = await window.electronAPI.query(
+        `SELECT COALESCE(SUM(remaining_debt), 0) AS total_debt FROM customer_debts WHERE customer_id = ? AND status IN ('UNPAID', 'PARTIAL')`,
+        [customerId]
+      );
+      const maxPayable = Number(debtSum?.total_debt || 0);
+      if (maxPayable <= 0) throw new Error("Pelanggan ini tidak memiliki tunggakan kasbon aktif (sudah lunas).");
+      if (payAmount > maxPayable) {
+        throw new Error(`Nominal pembayaran (Rp ${payAmount.toLocaleString('id-ID')}) melebihi total kasbon pelanggan (Rp ${maxPayable.toLocaleString('id-ID')})!`);
+      }
+    }
+
     const createdAt = getLocalDatetimeStr();
 
     await window.electronAPI.run("BEGIN TRANSACTION");

@@ -117,6 +117,12 @@ function CustomerDebts() {
       return;
     }
 
+    const maxDebt = Number(payTargetCustomer.total_debt || 0);
+    if (amount > maxDebt) {
+      showToast("error", `Nominal melebihi total kasbon! Maksimal pembayaran: ${fmt(maxDebt)}`);
+      return;
+    }
+
     setPaying(true);
     try {
       const res = await payDebt({
@@ -1210,30 +1216,40 @@ function CustomerDebts() {
                         }}
                       />
                     </div>
+                    {Number(payAmount) > (payTargetCustomer.total_debt || 0) && (
+                      <p style={{ fontSize: 11, color: T.red, fontWeight: 700, margin: "6px 0 0 0" }}>
+                        ⚠️ Nominal melebihi sisa kasbon! Maksimal pembayaran adalah {fmt(payTargetCustomer.total_debt)}.
+                      </p>
+                    )}
                   </div>
 
                   {/* Quick amount presets */}
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
-                    {[10_000, 20_000, 50_000, 100_000].map((amt) => (
-                      <button
-                        key={amt}
-                        type="button"
-                        onClick={() => setPayAmount(String(amt))}
-                        style={{
-                          padding: "6px",
-                          borderRadius: 8,
-                          border: `1px solid ${T.border2}`,
-                          background: T.bg,
-                          color: T.sub,
-                          fontSize: 10,
-                          fontWeight: 700,
-                          fontFamily: "JetBrains Mono, monospace",
-                          cursor: "pointer",
-                        }}
-                      >
-                        +{fmt(amt).replace("Rp ", "")}
-                      </button>
-                    ))}
+                    {[10_000, 20_000, 50_000, 100_000].map((amt) => {
+                      const isOver = amt > (payTargetCustomer.total_debt || 0);
+                      return (
+                        <button
+                          key={amt}
+                          type="button"
+                          disabled={isOver}
+                          onClick={() => setPayAmount(String(amt))}
+                          style={{
+                            padding: "6px",
+                            borderRadius: 8,
+                            border: `1px solid ${isOver ? T.border : T.border2}`,
+                            background: isOver ? T.border + "10" : T.bg,
+                            color: isOver ? T.muted : T.sub,
+                            fontSize: 10,
+                            fontWeight: 700,
+                            fontFamily: "JetBrains Mono, monospace",
+                            cursor: isOver ? "not-allowed" : "pointer",
+                            opacity: isOver ? 0.4 : 1,
+                          }}
+                        >
+                          +{fmt(amt).replace("Rp ", "")}
+                        </button>
+                      );
+                    })}
                   </div>
 
                   {/* Payment method */}
@@ -1333,12 +1349,12 @@ function CustomerDebts() {
                   </button>
                   <button
                     type="submit"
-                    disabled={paying}
+                    disabled={paying || Number(payAmount) <= 0 || Number(payAmount) > (payTargetCustomer.total_debt || 0)}
                     style={{
                       padding: "11px",
                       borderRadius: 10,
                       border: `1px solid ${T.green}50`,
-                      background: paying ? T.border : T.green,
+                      background: (paying || Number(payAmount) <= 0 || Number(payAmount) > (payTargetCustomer.total_debt || 0)) ? T.border : T.green,
                       color: "#fff",
                       fontWeight: 800,
                       fontSize: 12,

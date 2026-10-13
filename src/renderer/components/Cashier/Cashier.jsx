@@ -5,7 +5,7 @@ import { createTransaction, getLocalDatetimeStr } from "../../services/transacti
 import { getStoreProfile } from "../../services/settings";
 import { printReceipt, printThermalReceipt, printShiftReceipt } from "../../utils/PrintUtility";
 import { getCurrentShift, getCashMovements } from "../../services/shifts";
-import { OpenShiftModal, CashMovementModal, CloseShiftModal } from "../Shifts/ShiftsManagement";
+import { OpenShiftModal, CashMovementModal, CloseShiftModal, CancelShiftModal } from "../Shifts/ShiftsManagement";
 import PaymentModal from "./PaymentModal";
 import { useToast } from "../Toast";
 import { T } from "../../theme";
@@ -709,6 +709,7 @@ function Cashier({ setCurrentPage }) {
   const [showMovementModal, setShowMovementModal]   = useState(false);
   const [movementType, setMovementType]             = useState('OUT');
   const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
+  const [showCancelShiftModal, setShowCancelShiftModal] = useState(false);
   const [shiftMovements, setShiftMovements]         = useState([]);
   const [allProducts, setAllProducts]               = useState([]);
   const [displayedProducts, setDisplayedProducts]   = useState([]);
@@ -1251,6 +1252,25 @@ function Cashier({ setCurrentPage }) {
               >
                 - Ambil Kasir
               </button>
+              {((activeShift.summary?.transactionCount || 0) === 0 && (activeShift.summary?.debtCollected || 0) === 0) && (
+                <button
+                  onClick={() => setShowCancelShiftModal(true)}
+                  title="Batalkan pembukaan shift ini jika salah input (hanya bisa jika belum ada transaksi belanja)"
+                  style={{
+                    padding: '6px 11px', borderRadius: 8,
+                    border: `1px solid ${T.muted}35`,
+                    background: 'transparent',
+                    color: T.muted,
+                    fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.color = T.red; e.currentTarget.style.borderColor = T.red + '50'; e.currentTarget.style.background = T.red + '10'; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = T.muted; e.currentTarget.style.borderColor = T.muted + '35'; e.currentTarget.style.background = 'transparent'; }}
+                >
+                  ✕ Batal Buka Shift
+                </button>
+              )}
               <button
                 onClick={handleOpenCloseShift}
                 title="Tutup shift kasir & hitung fisik uang di laci"
@@ -1826,6 +1846,21 @@ function Cashier({ setCurrentPage }) {
                 console.error("Gagal cetak rekap shift:", printErr);
               }
             }
+            await checkShift();
+          }}
+        />
+      )}
+
+      {/* ─── MODAL BATALKAN PEMBUKAAN SHIFT ─── */}
+      {showCancelShiftModal && activeShift && (
+        <CancelShiftModal
+          shift={activeShift}
+          onClose={() => setShowCancelShiftModal(false)}
+          onSuccess={async () => {
+            setShowCancelShiftModal(false);
+            setActiveShift(null);
+            setCart([]);
+            showToast('info', 'Pembukaan shift kasir dibatalkan. Meja kasir kembali terkunci.');
             await checkShift();
           }}
         />

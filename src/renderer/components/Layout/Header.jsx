@@ -32,16 +32,6 @@ function Header({ currentPageLabel, sidebarOpen, setSidebarOpen }) {
         }}>
           {new Date().toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
         </span>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 6,
-          padding: '4px 12px', borderRadius: 100,
-          background: '#DCFCE7', border: '1px solid #BBF7D0',
-        }}>
-          <div style={{ position: 'relative', width: 7, height: 7 }}>
-            <div style={{ width: 7, height: 7, borderRadius: '50%', background: T.green }} />
-          </div>
-          <span style={{ fontSize: 10, fontWeight: 700, color: T.green, letterSpacing: '0.06em' }}>ONLINE</span>
-        </div>
       </div>
     </header>
   );

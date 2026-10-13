@@ -9,6 +9,7 @@ import { OpenShiftModal, CashMovementModal, CloseShiftModal, CancelShiftModal } 
 import PaymentModal from "./PaymentModal";
 import { useToast } from "../Toast";
 import { T } from "../../theme";
+import { formatNominal, parseNominal } from "../../utils/format";
 
 const fmt = (n) => `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
 
@@ -50,7 +51,7 @@ function WeighingModal({ product, onClose, onConfirm }) {
     else if (customUnit === 'gram') v = v / 1000;
     finalKg = v;
   } else if (tab === 'nominal') {
-    let v = parseFloat(nominalVal) || 0;
+    let v = parseNominal(nominalVal) || 0;
     finalKg = priceKg > 0 ? (v / priceKg) : 0;
   }
 
@@ -113,7 +114,15 @@ function WeighingModal({ product, onClose, onConfirm }) {
              <div style={{ marginBottom: 20, position:'relative' }}>
                 <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: T.muted, textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.1em' }}>Pembeli Bawa Uang (Rp)</label>
                 <span style={{ position: 'absolute', left: 14, top: 40, color: T.muted, fontSize: 14, fontWeight: 800 }}>Rp</span>
-                <input type="number" min="0" value={nominalVal} onChange={e => setNominalVal(e.target.value)} placeholder="10000" style={{...inputStyle, paddingLeft: 40}} autoFocus />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={formatNominal(nominalVal)}
+                  onChange={e => setNominalVal(e.target.value.replace(/\D/g, ''))}
+                  placeholder="10.000"
+                  style={{...inputStyle, paddingLeft: 40}}
+                  autoFocus
+                />
              </div>
           )}
 
@@ -432,7 +441,7 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef, ign
   }
 
   const handleManualAdd = () => {
-    const price = parseFloat(manualPrice);
+    const price = parseNominal(manualPrice);
     const qty   = parseFloat(manualQty);
     
     if (!manualPrice || isNaN(price) || price <= 0) {
@@ -553,11 +562,11 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef, ign
                 Harga / Unit (Rp)
               </label>
               <input
-                type="number"
-                min="0"
+                type="text"
+                inputMode="numeric"
                 placeholder="0"
-                value={manualPrice}
-                onChange={e => setManualPrice(e.target.value)}
+                value={formatNominal(manualPrice)}
+                onChange={e => setManualPrice(e.target.value.replace(/\D/g, ''))}
                 autoFocus
                 style={inputStyle}
               />
@@ -590,7 +599,7 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef, ign
           {/* Preview total */}
           {manualPrice && manualQty && (
             <div style={{ marginBottom: 8, fontSize: 11, color: T.sub, fontFamily: 'JetBrains Mono, monospace' }}>
-              Subtotal: <span style={{ color: T.accent, fontWeight: 700 }}>{fmt(parseFloat(manualPrice || 0) * parseFloat(manualQty || 0))}</span>
+              Subtotal: <span style={{ color: T.accent, fontWeight: 700 }}>{fmt(parseNominal(manualPrice) * parseFloat(manualQty || 0))}</span>
             </div>
           )}
 
@@ -1201,7 +1210,6 @@ function Cashier({ setCurrentPage }) {
           </div>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 16 }}>⚠️</span>
             <span style={{ fontSize: 12, fontWeight: 700, color: T.orange }}>
               Laci kasir belum dibuka. Masukkan modal awal kembalian untuk membuka akses penjualan.
             </span>

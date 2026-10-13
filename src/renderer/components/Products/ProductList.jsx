@@ -514,7 +514,7 @@ function ProductList() {
         </div>
 
         {/* ── STAT CARDS ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 18 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 8 }}>
           <StatCard label="Total Jenis Barang" value={total} color={T.blue} icon={
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="6" height="6" rx="1.5" stroke={T.blue} strokeWidth="1.5"/><rect x="10" y="2" width="6" height="6" rx="1.5" stroke={T.blue} strokeWidth="1.5"/><rect x="2" y="10" width="6" height="6" rx="1.5" stroke={T.blue} strokeWidth="1.5"/><rect x="10" y="10" width="6" height="6" rx="1.5" stroke={T.blue} strokeWidth="1.5"/></svg>
           }/>
@@ -566,9 +566,9 @@ function ProductList() {
             {/* Status */}
             <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="filter-input" style={{ cursor: 'pointer' }}>
               <option value="">Semua Status</option>
-              <option value="aman">✅ Stok Aman</option>
-              <option value="menipis">⚠️ Stok Menipis</option>
-              <option value="habis">❌ Stok Habis</option>
+              <option value="aman">Stok Aman</option>
+              <option value="menipis">Stok Menipis</option>
+              <option value="habis">Stok Habis</option>
             </select>
 
             {/* Reset */}

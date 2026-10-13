@@ -15,6 +15,7 @@ import { printDebtPaymentReceipt } from "../../utils/PrintUtility";
 import { useToast } from "../Toast";
 import { T } from "../../theme";
 import { DebtsIcon } from "../Icons/AppIcons";
+import { formatNominal, parseNominal } from "../../utils/format";
 
 const fmt = (n) => `Rp ${Number(n || 0).toLocaleString("id-ID")}`;
 
@@ -111,7 +112,7 @@ function CustomerDebts() {
     e.preventDefault();
     if (!payTargetCustomer || paying) return;
 
-    const amount = Number(payAmount) || 0;
+    const amount = parseNominal(payAmount);
     if (amount <= 0) {
       showToast("error", "Nominal pembayaran harus lebih dari Rp 0");
       return;
@@ -219,7 +220,7 @@ function CustomerDebts() {
         name: custName.trim(),
         phone: custPhone.trim(),
         address: custAddress.trim(),
-        debt_limit: Number(custDebtLimit) || 0,
+        debt_limit: parseNominal(custDebtLimit),
         notes: custNotes.trim(),
       };
 
@@ -1196,9 +1197,10 @@ function CustomerDebts() {
                         Rp
                       </span>
                       <input
-                        type="number"
-                        value={payAmount}
-                        onChange={(e) => setPayAmount(e.target.value)}
+                        type="text"
+                        inputMode="numeric"
+                        value={formatNominal(payAmount)}
+                        onChange={(e) => setPayAmount(e.target.value.replace(/\D/g, ''))}
                         placeholder="0"
                         autoFocus
                         required
@@ -1216,7 +1218,7 @@ function CustomerDebts() {
                         }}
                       />
                     </div>
-                    {Number(payAmount) > (payTargetCustomer.total_debt || 0) && (
+                    {parseNominal(payAmount) > (payTargetCustomer.total_debt || 0) && (
                       <p style={{ fontSize: 11, color: T.red, fontWeight: 700, margin: "6px 0 0 0" }}>
                         ⚠️ Nominal melebihi sisa kasbon! Maksimal pembayaran adalah {fmt(payTargetCustomer.total_debt)}.
                       </p>
@@ -1349,7 +1351,7 @@ function CustomerDebts() {
                   </button>
                   <button
                     type="submit"
-                    disabled={paying || Number(payAmount) <= 0 || Number(payAmount) > (payTargetCustomer.total_debt || 0)}
+                    disabled={paying || parseNominal(payAmount) <= 0 || parseNominal(payAmount) > (payTargetCustomer.total_debt || 0)}
                     style={{
                       padding: "11px",
                       borderRadius: 10,
@@ -1691,9 +1693,10 @@ function CustomerDebts() {
                         Batas Maksimal Kasbon (Rp)
                       </label>
                       <input
-                        type="number"
-                        value={custDebtLimit}
-                        onChange={(e) => setCustDebtLimit(e.target.value)}
+                        type="text"
+                        inputMode="numeric"
+                        value={formatNominal(custDebtLimit)}
+                        onChange={(e) => setCustDebtLimit(e.target.value.replace(/\D/g, ''))}
                         placeholder="0 (Tanpa batas)"
                         style={{
                           width: "100%",

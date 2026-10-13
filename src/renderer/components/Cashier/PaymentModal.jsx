@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { T } from "../../theme";
 import { getCustomers } from "../../services/debts";
+import { formatNominal, parseNominal } from "../../utils/format";
 
 const fmt = (n) => `Rp ${Number(n || 0).toLocaleString("id-ID")}`;
 
@@ -68,9 +69,9 @@ function PaymentModal({ total, onClose, onConfirm, loading = false }) {
 
   const inputRef = useRef(null);
 
-  const discountNum = Math.max(0, Number(discount) || 0);
+  const discountNum = Math.max(0, parseNominal(discount));
   const finalTotal = Math.max(0, total - discountNum);
-  const paymentNum = Number(payment) || 0;
+  const paymentNum = parseNominal(payment);
   const change = paymentNum - finalTotal;
 
   // Kasbon calculations
@@ -603,9 +604,10 @@ function PaymentModal({ total, onClose, onConfirm, loading = false }) {
                       Rp
                     </span>
                     <input
-                      type="number"
-                      value={discount}
-                      onChange={(e) => setDiscount(e.target.value)}
+                      type="text"
+                      inputMode="numeric"
+                      value={formatNominal(discount)}
+                      onChange={(e) => setDiscount(e.target.value.replace(/\D/g, ''))}
                       placeholder="0"
                       style={{
                         width: "100%",
@@ -701,9 +703,10 @@ function PaymentModal({ total, onClose, onConfirm, loading = false }) {
                 </span>
                 <input
                   ref={inputRef}
-                  type="number"
-                  value={payment}
-                  onChange={(e) => setPayment(e.target.value)}
+                  type="text"
+                  inputMode="numeric"
+                  value={formatNominal(payment)}
+                  onChange={(e) => setPayment(e.target.value.replace(/\D/g, ''))}
                   placeholder="0"
                   className="pay-input"
                   style={{

@@ -14,6 +14,7 @@ import {
 import { getStoreProfile } from "../../services/settings";
 import { printShiftReceipt } from "../../utils/PrintUtility";
 import { useToast } from "../Toast";
+import { formatNominal, parseNominal } from "../../utils/format";
 
 const fmt = (n) => `Rp ${Number(n || 0).toLocaleString("id-ID")}`;
 
@@ -959,7 +960,7 @@ export function OpenShiftModal({ onClose, onSuccess }) {
     setSubmitting(true);
     const res = await openShift({
       cashier_name: cashierName,
-      starting_cash: Number(startingCash) || 0,
+      starting_cash: parseNominal(startingCash),
       notes,
     });
     setSubmitting(false);
@@ -1057,11 +1058,11 @@ export function OpenShiftModal({ onClose, onSuccess }) {
             </label>
             <input
               ref={inputRef}
-              type="number"
-              min="0"
-              step="1000"
-              value={startingCash}
-              onChange={(e) => setStartingCash(e.target.value)}
+              type="text"
+              inputMode="numeric"
+              value={formatNominal(startingCash)}
+              onChange={(e) => setStartingCash(e.target.value.replace(/\D/g, ''))}
+              placeholder="0"
               required
               style={{
                 width: "100%",
@@ -1191,7 +1192,7 @@ export function CashMovementModal({ shiftId, initialType, onClose, onSuccess }) 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (submitting) return;
-    const cleanAmt = parseFloat(amount);
+    const cleanAmt = parseNominal(amount);
     if (!cleanAmt || cleanAmt <= 0) {
       alert("Nominal uang harus lebih dari Rp 0");
       return;
@@ -1316,11 +1317,10 @@ export function CashMovementModal({ shiftId, initialType, onClose, onSuccess }) 
             </label>
             <input
               ref={inputRef}
-              type="number"
-              min="1000"
-              step="500"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              type="text"
+              inputMode="numeric"
+              value={formatNominal(amount)}
+              onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))}
               placeholder="0"
               required
               style={{
@@ -1467,7 +1467,7 @@ export function CloseShiftModal({ shift, movements, onClose, onSuccess }) {
     return sum + Number(denom) * (Number(count) || 0);
   }, 0);
 
-  const actualCash = mode === "calculator" ? calcTotal : (Number(directAmount) || 0);
+  const actualCash = mode === "calculator" ? calcTotal : parseNominal(directAmount);
   const expectedCash = shift.summary?.expectedCash || 0;
   const difference = actualCash - expectedCash;
 
@@ -1678,14 +1678,13 @@ export function CloseShiftModal({ shift, movements, onClose, onSuccess }) {
             >
               <span style={{ fontSize: 11, fontWeight: 700, color: T.sub }}>🪙 Total Koin / Pecahan Receh (Rp)</span>
               <input
-                type="number"
-                min="0"
-                step="500"
-                value={breakdown.coins || ""}
+                type="text"
+                inputMode="numeric"
+                value={formatNominal(breakdown.coins)}
                 onChange={(e) =>
                   setBreakdown({
                     ...breakdown,
-                    coins: Math.max(0, parseInt(e.target.value) || 0),
+                    coins: parseNominal(e.target.value),
                   })
                 }
                 placeholder="0"
@@ -1711,11 +1710,10 @@ export function CloseShiftModal({ shift, movements, onClose, onSuccess }) {
               Total Uang Fisik Nyata di Laci (Rp)
             </label>
             <input
-              type="number"
-              min="0"
-              step="1000"
-              value={directAmount}
-              onChange={(e) => setDirectAmount(e.target.value)}
+              type="text"
+              inputMode="numeric"
+              value={formatNominal(directAmount)}
+              onChange={(e) => setDirectAmount(e.target.value.replace(/\D/g, ''))}
               placeholder="0"
               autoFocus
               style={{

@@ -4,6 +4,7 @@ import { isPrivacyModeEnabled } from '../../services/settings';
 import { FormModal, FormActions, MODAL_CSS, fieldStyle, Field, SELL_UNIT_OPTIONS } from './ProductForm';
 import { useToast } from '../Toast';
 import { T } from '../../theme';
+import { formatNominal, parseNominal } from '../../utils/format';
 
 function EditProductForm({ productId, onClose, onSuccess }) {
   const { showToast } = useToast();
@@ -66,9 +67,9 @@ function EditProductForm({ productId, onClose, onSuccess }) {
     const errs = {};
     if (!name.trim())   errs.name = 'Nama produk harus diisi';
     if (!categoryId)    errs.category = 'Kategori harus dipilih';
-    const prices = [Number(pricePcs), Number(pricePack), Number(priceDus), Number(priceKarung), Number(priceKg)];
+    const prices = [parseNominal(pricePcs), parseNominal(pricePack), parseNominal(priceDus), parseNominal(priceKarung), parseNominal(priceKg)];
     if (prices.every(p => p <= 0)) errs.price = 'Minimal satu harga jual harus diisi';
-    if (!hideCost && Number(purchasePrice) <= 0) {
+    if (!hideCost && parseNominal(purchasePrice) <= 0) {
       errs.purchasePrice = 'Harga modal wajib diisi lebih dari Rp 0';
     }
     return errs;
@@ -84,17 +85,17 @@ function EditProductForm({ productId, onClose, onSuccess }) {
       name: name.trim(),
       category_id:  categoryId,
       sell_per_unit: sellPerUnit,
-      price_pcs:    Number(pricePcs)    || 0,
-      price_pack:   Number(pricePack)   || 0,
-      price_dus:    Number(priceDus)    || 0,
-      price_karung: Number(priceKarung) || 0,
-      price_kg:     Number(priceKg)     || 0,
+      price_pcs:    parseNominal(pricePcs),
+      price_pack:   parseNominal(pricePack),
+      price_dus:    parseNominal(priceDus),
+      price_karung: parseNominal(priceKarung),
+      price_kg:     parseNominal(priceKg),
       pcs_per_pack: Number(pcsPerPack)  || 1,
       pack_per_dus: Number(packPerDus)  || 1,
       kg_per_karung: Number(kgPerKarung) || 25,
       min_stock:    Number(minStock)    || 0,
       min_stock_kg: Number(minStockKg)  || 0,
-      purchase_price: Number(purchasePrice) || 0,
+      purchase_price: parseNominal(purchasePrice),
       notes,
     });
     setSaving(false);
@@ -255,7 +256,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
               <Field label="Harga Modal / Beli (Per Satuan Utama)" required={!hideCost} hint="Harga beli barang dari supplier / agen" error={errors.purchasePrice}>
                 <div style={{ position: 'relative' }}>
                   <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 11, fontWeight: 700, color: T.muted }}>Rp</span>
-                  <input type="number" value={purchasePrice} onChange={e => setPurchasePrice(e.target.value)} className="form-field" style={{ ...fieldStyle, paddingLeft: 32 }} placeholder="0" />
+                  <input type="text" inputMode="numeric" value={formatNominal(purchasePrice)} onChange={e => setPurchasePrice(e.target.value.replace(/\D/g, ''))} className="form-field" style={{ ...fieldStyle, paddingLeft: 32 }} placeholder="0" />
                 </div>
               </Field>
             </div>
@@ -280,7 +281,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
                 <label style={{ fontSize: 9, fontWeight: 700, color: u.col, display: 'block', marginBottom: 5 }}>{u.label}</label>
                 <div style={{ position: 'relative' }}>
                   <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', fontSize: 9, color: T.muted, pointerEvents: 'none', fontFamily: 'JetBrains Mono, monospace' }}>Rp</span>
-                  <input type="number" value={u.val} onChange={e => { u.set(e.target.value); setErrors(v => ({...v, price: ''})); }}
+                  <input type="text" inputMode="numeric" value={formatNominal(u.val)} onChange={e => { u.set(e.target.value.replace(/\D/g, '')); setErrors(v => ({...v, price: ''})); }}
                     placeholder="0" className="form-field" style={{ ...fieldStyle, paddingLeft: 26, fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }} />
                 </div>
               </div>

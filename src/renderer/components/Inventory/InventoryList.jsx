@@ -5,6 +5,7 @@ import { isPrivacyModeEnabled } from "../../services/settings";
 import { useToast } from "../Toast";
 import { T } from "../../theme";
 import { InventoryIcon } from "../Icons/AppIcons";
+import { formatNominal, parseNominal } from "../../utils/format";
 
 const fmt    = n => `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
 const numFmt = n => Number(n || 0).toLocaleString('id-ID');
@@ -55,7 +56,7 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
     setSaving(true);
     const res = await addStock(product.id, {
       qty_dus: dusVal, qty_pack: packVal, qty_pcs: pcsVal, qty_kg: kgVal,
-      purchase_price: Number(purchasePrice) || 0,
+      purchase_price: parseNominal(purchasePrice),
       expiry_date: expiry || null,
       batch_code: batchCode,
       notes,
@@ -241,8 +242,10 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
                     <div style={{ position: 'relative' }}>
                       <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 13, fontWeight: 700, color: T.muted }}>Rp</span>
                       <input
-                        type="number" min="0" step="1" value={purchasePrice}
-                        onChange={e => setPurchasePrice(e.target.value)}
+                        type="text"
+                        inputMode="numeric"
+                        value={formatNominal(purchasePrice)}
+                        onChange={e => setPurchasePrice(e.target.value.replace(/\D/g, ''))}
                         placeholder="0"
                         style={{ ...inp, paddingLeft: 34 }}
                       />

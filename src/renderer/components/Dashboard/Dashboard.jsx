@@ -298,12 +298,9 @@ export default function Dashboard({ setCurrentPage }) {
                 <DashboardIcon />
               </div>
               <span style={{ fontSize: 18, fontWeight: 800, color: T.text, letterSpacing: '-0.01em' }}>
-                Beranda (Ringkasan Hari Ini)
+                Beranda
               </span>
             </div>
-            <span style={{ fontSize: 12, color: T.muted, fontFamily: 'JetBrains Mono, monospace' }}>
-              {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-            </span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -320,14 +317,6 @@ export default function Dashboard({ setCurrentPage }) {
               </svg>
               Segarkan
             </button>
-            {/* Live indicator */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 100, background: T.green + '15', border: `1px solid ${T.green}30` }}>
-              <div style={{ position: 'relative', width: 7, height: 7 }}>
-                <div style={{ width: 7, height: 7, borderRadius: '50%', background: T.green }} />
-                <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: T.green, animation: 'pulse-ring 1.5s ease-out infinite' }} />
-              </div>
-              <span style={{ fontSize: 11, fontWeight: 700, color: T.green, letterSpacing: '0.06em' }}>LIVE</span>
-            </div>
           </div>
         </div>
 

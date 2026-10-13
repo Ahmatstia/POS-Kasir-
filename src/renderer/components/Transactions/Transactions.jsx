@@ -353,17 +353,17 @@ function Transactions() {
             {/* Filters Row */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: 10, padding: '0 10px', marginBottom: 14 }}>
               <div style={{ position: 'relative' }}>
-                <label style={{ display: 'block', fontSize: 8, fontWeight: 800, color: T.muted, marginBottom: 4, textTransform: 'uppercase' }}>Mulai</label>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.sub, marginBottom: 4, textTransform: 'uppercase' }}>Mulai</label>
                 <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} 
                   style={{ width: '100%', padding: '8px 10px', borderRadius: 10, border: `1px solid ${T.border2}`, background: T.bg, color: T.text, fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }} />
               </div>
               <div style={{ position: 'relative' }}>
-                <label style={{ display: 'block', fontSize: 8, fontWeight: 800, color: T.muted, marginBottom: 4, textTransform: 'uppercase' }}>Sampai</label>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.sub, marginBottom: 4, textTransform: 'uppercase' }}>Sampai</label>
                 <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} 
                   style={{ width: '100%', padding: '8px 10px', borderRadius: 10, border: `1px solid ${T.border2}`, background: T.bg, color: T.text, fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }} />
               </div>
               <div style={{ position: 'relative' }}>
-                <label style={{ display: 'block', fontSize: 8, fontWeight: 800, color: T.muted, marginBottom: 4, textTransform: 'uppercase' }}>Cari Nama / Inv</label>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.sub, marginBottom: 4, textTransform: 'uppercase' }}>Cari Nama / Inv</label>
                 <div style={{ position: 'relative' }}>
                   <svg style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={T.sub} strokeWidth="3"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                   <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Invoice/Pelanggan..." 

@@ -105,14 +105,14 @@ export default function ShiftsManagement() {
                   setShowMovementModal(true);
                 }}
                 style={{
-                  padding: "9px 14px",
+                  padding: "9px 15px",
                   borderRadius: 10,
-                  border: `1px solid ${T.blue}40`,
-                  background: T.blue + "15",
-                  color: T.blue,
+                  border: `1px solid ${T.accent}40`,
+                  background: T.accentBg,
+                  color: T.accent,
                   fontFamily: "Syne, sans-serif",
                   fontSize: 12,
-                  fontWeight: 700,
+                  fontWeight: 800,
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
@@ -120,30 +120,7 @@ export default function ShiftsManagement() {
                   transition: "all 0.15s",
                 }}
               >
-                + Kas Masuk Laci
-              </button>
-              <button
-                onClick={() => {
-                  setMovementType("OUT");
-                  setShowMovementModal(true);
-                }}
-                style={{
-                  padding: "9px 14px",
-                  borderRadius: 10,
-                  border: `1px solid ${T.orange}40`,
-                  background: T.orange + "15",
-                  color: T.orange,
-                  fontFamily: "Syne, sans-serif",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  transition: "all 0.15s",
-                }}
-              >
-                - Ambil Kasir / Keluar
+                💸 Catat Kas Masuk / Keluar
               </button>
               {((activeShift.summary?.transactionCount || 0) === 0 && (activeShift.summary?.debtCollected || 0) === 0) && (
                 <button
@@ -322,7 +299,7 @@ export default function ShiftsManagement() {
                 border: `1px solid ${T.border}`,
               }}
             >
-              <span style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: T.sub, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                 Modal Awal Kembalian
               </span>
               <p style={{ margin: "6px 0 0", fontSize: 20, fontWeight: 800, color: T.text, fontFamily: "JetBrains Mono, monospace" }}>
@@ -340,7 +317,7 @@ export default function ShiftsManagement() {
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: T.sub, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   Penjualan Tunai (+)
                 </span>
                 <span style={{ fontSize: 10, fontWeight: 800, color: T.green, background: T.green + "15", padding: "1px 6px", borderRadius: 6 }}>
@@ -361,7 +338,7 @@ export default function ShiftsManagement() {
                 border: `1px solid ${T.border}`,
               }}
             >
-              <span style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: T.sub, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                 Arus Kas Laci Lainnya
               </span>
               <div style={{ display: "flex", gap: 12, marginTop: 6 }}>
@@ -414,15 +391,15 @@ export default function ShiftsManagement() {
             }}
           >
             <div style={{ display: "flex", gap: 20 }}>
-              <span>
+              <span style={{ color: T.text, fontWeight: 600 }}>
                 💳 Penjualan Non-Tunai (QRIS/Debit):{" "}
                 <b style={{ color: T.purple, fontFamily: "JetBrains Mono, monospace" }}>
                   {fmt(activeShift.summary?.nonCashSales)}
                 </b>{" "}
-                <span style={{ color: T.muted }}>({activeShift.summary?.nonCashTxCount || 0} nota)</span>
+                <span style={{ color: T.sub, fontWeight: 500 }}>({activeShift.summary?.nonCashTxCount || 0} nota)</span>
               </span>
               {activeShift.summary?.debtCollected > 0 && (
-                <span>
+                <span style={{ color: T.text, fontWeight: 600 }}>
                   📒 Pembayaran Kasbon Masuk:{" "}
                   <b style={{ color: T.green, fontFamily: "JetBrains Mono, monospace" }}>
                     +{fmt(activeShift.summary?.debtCollected)}
@@ -430,7 +407,7 @@ export default function ShiftsManagement() {
                 </span>
               )}
             </div>
-            <span style={{ color: T.muted, fontSize: 11 }}>
+            <span style={{ color: T.sub, fontSize: 11, fontWeight: 600 }}>
               💡 Non-tunai langsung masuk rekening/e-wallet, tidak memengaruhi fisik laci.
             </span>
           </div>
@@ -603,16 +580,16 @@ export default function ShiftsManagement() {
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, textAlign: "left" }}>
               <thead>
-                <tr style={{ borderBottom: `1px solid ${T.border}`, color: T.muted }}>
-                  <th style={{ padding: "10px 12px", fontWeight: 700, textTransform: "uppercase", fontSize: 11 }}>Shift #</th>
-                  <th style={{ padding: "10px 12px", fontWeight: 700, textTransform: "uppercase", fontSize: 11 }}>Kasir</th>
-                  <th style={{ padding: "10px 12px", fontWeight: 700, textTransform: "uppercase", fontSize: 11 }}>Waktu</th>
-                  <th style={{ padding: "10px 12px", fontWeight: 700, textTransform: "uppercase", fontSize: 11 }}>Modal Awal</th>
-                  <th style={{ padding: "10px 12px", fontWeight: 700, textTransform: "uppercase", fontSize: 11 }}>Penjualan Tunai</th>
-                  <th style={{ padding: "10px 12px", fontWeight: 700, textTransform: "uppercase", fontSize: 11 }}>Uang Seharusnya</th>
-                  <th style={{ padding: "10px 12px", fontWeight: 700, textTransform: "uppercase", fontSize: 11 }}>Uang Fisik Dihitung</th>
-                  <th style={{ padding: "10px 12px", fontWeight: 700, textTransform: "uppercase", fontSize: 11 }}>Selisih Kas</th>
-                  <th style={{ padding: "10px 12px", fontWeight: 700, textTransform: "uppercase", fontSize: 11, textAlign: "right" }}>Aksi</th>
+                <tr style={{ borderBottom: `1px solid ${T.border}`, color: T.sub }}>
+                  <th style={{ padding: "10px 12px", fontWeight: 800, textTransform: "uppercase", fontSize: 11 }}>Shift #</th>
+                  <th style={{ padding: "10px 12px", fontWeight: 800, textTransform: "uppercase", fontSize: 11 }}>Kasir</th>
+                  <th style={{ padding: "10px 12px", fontWeight: 800, textTransform: "uppercase", fontSize: 11 }}>Waktu</th>
+                  <th style={{ padding: "10px 12px", fontWeight: 800, textTransform: "uppercase", fontSize: 11 }}>Modal Awal</th>
+                  <th style={{ padding: "10px 12px", fontWeight: 800, textTransform: "uppercase", fontSize: 11 }}>Penjualan Tunai</th>
+                  <th style={{ padding: "10px 12px", fontWeight: 800, textTransform: "uppercase", fontSize: 11 }}>Uang Seharusnya</th>
+                  <th style={{ padding: "10px 12px", fontWeight: 800, textTransform: "uppercase", fontSize: 11 }}>Uang Fisik Dihitung</th>
+                  <th style={{ padding: "10px 12px", fontWeight: 800, textTransform: "uppercase", fontSize: 11 }}>Selisih Kas</th>
+                  <th style={{ padding: "10px 12px", fontWeight: 800, textTransform: "uppercase", fontSize: 11, textAlign: "right" }}>Aksi</th>
                 </tr>
               </thead>
               <tbody>
@@ -642,7 +619,7 @@ export default function ShiftsManagement() {
                       <td style={{ padding: "12px", fontWeight: 800, color: T.accent }}>
                         #{s.id}
                         {!isClosed && (
-                          <span style={{ marginLeft: 6, fontSize: 9, padding: "2px 6px", borderRadius: 4, background: T.green + "20", color: T.green }}>
+                          <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: T.green + "20", color: T.green }}>
                             AKTIF
                           </span>
                         )}
@@ -651,21 +628,21 @@ export default function ShiftsManagement() {
                         {s.cashier_name}
                       </td>
                       <td style={{ padding: "12px", color: T.sub, fontSize: 11 }}>
-                        <div>{s.opened_at?.split(" ")[0]}</div>
+                        <div style={{ fontWeight: 600 }}>{s.opened_at?.split(" ")[0]}</div>
                         <div style={{ color: T.muted }}>
                           {s.opened_at?.split(" ")[1]} s/d {s.closed_at ? s.closed_at.split(" ")[1] : "sekarang"}
                         </div>
                       </td>
-                      <td style={{ padding: "12px", fontFamily: "JetBrains Mono, monospace" }}>
+                      <td style={{ padding: "12px", fontFamily: "JetBrains Mono, monospace", color: T.text, fontWeight: 700 }}>
                         {fmt(s.starting_cash)}
                       </td>
-                      <td style={{ padding: "12px", fontFamily: "JetBrains Mono, monospace", color: T.green, fontWeight: 700 }}>
+                      <td style={{ padding: "12px", fontFamily: "JetBrains Mono, monospace", color: T.green, fontWeight: 800 }}>
                         {fmt(s.cash_sales)}
                       </td>
-                      <td style={{ padding: "12px", fontFamily: "JetBrains Mono, monospace" }}>
+                      <td style={{ padding: "12px", fontFamily: "JetBrains Mono, monospace", color: isClosed ? T.text : T.muted, fontWeight: 700 }}>
                         {isClosed ? fmt(s.expected_cash) : "-"}
                       </td>
-                      <td style={{ padding: "12px", fontFamily: "JetBrains Mono, monospace", fontWeight: 700 }}>
+                      <td style={{ padding: "12px", fontFamily: "JetBrains Mono, monospace", color: isClosed ? T.text : T.muted, fontWeight: 800 }}>
                         {isClosed ? fmt(s.actual_cash) : "-"}
                       </td>
                       <td style={{ padding: "12px" }}>
@@ -684,7 +661,7 @@ export default function ShiftsManagement() {
                             {diffText}
                           </span>
                         ) : (
-                          <span style={{ color: T.muted, fontSize: 11 }}>Sedang Berjalan</span>
+                          <span style={{ color: T.accent, background: T.accent + '15', fontWeight: 700, fontSize: 10, padding: '3px 8px', borderRadius: 6 }}>Sedang Berjalan</span>
                         )}
                       </td>
                       <td style={{ padding: "12px", textAlign: "right" }}>
@@ -1467,7 +1444,7 @@ export function CashMovementModal({ shiftId, initialType, onClose, onSuccess }) 
 export function CloseShiftModal({ shift, movements, onClose, onSuccess }) {
   const [mode, setMode] = useState("calculator"); // "calculator" or "direct"
   const [directAmount, setDirectAmount] = useState("");
-  const [autoPrint, setAutoPrint] = useState(true);
+  const [autoPrint, setAutoPrint] = useState(false);
   const [closingNotes, setClosingNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 

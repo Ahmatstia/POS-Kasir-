@@ -57,7 +57,7 @@ function PaymentModal({ total, onClose, onConfirm, loading = false }) {
   const [discount, setDiscount] = useState("");
   const [payment, setPayment] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
-  const [autoPrint, setAutoPrint] = useState(true);
+  const [autoPrint, setAutoPrint] = useState(false);
   const [printType, setPrintType] = useState("thermal"); // 'thermal' or 'normal'
   const [notes, setNotes] = useState("");
 

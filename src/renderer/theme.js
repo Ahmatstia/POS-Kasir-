@@ -4,18 +4,18 @@
 
 export const T = {
   // Backgrounds
-  bg:       '#F3F4F8',     // page background (warm light gray)
+  bg:       '#F8FAFC',     // crisp slate-50 page background
   surface:  '#FFFFFF',     // card / panel background
-  card:     '#F9FAFB',     // slightly off-white, nested cards
+  card:     '#F1F5F9',     // slate-100, nested cards
 
   // Borders
-  border:   '#E5E7EB',     // light border
-  border2:  '#D1D5DB',     // stronger border
+  border:   '#E2E8F0',     // slate-200, crisp border
+  border2:  '#CBD5E1',     // slate-300, clear border
 
-  // Text
-  text:     '#1F2937',     // primary text (near-black)
-  muted:    '#9CA3AF',     // muted / placeholder
-  sub:      '#6B7280',     // secondary text
+  // Text - high contrast & WCAG-compliant
+  text:     '#0F172A',     // slate-900 (ultra crisp primary text)
+  sub:      '#334155',     // slate-700 (sharp secondary text)
+  muted:    '#64748B',     // slate-500 (WCAG-compliant muted text, never washed out)
 
   // Primary — Indigo (Google-inspired)
   accent:   '#4F46E5',     // indigo-600
@@ -27,7 +27,7 @@ export const T = {
   red:      '#DC2626',     // error / danger
   blue:     '#2563EB',     // info
   purple:   '#7C3AED',     // misc
-  orange:   '#EA580C',     // karung / bulk
+  orange:   '#EA580C',     // warning / bulk
 
   // Sidebar
   sidebarBg:   '#1E1B4B',  // indigo-950 (dark sidebar for contrast)

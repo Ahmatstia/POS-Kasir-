@@ -45,7 +45,7 @@ function CustomerDebts() {
   const [payAmount, setPayAmount] = useState("");
   const [payMethod, setPayMethod] = useState("cash");
   const [payNotes, setPayNotes] = useState("");
-  const [payAutoPrint, setPayAutoPrint] = useState(true);
+  const [payAutoPrint, setPayAutoPrint] = useState(false);
   const [paying, setPaying] = useState(false);
 
   // Customer form state
@@ -95,7 +95,7 @@ function CustomerDebts() {
     setPayAmount(String(amountToPay || 0));
     setPayNotes(specificDebt ? `Bayar nota ${specificDebt.invoice_no}` : "");
     setPayMethod("cash");
-    setPayAutoPrint(true);
+    setPayAutoPrint(false);
   };
 
   const closePayModal = () => {

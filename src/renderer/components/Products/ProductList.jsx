@@ -37,7 +37,7 @@ function StatCard({ label, value, color, icon }) {
         {icon}
       </div>
       <div>
-        <p style={{ fontSize: 9, fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>{label}</p>
+        <p style={{ fontSize: 10, fontWeight: 800, color: T.sub, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>{label}</p>
         <p style={{ fontSize: 22, fontWeight: 800, color, fontFamily: 'JetBrains Mono, monospace', lineHeight: 1 }}>{value}</p>
       </div>
     </div>
@@ -141,7 +141,7 @@ function ProductCard({ product, onEdit, onDelete, isDeleting, isConfirmingDelete
               {isKg ? Number(currentStock || 0).toFixed(2) : currentStock}
             </p>
           )}
-          <p style={{ fontSize: 8, fontWeight: 700, color: stockColor, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          <p style={{ fontSize: 10, fontWeight: 800, color: stockColor, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             {stockLabel}
           </p>
         </div>
@@ -154,7 +154,7 @@ function ProductCard({ product, onEdit, onDelete, isDeleting, isConfirmingDelete
             padding: '4px 10px', borderRadius: 8,
             background: u.color + '0C', border: `1px solid ${u.color}25`,
           }}>
-            <span style={{ fontSize: 8, fontWeight: 700, color: u.color, textTransform: 'uppercase', display: 'block', marginBottom: 1 }}>{u.label}</span>
+            <span style={{ fontSize: 9, fontWeight: 800, color: u.color, textTransform: 'uppercase', display: 'block', marginBottom: 1 }}>{u.label}</span>
             <span style={{ fontSize: 11, fontWeight: 800, color: T.text, fontFamily: 'JetBrains Mono, monospace' }}>{fmt(u.price)}</span>
           </div>
         )) : (
@@ -182,13 +182,13 @@ function ProductCard({ product, onEdit, onDelete, isDeleting, isConfirmingDelete
             <div style={{ flex: 1, height: 3, borderRadius: 2, background: T.border2, overflow: 'hidden' }}>
               <div style={{ height: '100%', background: product.stock <= product.min_stock ? (product.stock <= 0 ? T.red : T.accent) : T.green, width: `${Math.min(100, (product.stock / Math.max(product.min_stock * 2, 1)) * 100)}%` }} />
             </div>
-            <span style={{ fontSize: 8, color: T.muted }}>min {product.min_stock} pcs</span>
+            <span style={{ fontSize: 10, fontWeight: 600, color: T.sub }}>min {product.min_stock} pcs</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{ flex: 1, height: 3, borderRadius: 2, background: T.border2, overflow: 'hidden' }}>
               <div style={{ height: '100%', background: product.stock_kg <= product.min_stock_kg ? (product.stock_kg <= 0 ? T.red : T.accent) : T.green, width: `${Math.min(100, (product.stock_kg / Math.max(product.min_stock_kg * 2, 1)) * 100)}%` }} />
             </div>
-            <span style={{ fontSize: 8, color: T.muted }}>min {product.min_stock_kg} kg</span>
+            <span style={{ fontSize: 10, fontWeight: 600, color: T.sub }}>min {product.min_stock_kg} kg</span>
           </div>
         </div>
       ) : (minStock > 0 && (

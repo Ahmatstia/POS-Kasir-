@@ -471,47 +471,39 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef, ign
       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
     >
       {/* Top row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <div style={{ flex: 1, minWidth: 0, marginRight: 10 }}>
           <p style={{
             fontSize: 13, fontWeight: 700, color: (!ignoreStock && isOut) ? T.muted : T.text,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            marginBottom: 4,
+            margin: 0,
           }}>
             {product.name}
           </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            {!ignoreStock && (
+          {!ignoreStock && (
+            <div style={{ marginTop: 2 }}>
               <span style={{
                 fontSize: 10, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
-                color: isOut ? T.red : isLow ? T.accent : T.green,
+                color: isOut ? T.red : isLow ? T.orange : T.sub,
               }}>
-                {stockDisplay}
+                {isOut ? '● HABIS' : isLow ? `● Sisa ${stockDisplay}` : stockDisplay}
               </span>
-            )}
-            <span style={{
-              fontSize: 9, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
-              padding: '1px 7px', borderRadius: 100,
-              background: T.border2, color: T.sub,
-            }}>
-              {product.sell_per_unit || 'all'}
-            </span>
-          </div>
+            </div>
+          )}
         </div>
 
         <button
           onClick={() => setShowManual(v => !v)}
           style={{
-            padding: '4px 10px', borderRadius: 7, fontSize: 10, fontWeight: 700,
-            letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer',
-            transition: 'all 0.15s',
-            border: showManual ? `1px solid ${T.red}40`   : `1px solid ${T.border2}`,
-            background: showManual ? T.red + '12'          : T.border,
-            color:      showManual ? T.red                 : T.sub,
+            padding: '4px 9px', borderRadius: 6, fontSize: 10, fontWeight: 700,
+            cursor: 'pointer', transition: 'all 0.15s',
+            border: showManual ? `1px solid ${T.red}40` : `1px solid ${T.border2}`,
+            background: showManual ? T.red + '12' : T.bg,
+            color: showManual ? T.red : T.sub,
             flexShrink: 0,
           }}
         >
-          {showManual ? '✕ Batal' : 'Harga Kustom'}
+          {showManual ? '✕ Batal' : '✏️ Kustom'}
         </button>
       </div>
 
@@ -1190,7 +1182,7 @@ function Cashier({ setCurrentPage }) {
         flexWrap: 'wrap', gap: 10,
       }}>
         {activeShift ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
               fontSize: 11, fontWeight: 800, color: T.green,
@@ -1198,16 +1190,13 @@ function Cashier({ setCurrentPage }) {
               padding: '3px 10px', borderRadius: 100, textTransform: 'uppercase'
             }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: T.green, display: 'inline-block' }} />
-              Shift Aktif (#{activeShift.id})
+              Shift #{activeShift.id}
             </span>
             <span style={{ fontSize: 12, fontWeight: 700, color: T.text }}>
               Kasir: <b style={{ color: T.accent }}>{activeShift.cashier_name}</b>
             </span>
-            <span style={{ fontSize: 11, color: T.muted }}>
-              Modal: {fmt(activeShift.summary?.startingCash || activeShift.starting_cash)}
-            </span>
-            <span style={{ fontSize: 11, color: T.muted }}>
-              Uang di Laci: <b style={{ color: T.green, fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>{fmt(activeShift.summary?.expectedCash || activeShift.starting_cash)}</b>
+            <span style={{ fontSize: 11, fontWeight: 600, color: T.sub }}>
+              Uang di Laci: <b style={{ color: T.green, fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 800 }}>{fmt(activeShift.summary?.expectedCash || activeShift.starting_cash)}</b>
             </span>
           </div>
         ) : (
@@ -1224,33 +1213,18 @@ function Cashier({ setCurrentPage }) {
             <>
               <button
                 onClick={() => handleOpenMovement('IN')}
-                title="Catat uang masuk ke laci (misal suntikan modal / tukar uang)"
+                title="Catat uang masuk atau keluar dari laci di luar belanja nota"
                 style={{
-                  padding: '6px 12px', borderRadius: 8,
-                  border: `1px solid ${T.blue}40`,
-                  background: T.blue + '15',
-                  color: T.blue,
+                  padding: '7px 13px', borderRadius: 8,
+                  border: `1px solid ${T.accent}35`,
+                  background: T.accentBg,
+                  color: T.accent,
                   fontSize: 11, fontWeight: 800, cursor: 'pointer',
                   display: 'inline-flex', alignItems: 'center', gap: 5,
                   transition: 'all 0.15s',
                 }}
               >
-                + Kas Masuk
-              </button>
-              <button
-                onClick={() => handleOpenMovement('OUT')}
-                title="Catat uang keluar dari laci (misal beli kresek, es batu, galon)"
-                style={{
-                  padding: '6px 12px', borderRadius: 8,
-                  border: `1px solid ${T.orange}40`,
-                  background: T.orange + '15',
-                  color: T.orange,
-                  fontSize: 11, fontWeight: 800, cursor: 'pointer',
-                  display: 'inline-flex', alignItems: 'center', gap: 5,
-                  transition: 'all 0.15s',
-                }}
-              >
-                - Ambil Kasir
+                💸 Kas Masuk / Keluar
               </button>
               {((activeShift.summary?.transactionCount || 0) === 0 && (activeShift.summary?.debtCollected || 0) === 0) && (
                 <button
@@ -1275,7 +1249,7 @@ function Cashier({ setCurrentPage }) {
                 onClick={handleOpenCloseShift}
                 title="Tutup shift kasir & hitung fisik uang di laci"
                 style={{
-                  padding: '6px 13px', borderRadius: 8,
+                  padding: '7px 14px', borderRadius: 8,
                   border: `1px solid ${T.red}40`,
                   background: T.red + '15',
                   color: T.red,
@@ -1284,24 +1258,8 @@ function Cashier({ setCurrentPage }) {
                   transition: 'all 0.15s',
                 }}
               >
-                🔒 Tutup Kasir & Hitung Laci
+                🔒 Tutup Shift
               </button>
-              {setCurrentPage && (
-                <button
-                  onClick={() => setCurrentPage('shifts')}
-                  title="Buka menu Kas Harian & Laporan Shift lengkap"
-                  style={{
-                    padding: '6px 12px', borderRadius: 8,
-                    border: `1px solid ${T.border2}`,
-                    background: T.bg,
-                    color: T.sub,
-                    fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                    display: 'inline-flex', alignItems: 'center', gap: 5,
-                  }}
-                >
-                  ⚙️ Detail →
-                </button>
-              )}
             </>
           ) : (
             <button
@@ -1453,25 +1411,14 @@ function Cashier({ setCurrentPage }) {
           borderRadius: 16, display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}>
           {/* Header */}
-          <div style={{ padding: '18px 20px 14px', borderBottom: `1px solid ${T.border}` }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <div>
-                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.muted, marginBottom: 2 }}>
-                  Daftar Produk
-                </p>
-                <p style={{ fontSize: 12, color: T.sub, fontFamily: 'JetBrains Mono, monospace' }}>
-                  {displayedProducts.length}
-                  <span style={{ color: T.muted }}> / {allProducts.length}</span>
-                  {searchTerm && <span style={{ color: T.accent }}> · "{searchTerm}"</span>}
-                </p>
-              </div>
-              <div style={{
-                padding: '4px 12px', borderRadius: 100,
-                background: T.blue + '12', border: `1px solid ${T.blue}30`,
-                fontSize: 10, fontWeight: 700, color: T.blue, letterSpacing: '0.06em',
-              }}>
-                {allProducts.filter(p => p.sell_per_unit === 'kg' ? (p.stock_kg || 0) > 0 : (p.stock || 0) > 0).length} TERSEDIA
-              </div>
+          <div style={{ padding: '16px 20px 14px', borderBottom: `1px solid ${T.border}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <p style={{ fontSize: 13, fontWeight: 800, color: T.text, margin: 0 }}>
+                Daftar Produk
+                <span style={{ fontSize: 11, fontWeight: 600, color: T.sub, marginLeft: 8, fontFamily: 'JetBrains Mono, monospace' }}>
+                  ({displayedProducts.length})
+                </span>
+              </p>
             </div>
 
             {/* Search */}
@@ -1666,28 +1613,13 @@ function Cashier({ setCurrentPage }) {
 
           {/* Summary & checkout */}
           {cart.length > 0 && (
-            <div style={{ borderTop: `1px solid ${T.border}`, padding: '16px 20px' }}>
-              {/* Item count breakdown */}
-              <div style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {cart.map(item => (
-                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 11, color: T.sub, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginRight: 8 }}>
-                      {item.name} ×{item.quantity}
-                    </span>
-                    <span style={{ fontSize: 11, color: T.sub, fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>
-                      {fmt(item.subtotal)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Divider */}
-              <div style={{ height: 1, background: T.border, marginBottom: 12 }} />
-
+            <div style={{ borderTop: `1px solid ${T.border}`, padding: '16px 20px', background: T.surface }}>
               {/* Total */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: T.sub, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Total</span>
-                <span style={{ fontSize: 22, fontWeight: 800, color: T.text, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '-0.02em' }}>
+                <span style={{ fontSize: 12, fontWeight: 800, color: T.sub, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                  Total ({cart.reduce((sum, i) => sum + (parseFloat(i.quantity) || 1), 0)} item)
+                </span>
+                <span style={{ fontSize: 24, fontWeight: 900, color: T.text, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '-0.02em' }}>
                   {fmt(total)}
                 </span>
               </div>
@@ -1712,23 +1644,24 @@ function Cashier({ setCurrentPage }) {
                 <button
                   onClick={() => setShowPayment(true)}
                   style={{
-                    flex: 1, padding: '12px',
-                    borderRadius: 12, border: `1px solid ${T.green}40`,
-                    background: T.green + '18',
-                    color: T.green, fontFamily: 'Syne, sans-serif',
-                    fontSize: 13, fontWeight: 800, letterSpacing: '0.04em',
+                    flex: 1, padding: '13px 18px',
+                    borderRadius: 12, border: 'none',
+                    background: T.green,
+                    color: '#FFFFFF', fontFamily: 'Syne, sans-serif',
+                    fontSize: 14, fontWeight: 800, letterSpacing: '0.02em',
                     cursor: 'pointer', transition: 'all 0.2s',
+                    boxShadow: `0 4px 14px ${T.green}45`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.background = T.green + '28'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = T.green + '18'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = `0 6px 18px ${T.green}60`; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = `0 4px 14px ${T.green}45`; }}
                 >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <rect x="1" y="4" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-                    <path d="M5 4V3a3 3 0 016 0v1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
+                    <rect x="1" y="4" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.6"/>
+                    <path d="M5 4V3a3 3 0 016 0v1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
                     <circle cx="8" cy="8.5" r="1.5" fill="currentColor"/>
                   </svg>
-                  Proses Pembayaran
+                  Bayar Sekarang
                 </button>
               </div>
             </div>

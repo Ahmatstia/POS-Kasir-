@@ -12,9 +12,9 @@ import {
 
 export const NAV = [
   { id: 'dashboard',    label: 'Beranda',       icon: <DashboardIcon /> },
-  { id: 'cashier',      label: 'Jual (Kasir)',  icon: <CashierIcon /> },
-  { id: 'shifts',       label: 'Kas & Shift',   icon: <ShiftsIcon /> },
-  { id: 'products',     label: 'Barang',        icon: <ProductsIcon /> },
+  { id: 'cashier',      label: 'Kasir',         icon: <CashierIcon /> },
+  { id: 'shifts',       label: 'Shift',         icon: <ShiftsIcon /> },
+  { id: 'products',     label: 'Produk',        icon: <ProductsIcon /> },
   { id: 'transactions', label: 'Riwayat Nota',  icon: <TransactionsIcon /> },
   { id: 'debts',        label: 'Buku Kasbon',   icon: <DebtsIcon /> },
   { id: 'reports',      label: 'Laporan',       icon: <ReportsIcon /> },

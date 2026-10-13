@@ -56,7 +56,7 @@ export default function ShiftsManagement() {
       setShiftHistory(history);
     } catch (err) {
       console.error("Gagal memuat data shift:", err);
-      showToast("error", "Gagal memuat data kas & shift");
+      showToast("error", "Gagal memuat data shift");
     } finally {
       setLoading(false);
     }
@@ -89,7 +89,7 @@ export default function ShiftsManagement() {
               fontFamily: "Syne, sans-serif",
             }}
           >
-            Kas Harian & Shift Kasir
+            Shift Kasir
           </h1>
           <p style={{ fontSize: 13, color: T.sub, margin: 0 }}>
             Kelola modal awal kembalian, pantau uang laci real-time, dan cocokkan fisik uang saat tutup toko.
@@ -197,7 +197,7 @@ export default function ShiftsManagement() {
                 transition: "all 0.15s",
               }}
             >
-              🟢 Buka Shift Kasir Baru
+            Buka Shift Kasir Baru
             </button>
           )}
         </div>
@@ -242,15 +242,6 @@ export default function ShiftsManagement() {
                   textTransform: "uppercase",
                 }}
               >
-                <span
-                  style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: "50%",
-                    background: T.green,
-                    display: "inline-block",
-                  }}
-                />
                 Shift Sedang Aktif (#{activeShift.id})
               </span>
               <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>
@@ -392,7 +383,7 @@ export default function ShiftsManagement() {
           >
             <div style={{ display: "flex", gap: 20 }}>
               <span style={{ color: T.text, fontWeight: 600 }}>
-                💳 Penjualan Non-Tunai (QRIS/Debit):{" "}
+                Penjualan Non-Tunai (QRIS/Debit):{" "}
                 <b style={{ color: T.purple, fontFamily: "JetBrains Mono, monospace" }}>
                   {fmt(activeShift.summary?.nonCashSales)}
                 </b>{" "}
@@ -531,7 +522,7 @@ export default function ShiftsManagement() {
               boxShadow: `0 4px 16px ${T.green}40`,
             }}
           >
-            🟢 Buka Shift Kasir Sekarang
+          Buka Shift Kasir Sekarang
           </button>
         </div>
       )}

@@ -37,7 +37,7 @@ function App() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           
           <Header 
-            currentPageLabel={NAV.find(n => n.id === (currentPage === 'inventory' || currentPage === 'categories' ? 'products' : currentPage))?.label || 'Barang'} 
+            currentPageLabel={NAV.find(n => n.id === (currentPage === 'inventory' || currentPage === 'categories' ? 'products' : currentPage))?.label || 'Produk'} 
             sidebarOpen={sidebarOpen} 
             setSidebarOpen={setSidebarOpen} 
           />

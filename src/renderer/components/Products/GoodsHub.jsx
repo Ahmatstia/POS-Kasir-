@@ -17,20 +17,20 @@ function GoodsHub({ defaultTab = 'products' }) {
   const tabs = [
     {
       id: 'products',
-      label: 'Daftar Barang',
+      label: 'Daftar Produk',
       sublabel: 'Master harga & satuan',
       icon: <ProductsIcon />,
     },
     {
       id: 'inventory',
-      label: 'Barang Masuk & Stok Rak',
+      label: 'Produk Masuk & Stok Rak',
       sublabel: 'Catat stok masuk & cocokkan rak',
       icon: <InventoryIcon />,
     },
     {
       id: 'categories',
-      label: 'Kategori Barang',
-      sublabel: 'Kelompok jenis barang',
+      label: 'Kategori Produk',
+      sublabel: 'Kelompok jenis produk',
       icon: <CategoriesIcon />,
     },
   ];

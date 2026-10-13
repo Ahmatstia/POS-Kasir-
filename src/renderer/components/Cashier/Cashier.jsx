@@ -1275,7 +1275,7 @@ function Cashier({ setCurrentPage }) {
                 transition: 'all 0.15s',
               }}
             >
-              🟢 Buka Shift Kasir Sekarang
+            Buka Shift Kasir Sekarang
             </button>
           )}
         </div>
@@ -1304,16 +1304,7 @@ function Cashier({ setCurrentPage }) {
             fontSize: 34, marginBottom: 18,
           }}>
             🔒
-          </div>
-
-          <span style={{
-            fontSize: 11, fontWeight: 800, color: T.orange,
-            background: T.orange + '18', border: `1px solid ${T.orange}40`,
-            padding: '4px 14px', borderRadius: 100, textTransform: 'uppercase',
-            letterSpacing: '0.08em', marginBottom: 12,
-          }}>
-            Akses Kasir Terkunci
-          </span>
+          </div>  
 
           <h2 style={{ fontSize: 24, fontWeight: 900, color: T.text, margin: '0 0 8px' }}>
             Shift Kasir Belum Dibuka
@@ -1334,7 +1325,7 @@ function Cashier({ setCurrentPage }) {
                 boxShadow: `0 6px 20px ${T.green}45`, transition: 'all 0.15s',
               }}
             >
-              🟢 Buka Shift Kasir Sekarang
+            Buka Shift Kasir Sekarang
             </button>
 
             {setCurrentPage && (
@@ -1347,7 +1338,7 @@ function Cashier({ setCurrentPage }) {
                   cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
                 }}
               >
-                📋 Buka Menu Kas & Shift →
+                Buka Menu Shift
               </button>
             )}
           </div>
@@ -1361,7 +1352,6 @@ function Cashier({ setCurrentPage }) {
               padding: '16px 18px', borderRadius: 14, background: T.bg,
               border: `1px solid ${T.border}`,
             }}>
-              <div style={{ fontSize: 22, marginBottom: 8 }}>💵</div>
               <div style={{ fontSize: 13, fontWeight: 800, color: T.text, marginBottom: 4 }}>
                 Modal Uang Pecahan
               </div>
@@ -1374,7 +1364,6 @@ function Cashier({ setCurrentPage }) {
               padding: '16px 18px', borderRadius: 14, background: T.bg,
               border: `1px solid ${T.border}`,
             }}>
-              <div style={{ fontSize: 22, marginBottom: 8 }}>🧾</div>
               <div style={{ fontSize: 13, fontWeight: 800, color: T.text, marginBottom: 4 }}>
                 Hitungan Kas Otomatis
               </div>
@@ -1387,7 +1376,6 @@ function Cashier({ setCurrentPage }) {
               padding: '16px 18px', borderRadius: 14, background: T.bg,
               border: `1px solid ${T.border}`,
             }}>
-              <div style={{ fontSize: 22, marginBottom: 8 }}>⚖️</div>
               <div style={{ fontSize: 13, fontWeight: 800, color: T.text, marginBottom: 4 }}>
                 Cek Selisih Saat Tutup
               </div>
@@ -1803,4 +1791,4 @@ function Cashier({ setCurrentPage }) {
 }
 
 export default Cashier;
-
+

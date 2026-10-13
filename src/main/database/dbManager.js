@@ -294,6 +294,38 @@ class DatabaseManager {
               FOREIGN KEY (debt_id)     REFERENCES customer_debts(id)
             )`, "CREATE debt_payments");
 
+          // ── CASH SHIFTS (KAS & SHIFT KASIR TOKO) ──────────────────────────
+          await this._runSQL(`
+            CREATE TABLE IF NOT EXISTS cash_shifts (
+              id             INTEGER PRIMARY KEY AUTOINCREMENT,
+              cashier_name   TEXT NOT NULL DEFAULT 'Kasir',
+              opened_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+              closed_at      DATETIME,
+              starting_cash  INTEGER NOT NULL DEFAULT 0,
+              expected_cash  INTEGER DEFAULT 0,
+              actual_cash    INTEGER DEFAULT 0,
+              difference     INTEGER DEFAULT 0,
+              cash_sales     INTEGER DEFAULT 0,
+              non_cash_sales INTEGER DEFAULT 0,
+              debt_collected INTEGER DEFAULT 0,
+              cash_in        INTEGER DEFAULT 0,
+              cash_out       INTEGER DEFAULT 0,
+              status         TEXT DEFAULT 'OPEN',
+              notes          TEXT
+            )`, "CREATE cash_shifts");
+
+          // ── CASH MOVEMENTS (KAS MASUK / KELUAR LACI) ─────────────────────
+          await this._runSQL(`
+            CREATE TABLE IF NOT EXISTS cash_movements (
+              id             INTEGER PRIMARY KEY AUTOINCREMENT,
+              shift_id       INTEGER NOT NULL,
+              type           TEXT NOT NULL,
+              amount         INTEGER NOT NULL,
+              reason         TEXT NOT NULL,
+              created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (shift_id) REFERENCES cash_shifts(id)
+            )`, "CREATE cash_movements");
+
           // ── SETTINGS ─────────────────────────────────────────────────────────
           await this._runSQL(`
             CREATE TABLE IF NOT EXISTS settings (
@@ -316,6 +348,9 @@ class DatabaseManager {
           await this._runSQL("CREATE INDEX IF NOT EXISTS idx_transaction_items_transaction_id ON transaction_items(transaction_id)", "INDEX transaction_items.transaction_id");
           await this._runSQL("CREATE INDEX IF NOT EXISTS idx_customer_debts_customer ON customer_debts(customer_id)", "INDEX customer_debts.customer_id");
           await this._runSQL("CREATE INDEX IF NOT EXISTS idx_debt_payments_customer ON debt_payments(customer_id)", "INDEX debt_payments.customer_id");
+          await this._runSQL("CREATE INDEX IF NOT EXISTS idx_cash_shifts_status ON cash_shifts(status)", "INDEX cash_shifts.status");
+          await this._runSQL("CREATE INDEX IF NOT EXISTS idx_cash_movements_shift ON cash_movements(shift_id)", "INDEX cash_movements.shift_id");
+          await this._runSQL("ALTER TABLE transactions ADD COLUMN shift_id INTEGER", "ADD transactions.shift_id");
 
           // ── ENSURE DATA CONSISTENCY ──────────────────────────────────────────
           await this._runSQL("UPDATE transactions SET status = 'COMPLETED' WHERE status IS NULL", "FIX transactions.status");

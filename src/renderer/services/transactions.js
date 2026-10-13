@@ -66,12 +66,23 @@ export async function createTransaction(transactionData) {
       }
     }
 
-    // Insert transaction header (dengan created_at waktu lokal WIB dan customer_id)
+    // Auto-detect current active shift
+    let currentShiftId = transactionData.shiftId || null;
+    if (!currentShiftId) {
+      try {
+        const [activeShift] = await window.electronAPI.query("SELECT id FROM cash_shifts WHERE status = 'OPEN' ORDER BY id DESC LIMIT 1");
+        if (activeShift) currentShiftId = activeShift.id;
+      } catch (e) {
+        // fail-safe if shift table not ready
+      }
+    }
+
+    // Insert transaction header (dengan created_at waktu lokal WIB, customer_id, dan shift_id)
     const txResult = await window.electronAPI.run(
       `INSERT INTO transactions
-         (invoice_no, subtotal, discount, total_amount, payment_amount, change_amount, payment_method, customer_name, customer_id, notes, status, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'COMPLETED', ?)`,
-      [invoiceNo, subtotal, discount || 0, total, payment, change, paymentMethod, finalCustomerName, finalCustomerId, notes || "", createdAt]
+         (invoice_no, subtotal, discount, total_amount, payment_amount, change_amount, payment_method, customer_name, customer_id, notes, status, created_at, shift_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'COMPLETED', ?, ?)`,
+      [invoiceNo, subtotal, discount || 0, total, payment, change, paymentMethod, finalCustomerName, finalCustomerId, notes || "", createdAt, currentShiftId]
     );
     const transactionId = txResult.lastID;
 

@@ -11,6 +11,7 @@ import GoodsHub from './components/Products/GoodsHub';
 import Cashier from './components/Cashier/Cashier';
 import Transactions from './components/Transactions/Transactions';
 import CustomerDebts from './components/Debts/CustomerDebts';
+import ShiftsManagement from './components/Shifts/ShiftsManagement';
 import Dashboard from './components/Dashboard/Dashboard';
 import Reports from './components/Reports/Reports';
 import Settings from './components/Settings/Settings';
@@ -49,7 +50,8 @@ function App() {
           }}>
             <div key={currentPage} className="page-content" style={{ maxWidth: 1400, margin: '0 auto' }}>
               {currentPage === 'dashboard'    && <Dashboard setCurrentPage={setCurrentPage} />}
-              {currentPage === 'cashier'      && <Cashier />}
+              {currentPage === 'cashier'      && <Cashier setCurrentPage={setCurrentPage} />}
+              {currentPage === 'shifts'       && <ShiftsManagement />}
               {currentPage === 'products'     && <GoodsHub defaultTab="products" />}
               {currentPage === 'inventory'    && <GoodsHub defaultTab="inventory" />}
               {currentPage === 'categories'   && <GoodsHub defaultTab="categories" />}

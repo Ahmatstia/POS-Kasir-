@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { getProducts } from "../../services/database";
 import { createTransaction, getLocalDatetimeStr } from "../../services/transactions";
 import { getStoreProfile } from "../../services/settings";
 import { printReceipt, printThermalReceipt } from "../../utils/PrintUtility";
+import { getCurrentShift } from "../../services/shifts";
 import PaymentModal from "./PaymentModal";
 import { useToast } from "../Toast";
 import { T } from "../../theme";
@@ -135,6 +137,272 @@ function WeighingModal({ product, onClose, onConfirm }) {
           </button>
        </div>
     </div>
+  );
+}
+
+// ─── HOLD CART MODAL ──────────────────────────────────────────────────────────
+function HoldCartModal({ itemCount, total, onClose, onConfirm }) {
+  const [customerName, setCustomerName] = useState('');
+  const [note, setNote] = useState('');
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onConfirm(customerName, note);
+  };
+
+  return createPortal(
+    <div
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(15, 23, 42, 0.68)', backdropFilter: 'blur(5px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 16, fontFamily: 'Syne, sans-serif',
+      }}
+    >
+      <div style={{
+        width: '100%', maxWidth: 440,
+        background: T.surface, border: `1px solid ${T.border2}`,
+        borderRadius: 20, padding: 24,
+        boxShadow: '0 24px 48px rgba(0, 0, 0, 0.45)',
+        animation: 'modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1) both',
+      }}>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
+          <div>
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ color: T.orange }}>⏸</span> Tahan Nota Sementara
+            </h3>
+            <p style={{ fontSize: 12, color: T.sub, margin: '4px 0 0' }}>
+              Simpan belanjaan ini agar kasir bisa melayani pembeli berikutnya.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'transparent', border: 'none', color: T.muted,
+              fontSize: 18, cursor: 'pointer', padding: '4px 8px', borderRadius: 8,
+            }}
+          >✕</button>
+        </div>
+
+        {/* Ringkasan Belanjaan */}
+        <div style={{
+          padding: '12px 14px', borderRadius: 12,
+          background: T.bg, border: `1px solid ${T.border}`,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          marginBottom: 16,
+        }}>
+          <div>
+            <span style={{ fontSize: 11, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Isi Belanjaan</span>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: T.text }}>{itemCount} macam barang</p>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <span style={{ fontSize: 11, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Nota</span>
+            <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: T.accent, fontFamily: 'JetBrains Mono, monospace' }}>
+              {fmt(total)}
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Nama atau Ciri Pembeli
+            </label>
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Contoh: Ibu baju merah, Mas Agus, dll"
+              value={customerName}
+              onChange={e => setCustomerName(e.target.value)}
+              style={{
+                width: '100%', padding: '10px 12px', borderRadius: 10,
+                background: T.bg, border: `1px solid ${T.border2}`,
+                color: T.text, fontSize: 13, outline: 'none', boxSizing: 'border-box'
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Catatan (Opsional)
+            </label>
+            <input
+              type="text"
+              placeholder="Contoh: Mengambil kecap manis dulu"
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              style={{
+                width: '100%', padding: '10px 12px', borderRadius: 10,
+                background: T.bg, border: `1px solid ${T.border2}`,
+                color: T.text, fontSize: 13, outline: 'none', boxSizing: 'border-box'
+              }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                flex: 1, padding: '12px', borderRadius: 10,
+                border: `1px solid ${T.border2}`, background: 'transparent',
+                color: T.sub, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              }}
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              style={{
+                flex: 1.5, padding: '12px', borderRadius: 10,
+                border: 'none', background: T.orange,
+                color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer',
+                boxShadow: `0 4px 14px ${T.orange}40`,
+              }}
+            >
+              Simpan & Tahan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// ─── HELD CARTS LIST MODAL ───────────────────────────────────────────────────
+function HeldCartsListModal({ heldCarts, onClose, onRestore, onDelete }) {
+  return createPortal(
+    <div
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(15, 23, 42, 0.68)', backdropFilter: 'blur(5px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 16, fontFamily: 'Syne, sans-serif',
+      }}
+    >
+      <div style={{
+        width: '100%', maxWidth: 540, maxHeight: '85vh',
+        background: T.surface, border: `1px solid ${T.border2}`,
+        borderRadius: 20, padding: 24, display: 'flex', flexDirection: 'column',
+        boxShadow: '0 24px 48px rgba(0, 0, 0, 0.45)',
+        animation: 'modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1) both',
+      }}>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+          <div>
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ color: T.orange }}>📂</span> Daftar Nota Tertahan ({heldCarts.length})
+            </h3>
+            <p style={{ fontSize: 12, color: T.sub, margin: '4px 0 0' }}>
+              Klik "Buka Nota" untuk melanjutkan pembayaran transaksi pembeli.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'transparent', border: 'none', color: T.muted,
+              fontSize: 18, cursor: 'pointer', padding: '4px 8px', borderRadius: 8,
+            }}
+          >✕</button>
+        </div>
+
+        {/* List */}
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, paddingRight: 4 }}>
+          {heldCarts.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: T.muted }}>
+              <span style={{ fontSize: 32, display: 'block', marginBottom: 8 }}>🧺</span>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>Tidak ada transaksi yang sedang ditahan.</p>
+            </div>
+          ) : (
+            heldCarts.map((item) => (
+              <div
+                key={item.id}
+                style={{
+                  padding: '14px 16px', borderRadius: 14,
+                  background: T.bg, border: `1px solid ${T.border2}`,
+                  display: 'flex', flexDirection: 'column', gap: 8,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: T.text }}>
+                      {item.customerName}
+                    </h4>
+                    <span style={{ fontSize: 11, color: T.muted, display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                      ⏱ Ditahan jam {item.heldAt} • {item.items?.length || 0} barang
+                    </span>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: T.accent, fontFamily: 'JetBrains Mono, monospace' }}>
+                      {fmt(item.total)}
+                    </span>
+                  </div>
+                </div>
+
+                {item.note && (
+                  <div style={{ fontSize: 12, color: T.sub, fontStyle: 'italic', background: T.surface, padding: '4px 8px', borderRadius: 6 }}>
+                    💬 {item.note}
+                  </div>
+                )}
+
+                <div style={{ fontSize: 11, color: T.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {(item.items || []).map(i => `${i.name} (${i.quantity} ${i.unit})`).join(', ')}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
+                  <button
+                    onClick={() => onDelete(item.id)}
+                    style={{
+                      padding: '6px 12px', borderRadius: 8,
+                      border: `1px solid ${T.red}35`, background: T.red + '10',
+                      color: T.red, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                    }}
+                  >
+                    Hapus
+                  </button>
+                  <button
+                    onClick={() => onRestore(item.id)}
+                    style={{
+                      padding: '6px 16px', borderRadius: 8,
+                      border: 'none', background: T.green,
+                      color: '#fff', fontSize: 11, fontWeight: 800, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: 4,
+                      boxShadow: `0 2px 8px ${T.green}40`,
+                    }}
+                  >
+                    Buka Nota →
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${T.border}` }}>
+          <button
+            onClick={onClose}
+            style={{
+              width: '100%', padding: '10px', borderRadius: 10,
+              border: `1px solid ${T.border2}`, background: T.surface,
+              color: T.text, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            Tutup
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
 
@@ -432,9 +700,10 @@ const qtyBtnStyle = (borderColor, color) => ({
 });
 
 // ─── MAIN CASHIER ─────────────────────────────────────────────────────────────
-function Cashier() {
+function Cashier({ setCurrentPage }) {
   const { showToast } = useToast();
 
+  const [activeShift, setActiveShift]               = useState(null);
   const [allProducts, setAllProducts]               = useState([]);
   const [displayedProducts, setDisplayedProducts]   = useState([]);
   const [searchTerm, setSearchTerm]                 = useState('');
@@ -451,6 +720,26 @@ function Cashier() {
   const [confirmClear, setConfirmClear]             = useState(false);
   const ITEMS_PER_PAGE = 30;
 
+  // ─── TAHAN NOTA (HOLD CART) ───
+  const [heldCarts, setHeldCarts] = useState(() => {
+    try {
+      const saved = localStorage.getItem('pos_held_carts');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [showHoldModal, setShowHoldModal] = useState(false);
+  const [showHeldListModal, setShowHeldListModal] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('pos_held_carts', JSON.stringify(heldCarts));
+    } catch (e) {
+      console.error('Gagal menyimpan nota tertahan', e);
+    }
+  }, [heldCarts]);
+
   const observer = useRef();
   const lastProductRef = useCallback((node) => {
     if (loadingMore) return;
@@ -461,12 +750,22 @@ function Cashier() {
     if (node) observer.current.observe(node);
   }, [loadingMore, hasMore]);
 
+  const checkShift = async () => {
+    try {
+      const s = await getCurrentShift();
+      setActiveShift(s);
+    } catch (e) {
+      console.error("Gagal cek shift kasir:", e);
+    }
+  };
+
   useEffect(() => { 
     (async () => {
       const res = await window.electronAPI.query("SELECT value FROM settings WHERE key = 'ignore_stock'");
       const isIgnore = (res[0]?.value === '1');
       setIgnoreStock(isIgnore);
       loadProducts(); 
+      checkShift();
     })();
   }, []);
 
@@ -682,6 +981,57 @@ function Cashier() {
   const removeFromCart = (itemId) => setCart(cart.filter(item => item.id !== itemId));
   const total = cart.reduce((sum, item) => sum + item.subtotal, 0);
 
+  const handleHoldCart = (customerName, note) => {
+    if (cart.length === 0) {
+      showToast('error', 'Keranjang masih kosong, tidak ada yang ditahan.');
+      return;
+    }
+    const currentTotal = cart.reduce((sum, item) => sum + (item.subtotal || 0), 0);
+    const newHold = {
+      id: 'HOLD-' + Date.now(),
+      heldAt: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+      customerName: customerName.trim() || `Pelanggan #${heldCarts.length + 1}`,
+      note: note ? note.trim() : '',
+      items: [...cart],
+      total: currentTotal,
+      itemCount: cart.length
+    };
+    setHeldCarts(prev => [newHold, ...prev]);
+    setCart([]);
+    setShowHoldModal(false);
+    showToast('info', `Nota disimpan sementara (${newHold.customerName})`);
+  };
+
+  const handleRestoreHeldCart = (holdId) => {
+    const target = heldCarts.find(h => h.id === holdId);
+    if (!target) return;
+
+    if (cart.length > 0) {
+      const currentTotal = cart.reduce((sum, item) => sum + (item.subtotal || 0), 0);
+      const autoHold = {
+        id: 'HOLD-' + Date.now(),
+        heldAt: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+        customerName: `Nota Sebelumnya (${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })})`,
+        note: 'Ditahan otomatis saat membuka nota lain',
+        items: [...cart],
+        total: currentTotal,
+        itemCount: cart.length
+      };
+      setHeldCarts(prev => [autoHold, ...prev.filter(h => h.id !== holdId)]);
+    } else {
+      setHeldCarts(prev => prev.filter(h => h.id !== holdId));
+    }
+
+    setCart(target.items);
+    setShowHeldListModal(false);
+    showToast('success', `Nota ${target.customerName} berhasil dimuat kembali!`);
+  };
+
+  const handleDeleteHeldCart = (holdId) => {
+    setHeldCarts(prev => prev.filter(h => h.id !== holdId));
+    showToast('info', 'Nota tertahan dihapus.');
+  };
+
   const handlePayment = async (paymentData) => {
     if (loading) return;
     setLoading(true);
@@ -737,6 +1087,7 @@ function Cashier() {
       setShowPayment(false);
       // Refresh product list to show updated stock
       loadProducts();
+      checkShift();
       showToast('success', `Transaksi berhasil! Invoice: ${result.invoiceNo} | Kembalian: ${fmt(paymentData.change)}`);
     } else {
       showToast('error', 'Transaksi gagal: ' + result.error);
@@ -783,9 +1134,63 @@ function Cashier() {
         .cart-scroll::-webkit-scrollbar-thumb { background: ${T.border2}; border-radius: 3px; }
       `}</style>
 
+      {/* ─── SHIFT STATUS STRIP DI KASIR ─── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '10px 16px', borderRadius: 12, marginBottom: 12,
+        background: activeShift ? T.surface : T.orange + '10',
+        border: `1px solid ${activeShift ? T.border : T.orange + '35'}`,
+        fontFamily: 'Syne, sans-serif',
+      }}>
+        {activeShift ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              fontSize: 11, fontWeight: 800, color: T.green,
+              background: T.green + '15', border: `1px solid ${T.green}30`,
+              padding: '3px 10px', borderRadius: 100, textTransform: 'uppercase'
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: T.green, display: 'inline-block' }} />
+              Shift Kasir Aktif (#{activeShift.id})
+            </span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: T.text }}>
+              Petugas: <b style={{ color: T.accent }}>{activeShift.cashier_name}</b>
+            </span>
+            <span style={{ fontSize: 11, color: T.muted }}>
+              Modal: {fmt(activeShift.summary?.startingCash)} • Uang Laci: <b style={{ color: T.green, fontFamily: 'JetBrains Mono, monospace' }}>{fmt(activeShift.summary?.expectedCash)}</b>
+            </span>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 15 }}>⚠️</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: T.orange }}>
+              Shift kasir belum dibuka hari ini. Disarankan mencatat modal awal kasir sebelum melayani pembeli.
+            </span>
+          </div>
+        )}
+
+        {setCurrentPage && (
+          <button
+            onClick={() => setCurrentPage('shifts')}
+            title="Buka menu Kas Harian & Shift Kasir"
+            style={{
+              padding: '6px 14px', borderRadius: 8,
+              border: `1px solid ${activeShift ? T.accent + '40' : T.orange + '40'}`,
+              background: activeShift ? T.accent + '15' : T.orange + '15',
+              color: activeShift ? T.accent : T.orange,
+              fontSize: 11, fontWeight: 800, cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              transition: 'all 0.15s',
+            }}
+          >
+            {activeShift ? '⚙️ Kelola Kas & Shift →' : '🟢 Buka Shift Sekarang →'}
+          </button>
+        )}
+      </div>
+
       <div style={{
         display: 'grid', gridTemplateColumns: '1fr 420px',
-        gap: 16, height: 'calc(100vh - 140px)',
+        gap: 16, height: 'calc(100vh - 195px)',
         fontFamily: 'Syne, sans-serif',
         animation: 'fadeUp 0.4s ease both',
       }}>
@@ -901,24 +1306,59 @@ function Cashier() {
           {/* Cart header */}
           <div style={{ padding: '18px 20px 14px', borderBottom: `1px solid ${T.border}` }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.muted }}>
-                Keranjang
-              </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {cart.length > 0 && !confirmClear && (
+                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.muted, margin: 0 }}>
+                  Keranjang
+                </p>
+                {heldCarts.length > 0 && (
                   <button
-                    onClick={() => setConfirmClear(true)}
+                    onClick={() => setShowHeldListModal(true)}
+                    title="Buka daftar nota yang ditahan"
                     style={{
-                      fontSize: 10, fontWeight: 700, color: T.red, letterSpacing: '0.06em',
-                      background: T.red + '10', border: `1px solid ${T.red}25`,
-                      padding: '3px 10px', borderRadius: 100, cursor: 'pointer',
-                      transition: 'all 0.15s', textTransform: 'uppercase',
+                      fontSize: 10, fontWeight: 800, color: T.orange,
+                      background: T.orange + '18', border: `1px solid ${T.orange}40`,
+                      padding: '2px 8px', borderRadius: 100, cursor: 'pointer',
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                      transition: 'all 0.15s'
                     }}
-                    onMouseEnter={e => e.currentTarget.style.background = T.red + '20'}
-                    onMouseLeave={e => e.currentTarget.style.background = T.red + '10'}
+                    onMouseEnter={e => e.currentTarget.style.background = T.orange + '28'}
+                    onMouseLeave={e => e.currentTarget.style.background = T.orange + '18'}
                   >
-                    Kosongkan
+                    <span>📂</span> {heldCarts.length} Tertahan
                   </button>
+                )}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {cart.length > 0 && !confirmClear && (
+                  <>
+                    <button
+                      onClick={() => setShowHoldModal(true)}
+                      title="Tahan transaksi belanja ini sementara untuk layani pembeli lain"
+                      style={{
+                        fontSize: 10, fontWeight: 700, color: T.orange, letterSpacing: '0.04em',
+                        background: T.orange + '12', border: `1px solid ${T.orange}30`,
+                        padding: '3px 9px', borderRadius: 100, cursor: 'pointer',
+                        transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', gap: 4
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = T.orange + '22'}
+                      onMouseLeave={e => e.currentTarget.style.background = T.orange + '12'}
+                    >
+                      ⏸ Tahan
+                    </button>
+                    <button
+                      onClick={() => setConfirmClear(true)}
+                      style={{
+                        fontSize: 10, fontWeight: 700, color: T.red, letterSpacing: '0.06em',
+                        background: T.red + '10', border: `1px solid ${T.red}25`,
+                        padding: '3px 10px', borderRadius: 100, cursor: 'pointer',
+                        transition: 'all 0.15s', textTransform: 'uppercase',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = T.red + '20'}
+                      onMouseLeave={e => e.currentTarget.style.background = T.red + '10'}
+                    >
+                      Kosongkan
+                    </button>
+                  </>
                 )}
                 <span style={{
                   fontSize: 12, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace',
@@ -1000,28 +1440,45 @@ function Cashier() {
                 </span>
               </div>
 
-              {/* Checkout button */}
-              <button
-                onClick={() => setShowPayment(true)}
-                style={{
-                  width: '100%', padding: '12px',
-                  borderRadius: 12, border: `1px solid ${T.green}40`,
-                  background: T.green + '18',
-                  color: T.green, fontFamily: 'Syne, sans-serif',
-                  fontSize: 13, fontWeight: 800, letterSpacing: '0.04em',
-                  cursor: 'pointer', transition: 'all 0.2s',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background = T.green + '28'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = T.green + '18'; e.currentTarget.style.transform = 'translateY(0)'; }}
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <rect x="1" y="4" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-                  <path d="M5 4V3a3 3 0 016 0v1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                  <circle cx="8" cy="8.5" r="1.5" fill="currentColor"/>
-                </svg>
-                Proses Pembayaran
-              </button>
+              {/* Action buttons (Tahan & Bayar) */}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => setShowHoldModal(true)}
+                  title="Tahan nota ini sementara (misal pembeli ambil barang tambahan)"
+                  style={{
+                    padding: '12px 14px', borderRadius: 12,
+                    border: `1px solid ${T.orange}40`, background: T.orange + '15',
+                    color: T.orange, fontFamily: 'Syne, sans-serif',
+                    fontSize: 12, fontWeight: 800, cursor: 'pointer',
+                    transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = T.orange + '25'}
+                  onMouseLeave={e => e.currentTarget.style.background = T.orange + '15'}
+                >
+                  ⏸ Tahan
+                </button>
+                <button
+                  onClick={() => setShowPayment(true)}
+                  style={{
+                    flex: 1, padding: '12px',
+                    borderRadius: 12, border: `1px solid ${T.green}40`,
+                    background: T.green + '18',
+                    color: T.green, fontFamily: 'Syne, sans-serif',
+                    fontSize: 13, fontWeight: 800, letterSpacing: '0.04em',
+                    cursor: 'pointer', transition: 'all 0.2s',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = T.green + '28'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = T.green + '18'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <rect x="1" y="4" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                    <path d="M5 4V3a3 3 0 016 0v1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    <circle cx="8" cy="8.5" r="1.5" fill="currentColor"/>
+                  </svg>
+                  Proses Pembayaran
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -1068,6 +1525,26 @@ function Cashier() {
             setCart(cart.map(i => i.id === reweighItem.itemId ? { ...i, quantity: kgVal, subtotal: kgVal * i.price } : i));
             setReweighItem(null);
           }}
+        />
+      )}
+
+      {/* MODAL TAHAN NOTA */}
+      {showHoldModal && (
+        <HoldCartModal
+          itemCount={cart.length}
+          total={total}
+          onClose={() => setShowHoldModal(false)}
+          onConfirm={handleHoldCart}
+        />
+      )}
+
+      {/* MODAL DAFTAR NOTA TERTAHAN */}
+      {showHeldListModal && (
+        <HeldCartsListModal
+          heldCarts={heldCarts}
+          onClose={() => setShowHeldListModal(false)}
+          onRestore={handleRestoreHeldCart}
+          onDelete={handleDeleteHeldCart}
         />
       )}
     </>

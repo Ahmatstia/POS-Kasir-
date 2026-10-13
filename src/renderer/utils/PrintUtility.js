@@ -416,3 +416,151 @@ export const printDebtPaymentReceipt = (payment, customer, remainingDebt, storeP
   printWindow.print();
   printWindow.close();
 };
+
+// ─── PRINT SHIFT / CASH DRAWER REPORT (STRUK TUTUP KASIR) ────────────────────
+export const printShiftReceipt = (shift, summary = null, movements = [], storeProfile = null) => {
+  const store = {
+    name: storeProfile?.name || 'TOKO BUMBU',
+    address: storeProfile?.address || 'Jl. Imam Bonjol, Muara Sabak Barat, Tanjung Jabung Timur',
+    phone: storeProfile?.phone || '0822-8324-8946',
+  };
+
+  const fmt = (price) => `Rp ${Number(price || 0).toLocaleString('id-ID')}`;
+  const escapeHtml = (text) => {
+    if (!text) return "";
+    return String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  };
+
+  const s = summary || {
+    startingCash: shift.starting_cash || 0,
+    cashSales: shift.cash_sales || 0,
+    nonCashSales: shift.non_cash_sales || 0,
+    debtCollected: shift.debt_collected || 0,
+    totalCashIn: shift.cash_in || 0,
+    totalCashOut: shift.cash_out || 0,
+    expectedCash: shift.expected_cash || 0,
+    actualCash: shift.actual_cash || 0,
+    difference: shift.difference || 0,
+  };
+
+  const diff = Number(shift.difference !== undefined ? shift.difference : (s.actualCash - s.expectedCash)) || 0;
+  let diffLabel = "PAS (SEIMBANG)";
+  let diffColor = "#059669";
+  if (diff < 0) {
+    diffLabel = `KURANG (${fmt(Math.abs(diff))})`;
+    diffColor = "#dc2626";
+  } else if (diff > 0) {
+    diffLabel = `LEBIH (+${fmt(diff)})`;
+    diffColor = "#2563eb";
+  }
+
+  const receiptContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Laporan Tutup Kasir - Shift #${shift.id}</title>
+      <style>
+        @page { size: auto; margin: 4mm; }
+        body {
+          font-family: 'Courier New', monospace;
+          width: 300px;
+          margin: 0 auto;
+          padding: 12px;
+          font-size: 12px;
+          color: #000;
+        }
+        .header { text-align: center; margin-bottom: 12px; }
+        .store-name { font-size: 16px; font-weight: bold; margin-bottom: 3px; }
+        .store-info { font-size: 10px; color: #333; line-height: 1.3; }
+        .title { font-size: 13px; font-weight: bold; margin: 8px 0 4px; text-transform: uppercase; border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 4px 0; }
+        .row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .line { border-top: 1px dashed #000; margin: 8px 0; }
+        .double-line { border-top: 2px solid #000; margin: 8px 0; }
+        .highlight { font-weight: bold; font-size: 13px; }
+        .box { border: 1px solid #000; padding: 6px; margin: 6px 0; text-align: center; }
+        .footer { text-align: center; font-size: 10px; margin-top: 16px; }
+        .sign { display: flex; justify-content: space-between; margin-top: 24px; text-align: center; font-size: 10px; }
+        .sign-box { width: 45%; }
+        .sign-space { height: 40px; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="store-name">${escapeHtml(store.name)}</div>
+        <div class="store-info">${escapeHtml(store.address)}</div>
+        <div class="store-info">Telp: ${escapeHtml(store.phone)}</div>
+        <div class="title">REKAP TUTUP KASIR (SHIFT #${shift.id})</div>
+      </div>
+
+      <div class="row"><span>Kasir:</span><b>${escapeHtml(shift.cashier_name || 'Kasir')}</b></div>
+      <div class="row"><span>Waktu Buka:</span><span>${shift.opened_at || '-'}</span></div>
+      <div class="row"><span>Waktu Tutup:</span><span>${shift.closed_at || '(Sedang Berjalan)'}</span></div>
+      <div class="row"><span>Status:</span><b>${shift.status === 'CLOSED' ? 'DITUTUP' : 'AKTIF'}</b></div>
+
+      <div class="line"></div>
+      <div style="font-weight:bold;margin-bottom:4px">ARUS KAS LACI:</div>
+      <div class="row"><span>Modal Awal Laci:</span><span>${fmt(s.startingCash)}</span></div>
+      <div class="row"><span>Penjualan Tunai:</span><span>+ ${fmt(s.cashSales)}</span></div>
+      ${s.debtCollected > 0 ? `<div class="row"><span>Pelunasan Kasbon:</span><span>+ ${fmt(s.debtCollected)}</span></div>` : ''}
+      ${s.totalCashIn > 0 ? `<div class="row"><span>Kas Masuk Lainnya:</span><span>+ ${fmt(s.totalCashIn)}</span></div>` : ''}
+      ${s.totalCashOut > 0 ? `<div class="row"><span>Kas Keluar Laci:</span><span>- ${fmt(s.totalCashOut)}</span></div>` : ''}
+      
+      <div class="line"></div>
+      <div class="row highlight">
+        <span>UANG SEHARUSNYA:</span>
+        <span>${fmt(s.expectedCash)}</span>
+      </div>
+      <div class="row highlight">
+        <span>UANG FISIK LACI:</span>
+        <span>${fmt(s.actualCash !== undefined ? s.actualCash : shift.actual_cash)}</span>
+      </div>
+
+      <div class="box" style="border-color:${diffColor}">
+        <div style="font-size:10px;text-transform:uppercase">HASIL SELISIH KAS:</div>
+        <div style="font-size:14px;font-weight:bold;color:${diffColor}">${diffLabel}</div>
+      </div>
+
+      <div class="line"></div>
+      <div style="font-weight:bold;margin-bottom:4px">NON-TUNAI & TOTAL OMZET:</div>
+      <div class="row"><span>Penjualan Non-Tunai:</span><span>${fmt(s.nonCashSales)}</span></div>
+      <div class="row"><span>Total Seluruh Omzet:</span><b>${fmt((s.cashSales || 0) + (s.nonCashSales || 0))}</b></div>
+
+      ${shift.notes ? `
+        <div class="line"></div>
+        <div style="font-size:11px"><b>Catatan:</b> ${escapeHtml(shift.notes)}</div>
+      ` : ''}
+
+      <div class="sign">
+        <div class="sign-box">
+          <div>Kasir</div>
+          <div class="sign-space"></div>
+          <div>( ${escapeHtml(shift.cashier_name || 'Kasir')} )</div>
+        </div>
+        <div class="sign-box">
+          <div>Pemilik / Spv</div>
+          <div class="sign-space"></div>
+          <div>( .................... )</div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p>Laporan dicetak otomatis oleh sistem kasir.</p>
+        <p>Waktu Cetak: ${new Date().toLocaleString('id-ID')}</p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(receiptContent);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+  printWindow.close();
+};

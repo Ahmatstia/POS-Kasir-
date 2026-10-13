@@ -12,15 +12,12 @@ const numFmt = n => Number(n || 0).toLocaleString('id-ID');
 
 // ─── STOCK IN MODAL ──────────────────────────────────────────────────────────
 function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
-  const [step, setStep]         = useState(1); // 1 = quantity, 2 = details
   const [qtyDus, setQtyDus]     = useState('');
   const [qtyPack, setQtyPack]   = useState('');
   const [qtyPcs, setQtyPcs]     = useState('');
   const [qtyKg, setQtyKg]       = useState('');
   const [qtyKarung, setQtyKarung] = useState('');
-  const [purchasePrice, setPurchasePrice] = useState('');
-  const [expiry, setExpiry]     = useState('');
-  const [batchCode, setBatch]   = useState('');
+  const [purchasePrice, setPurchasePrice] = useState(product?.purchase_price ? String(product.purchase_price) : '');
   const [notes, setNotes]       = useState('');
   const [saving, setSaving]     = useState(false);
   const [error, setError]       = useState('');
@@ -54,11 +51,11 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
     if (totalPcs <= 0 && totalKg <= 0) { setError('Masukkan jumlah stok yang valid'); return; }
     setError('');
     setSaving(true);
+    const parsedCost = parseNominal(purchasePrice);
+    const costToUse = parsedCost > 0 ? parsedCost : (Number(product?.purchase_price) || 0);
     const res = await addStock(product.id, {
       qty_dus: dusVal, qty_pack: packVal, qty_pcs: pcsVal, qty_kg: kgVal,
-      purchase_price: parseNominal(purchasePrice),
-      expiry_date: expiry || null,
-      batch_code: batchCode,
+      purchase_price: costToUse,
       notes,
     }, product);
     setSaving(false);
@@ -84,213 +81,167 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontFamily: 'Syne, sans-serif', padding: 20,
     }}>
-      <style>{`@keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; opacity:1; transform:translateY(0); } }`}</style>
+      <style>{`@keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }`}</style>
       <div style={{
         width: '100%', maxWidth: 500,
         background: T.surface, border: `1px solid ${T.border2}`,
         borderRadius: 20, overflow: 'hidden',
         animation: 'slideUp 0.3s cubic-bezier(0.16,1,0.3,1) both',
         boxShadow: '0 40px 100px rgba(0,0,0,0.7)',
+        display: 'flex', flexDirection: 'column', maxHeight: '90vh',
       }}>
         {/* Header */}
-        <div style={{ padding: '20px 22px', borderBottom: `1px solid ${T.border}` }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-            <div>
-              <p style={{ fontSize: 9, fontWeight: 700, color: T.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 4 }}>Barang Masuk</p>
-              <p style={{ fontSize: 16, fontWeight: 800, color: T.text }}>{product.name}</p>
-            </div>
-            <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${T.border2}`, background: 'transparent', color: T.sub, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+        <div style={{ padding: '18px 22px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <p style={{ fontSize: 9, fontWeight: 700, color: T.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 2 }}>Barang Masuk / Tambah Stok</p>
+            <p style={{ fontSize: 16, fontWeight: 800, color: T.text }}>{product.name}</p>
           </div>
-
-          {/* Step indicator */}
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            {[1, 2].map(s => (
-              <React.Fragment key={s}>
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 6, cursor: s < step ? 'pointer' : 'default',
-                }} onClick={() => s < step && setStep(s)}>
-                  <div style={{
-                    width: 22, height: 22, borderRadius: '50%',
-                    background: s <= step ? T.accent + '20' : T.border2,
-                    border: `1.5px solid ${s <= step ? T.accent : T.border2}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 10, fontWeight: 800,
-                    color: s <= step ? T.accent : T.muted,
-                    transition: 'all 0.2s',
-                  }}>
-                    {s < step ? '✓' : s}
-                  </div>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: s <= step ? T.text : T.muted }}>
-                    {s === 1 ? 'Jumlah Stok' : 'Harga & Detail'}
-                  </span>
-                </div>
-                {s < 2 && <div style={{ flex: 1, height: 1, background: step > s ? T.accent + '40' : T.border2 }} />}
-              </React.Fragment>
-            ))}
-          </div>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${T.border2}`, background: 'transparent', color: T.sub, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
         </div>
 
-        <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-          {step === 1 && (
-            <>
-              {/* Conversion reference */}
-              {(pp > 1 || pd > 1) && (
-                <div style={{ padding: '12px 16px', borderRadius: 12, background: T.blue + '08', border: `1px solid ${T.blue}20`, display: 'flex', gap: 16 }}>
-                  <span style={{ fontSize: 11, color: T.blue, fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>Konversi:</span>
-                  <div style={{ display: 'flex', gap: 12 }}>
-                    {pd > 1 && <span style={{ fontSize: 11, color: T.blue, fontFamily: 'JetBrains Mono, monospace' }}>1 Dus = {pd} Pk</span>}
-                    {pp > 1 && <span style={{ fontSize: 11, color: T.blue, fontFamily: 'JetBrains Mono, monospace' }}>1 Pk = {pp} Pcs</span>}
-                  </div>
-                </div>
-              )}
-
-              {/* Qty inputs */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                {(isKgOnly || isHybrid) && (
-                  <div style={{ padding: 18, background: T.purple + '06', border: `1.5px dashed ${T.purple}30`, borderRadius: 16 }}>
-                    <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.purple, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>
-                      📦 Stok Timbangan (Kg / Karung)
-                    </label>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 12 }}>
-                      <div style={{ position: 'relative' }}>
-                        <input type="number" step="0.01" min="0" value={qtyKg} onChange={e => { setQtyKg(e.target.value); setError(''); }}
-                          placeholder="0.00" style={{ ...inp, fontSize: 18, padding: '14px 40px 14px 14px' }} autoFocus={isKgOnly} />
-                        <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, fontWeight: 800, color: T.purple }}>Kg</span>
-                      </div>
-                      <div style={{ position: 'relative' }}>
-                        <input type="number" min="0" value={qtyKarung} onChange={e => { 
-                            const val = e.target.value;
-                            setQtyKarung(val);
-                            const numVal = parseInt(val) || 0;
-                            const kgPerKarung = product.kg_per_karung || 25;
-                            setQtyKg(String(numVal * kgPerKarung));
-                            setError(''); 
-                          }}
-                          placeholder="Karung" style={{ ...inp, fontSize: 16, padding: '14px' }} />
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                {(!isKgOnly || isHybrid) && (
-                  <div style={{ padding: 18, background: T.blue + '06', border: `1.5px dashed ${T.blue}30`, borderRadius: 16 }}>
-                    <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.blue, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>
-                      📦 Stok Kemasan (Pcs / Pack / Dus)
-                    </label>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-                      <div>
-                        <p style={{ fontSize: 9, fontWeight: 700, color: T.muted, marginBottom: 6, textAlign: 'center' }}>DUS</p>
-                        <input type="number" min="0" value={qtyDus && !isKgOnly ? qtyDus : ''} onChange={e => { setQtyDus(e.target.value); setError(''); }}
-                          placeholder="0" style={{ ...inp, opacity: pd > 1 ? 1 : 0.4 }} disabled={pd <= 1} />
-                      </div>
-                      <div>
-                        <p style={{ fontSize: 9, fontWeight: 700, color: T.muted, marginBottom: 6, textAlign: 'center' }}>PACK</p>
-                        <input type="number" min="0" value={qtyPack} onChange={e => { setQtyPack(e.target.value); setError(''); }}
-                          placeholder="0" style={{ ...inp, opacity: pp > 1 ? 1 : 0.4 }} disabled={pp <= 1} />
-                      </div>
-                      <div>
-                        <p style={{ fontSize: 9, fontWeight: 700, color: T.muted, marginBottom: 6, textAlign: 'center' }}>PCS</p>
-                        <input type="number" min="0" value={qtyPcs} onChange={e => { setQtyPcs(e.target.value); setError(''); }}
-                          placeholder="0" style={{ ...inp }} />
-                      </div>
-                    </div>
-                  </div>
-                )}
+        <div style={{ padding: '20px 24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Conversion reference */}
+          {(pp > 1 || pd > 1) && (
+            <div style={{ padding: '10px 14px', borderRadius: 10, background: T.blue + '08', border: `1px solid ${T.blue}20`, display: 'flex', gap: 14 }}>
+              <span style={{ fontSize: 11, color: T.blue, fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>Konversi:</span>
+              <div style={{ display: 'flex', gap: 12 }}>
+                {pd > 1 && <span style={{ fontSize: 11, color: T.blue, fontFamily: 'JetBrains Mono, monospace' }}>1 Dus = {pd} Pk</span>}
+                {pp > 1 && <span style={{ fontSize: 11, color: T.blue, fontFamily: 'JetBrains Mono, monospace' }}>1 Pk = {pp} Pcs</span>}
               </div>
-
-              {/* Total Summary */}
-              <div style={{
-                padding: '18px', borderRadius: 16,
-                background: (totalPcs > 0 || totalKg > 0) ? T.bg : T.border,
-                border: `1.5px solid ${(totalPcs > 0 || totalKg > 0) ? T.green + '40' : T.border2}`,
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                boxShadow: (totalPcs > 0 || totalKg > 0) ? `0 4px 15px ${T.green}10` : 'none',
-              }}>
-                <span style={{ fontSize: 13, fontWeight: 800, color: T.sub }}>Akan Ditambahkan:</span>
-                <span style={{ fontSize: 22, fontWeight: 900, fontFamily: 'JetBrains Mono, monospace', color: T.green }}>
-                  {totalDisplay || '0 Pcs'}
-                </span>
-              </div>
-
-              {error && <div style={{ padding: '12px', borderRadius: 12, background: T.red + '0A', border: `1px solid ${T.red}20`, fontSize: 13, color: T.red, fontWeight: 700 }}>⚠ {error}</div>}
-
-              <button
-                onClick={() => (totalPcs > 0 || totalKg > 0) ? setStep(2) : setError('Masukkan jumlah stok yang valid')}
-                style={{ 
-                  width: '100%', padding: '16px', borderRadius: 14, 
-                  background: (totalPcs > 0 || totalKg > 0) ? T.accent : T.border2, 
-                  color: (totalPcs > 0 || totalKg > 0) ? '#fff' : T.muted, 
-                  fontFamily: 'Syne, sans-serif', fontSize: 14, fontWeight: 800, 
-                  cursor: (totalPcs > 0 || totalKg > 0) ? 'pointer' : 'not-allowed', border: 'none', transition: 'all 0.2s',
-                  boxShadow: (totalPcs > 0 || totalKg > 0) ? `0 8px 20px ${T.accent}40` : 'none'
-                }}
-              >
-                Lanjut ke Input Harga →
-              </button>
-            </>
+            </div>
           )}
 
-          {step === 2 && (
-            <>
-              {!hideCost && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginBottom: 4 }}>
+          {/* Qty inputs */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {(isKgOnly || isHybrid) && (
+              <div style={{ padding: 14, background: T.purple + '06', border: `1.5px dashed ${T.purple}30`, borderRadius: 14 }}>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.purple, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
+                  📦 Stok Timbangan (Kg / Karung)
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 10 }}>
+                  <div style={{ position: 'relative' }}>
+                    <input type="number" step="0.01" min="0" value={qtyKg} onChange={e => { setQtyKg(e.target.value); setError(''); }}
+                      placeholder="0.00" style={{ ...inp, fontSize: 16, padding: '12px 38px 12px 12px' }} autoFocus={isKgOnly} />
+                    <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, fontWeight: 800, color: T.purple }}>Kg</span>
+                  </div>
+                  <div style={{ position: 'relative' }}>
+                    <input type="number" min="0" value={qtyKarung} onChange={e => { 
+                        const val = e.target.value;
+                        setQtyKarung(val);
+                        const numVal = parseInt(val) || 0;
+                        const kgPerKarung = product.kg_per_karung || 25;
+                        setQtyKg(String(numVal * kgPerKarung));
+                        setError(''); 
+                      }}
+                      placeholder="Karung" style={{ ...inp, fontSize: 15, padding: '12px' }} />
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {(!isKgOnly || isHybrid) && (
+              <div style={{ padding: 14, background: T.blue + '06', border: `1.5px dashed ${T.blue}30`, borderRadius: 14 }}>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.blue, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
+                  📦 Stok Kemasan (Pcs / Pack / Dus)
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.green, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
-                      Harga Modal / {isKg ? 'Kg' : 'Pcs'}
-                    </label>
-                    <div style={{ position: 'relative' }}>
-                      <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 13, fontWeight: 700, color: T.muted }}>Rp</span>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        value={formatNominal(purchasePrice)}
-                        onChange={e => setPurchasePrice(e.target.value.replace(/\D/g, ''))}
-                        placeholder="0"
-                        style={{ ...inp, paddingLeft: 34 }}
-                      />
-                    </div>
-                    <p style={{ fontSize: 10, color: T.muted, marginTop: 6 }}>Harga modal beli untuk menghitung keuntungan toko saat terjual</p>
+                    <p style={{ fontSize: 9, fontWeight: 700, color: T.muted, marginBottom: 5, textAlign: 'center' }}>DUS</p>
+                    <input type="number" min="0" value={qtyDus && !isKgOnly ? qtyDus : ''} onChange={e => { setQtyDus(e.target.value); setError(''); }}
+                      placeholder="0" style={{ ...inp, opacity: pd > 1 ? 1 : 0.4 }} disabled={pd <= 1} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 9, fontWeight: 700, color: T.muted, marginBottom: 5, textAlign: 'center' }}>PACK</p>
+                    <input type="number" min="0" value={qtyPack} onChange={e => { setQtyPack(e.target.value); setError(''); }}
+                      placeholder="0" style={{ ...inp, opacity: pp > 1 ? 1 : 0.4 }} disabled={pp <= 1} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 9, fontWeight: 700, color: T.muted, marginBottom: 5, textAlign: 'center' }}>PCS</p>
+                    <input type="number" min="0" value={qtyPcs} onChange={e => { setQtyPcs(e.target.value); setError(''); }}
+                      placeholder="0" style={{ ...inp }} />
                   </div>
                 </div>
-              )}
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 12 }}>
-                <div>
-                   <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Tgl Kedaluwarsa</label>
-                   <input type="date" value={expiry} onChange={e => setExpiry(e.target.value)} style={inp} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Nomor Kiriman (Opsional)</label>
-                  <input value={batchCode} onChange={e => setBatch(e.target.value)} placeholder="Misal: B-001" style={inp} />
-                </div>
               </div>
+            )}
+          </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Catatan</label>
-                <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Misal: Barang bagus, diterima oleh..." style={inp} />
+          {/* Total Summary */}
+          <div style={{
+            padding: '12px 16px', borderRadius: 12,
+            background: (totalPcs > 0 || totalKg > 0) ? T.bg : T.border,
+            border: `1.5px solid ${(totalPcs > 0 || totalKg > 0) ? T.green + '40' : T.border2}`,
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          }}>
+            <span style={{ fontSize: 12, fontWeight: 800, color: T.sub }}>Akan Ditambahkan:</span>
+            <span style={{ fontSize: 17, fontWeight: 900, fontFamily: 'JetBrains Mono, monospace', color: T.green }}>
+              {totalDisplay}
+            </span>
+          </div>
+
+          {/* Purchase Price Input */}
+          {!hideCost && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                <label style={{ fontSize: 10, fontWeight: 800, color: T.green, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                  Harga Modal / {isKg ? 'Kg' : 'Pcs'}
+                </label>
+                {product?.purchase_price > 0 && (
+                  <span style={{ fontSize: 11, color: T.muted }}>
+                    Master: Rp {Number(product.purchase_price).toLocaleString('id-ID')}
+                  </span>
+                )}
               </div>
-
-              {error && <div style={{ padding: '12px', borderRadius: 12, background: T.red + '0A', border: `1px solid ${T.red}20`, fontSize: 13, color: T.red, fontWeight: 700 }}>⚠ {error}</div>}
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12, marginTop: 8 }}>
-                <button onClick={() => setStep(1)} style={{ padding: '14px', borderRadius: 14, border: `1px solid ${T.border2}`, background: 'transparent', color: T.sub, fontFamily: 'Syne, sans-serif', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>← Kembali</button>
-                <button 
-                  onClick={handleSave} disabled={saving} 
-                  style={{ 
-                    padding: '14px', borderRadius: 14, background: saving ? T.border2 : T.green, 
-                    color: '#fff', fontFamily: 'Syne, sans-serif', fontSize: 14, fontWeight: 800, 
-                    cursor: saving ? 'wait' : 'pointer', border: 'none', transition: 'all 0.2s',
-                    boxShadow: saving ? 'none' : `0 8px 20px ${T.green}40`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10
-                  }}>
-                  {saving ? (
-                    <><div style={{ width: 16, height: 16, border: `2px solid #ffffff40`, borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}/>Menyimpan…</>
-                  ) : `Konfirmasi & Simpan`}
-                </button>
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 13, fontWeight: 700, color: T.muted }}>Rp</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={formatNominal(purchasePrice)}
+                  onChange={e => setPurchasePrice(e.target.value.replace(/\D/g, ''))}
+                  placeholder="0"
+                  style={{ ...inp, paddingLeft: 34 }}
+                />
               </div>
-            </>
+              <p style={{ fontSize: 10, color: T.muted, marginTop: 4 }}>
+                Otomatis terisi dari master. Ubah hanya jika harga kulakan berubah.
+              </p>
+            </div>
           )}
+
+          {/* Notes Input */}
+          <div>
+            <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>
+              Catatan (Opsional)
+            </label>
+            <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Misal: Dari Toko Makmur / Grosir Jaya" style={inp} />
+          </div>
+
+          {error && <div style={{ padding: '10px 14px', borderRadius: 10, background: T.red + '0A', border: `1px solid ${T.red}20`, fontSize: 12, color: T.red, fontWeight: 700 }}>⚠ {error}</div>}
+
+          {/* Footer Action Buttons */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 10, marginTop: 4 }}>
+            <button type="button" onClick={onClose} style={{ padding: '12px', borderRadius: 12, border: `1px solid ${T.border2}`, background: 'transparent', color: T.sub, fontFamily: 'Syne, sans-serif', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+              Batal
+            </button>
+            <button 
+              type="button"
+              onClick={handleSave} 
+              disabled={saving || (totalPcs <= 0 && totalKg <= 0)} 
+              style={{ 
+                padding: '12px', borderRadius: 12, 
+                background: (saving || (totalPcs <= 0 && totalKg <= 0)) ? T.border2 : T.accent, 
+                color: (saving || (totalPcs <= 0 && totalKg <= 0)) ? T.muted : '#fff', 
+                fontFamily: 'Syne, sans-serif', fontSize: 13, fontWeight: 800, 
+                cursor: (saving || (totalPcs <= 0 && totalKg <= 0)) ? 'not-allowed' : 'pointer', 
+                border: 'none', transition: 'all 0.2s',
+                boxShadow: (saving || (totalPcs <= 0 && totalKg <= 0)) ? 'none' : `0 6px 16px ${T.accent}30`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+              }}>
+              {saving ? (
+                <><div style={{ width: 14, height: 14, border: `2px solid #ffffff40`, borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}/>Menyimpan…</>
+              ) : `+ Simpan Stok Masuk`}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -745,13 +696,13 @@ function InventoryList() {
                 {/* Table header */}
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: '1.5fr 110px 100px 150px 140px',
+                  gridTemplateColumns: '2fr 1.2fr 1fr 140px',
                   padding: '12px 20px',
                   borderBottom: `1px solid ${T.border}`,
                   background: `linear-gradient(to bottom, ${T.bg}, ${T.surface})`,
                 }}>
-                  {['Informasi Produk', 'Jumlah Stok', 'Ambang Batas', 'Kesehatan Stok', 'Aksi'].map(h => (
-                    <p key={h} style={{ fontSize: 9, fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{h}</p>
+                  {['Informasi Produk', 'Jumlah Stok', 'Ambang Batas', 'Aksi'].map(h => (
+                    <p key={h} style={{ fontSize: 9, fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.12em', margin: 0 }}>{h}</p>
                   ))}
                 </div>
 
@@ -809,7 +760,7 @@ function InventoryList() {
                         key={product.id}
                         style={{
                           display: 'grid',
-                          gridTemplateColumns: '1.5fr 110px 100px 150px 140px',
+                          gridTemplateColumns: '2fr 1.2fr 1fr 140px',
                           padding: '14px 16px',
                           margin: '4px 0',
                           borderRadius: 12,
@@ -832,9 +783,6 @@ function InventoryList() {
                         <div style={{ paddingLeft: 8, overflow: 'hidden' }}>
                           <p className="text-truncate" style={{ fontSize: 13, fontWeight: 700, color: (product.stock <= 0 && product.stock_kg <= 0) ? T.sub : T.text, marginBottom: 4 }} title={product.name}>{product.name}</p>
                           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                            <span className="text-truncate" style={{ fontSize: 10, fontWeight: 700, color: T.sub, fontFamily: 'JetBrains Mono, monospace', background: T.bg, padding: '2px 8px', borderRadius: 6, border: `1px solid ${T.border2}`, maxWidth: 120 }} title={product.category_name}>
-                              {product.category_name || 'Tanpa Kategori'}
-                            </span>
                             {isHybrid ? (
                                <span style={{ fontSize: 9, fontWeight: 700, color: T.purple, background: T.purple + '10', padding: '1px 6px', borderRadius: 4, border: `1px solid ${T.purple}30` }}>HYBRID</span>
                             ) : (
@@ -898,23 +846,6 @@ function InventoryList() {
                               </div>
                             ) : '—'
                           )}
-                        </div>
-
-                        {/* Progress bar + status */}
-                        <div style={{ paddingRight: 20 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                            <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', color: sc, letterSpacing: '0.05em' }}>
-                              {label}
-                            </span>
-                            <span style={{ fontSize: 10, fontWeight: 800, color: T.muted, fontFamily: 'JetBrains Mono, monospace' }}>{Math.round(pct)}%</span>
-                          </div>
-                          <div style={{ height: 6, borderRadius: 10, background: T.border2, overflow: 'hidden', position: 'relative' }}>
-                            <div style={{ 
-                              height: '100%', borderRadius: 10, background: sc, width: `${pct}%`, 
-                              transition: 'width 1s cubic-bezier(0.16, 1, 0.3, 1)',
-                              boxShadow: `0 0 10px ${sc}40`
-                            }} />
-                          </div>
                         </div>
 
                         {/* Actions */}

@@ -98,16 +98,6 @@ function ProductCard({ product, onEdit, onDelete, isDeleting, isConfirmingDelete
             {product.name}
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            {/* Category chip */}
-            <span style={{
-              fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
-              padding: '2px 8px', borderRadius: 6,
-              background: T.border,
-              border: `1px solid ${T.border2}`,
-              color: T.sub,
-            }}>
-              {product.category_name || '—'}
-            </span>
             {/* Sell unit badge */}
             {sellUnit !== 'all' && (
               <span style={{
@@ -124,26 +114,24 @@ function ProductCard({ product, onEdit, onDelete, isDeleting, isConfirmingDelete
         {/* Stock badge */}
         <div style={{
           textAlign: 'right', flexShrink: 0,
-          padding: '6px 10px', borderRadius: 10,
+          padding: '6px 12px', borderRadius: 10,
           background: stockColor + '10', border: `1px solid ${stockColor}25`,
         }}>
           {isHybrid ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-              <p style={{ fontSize: 13, fontWeight: 800, color: product.stock <= product.min_stock ? (product.stock <= 0 ? T.red : T.accent) : T.sub, fontFamily: 'JetBrains Mono, monospace', lineHeight: 1 }}>
-                {product.stock}<small style={{ fontSize: 8, marginLeft: 2 }}>Pcs</small>
+              <p style={{ fontSize: 13, fontWeight: 800, color: product.stock <= product.min_stock ? (product.stock <= 0 ? T.red : T.accent) : T.sub, fontFamily: 'JetBrains Mono, monospace', lineHeight: 1, margin: 0 }}>
+                {product.stock}<small style={{ fontSize: 9, marginLeft: 2, color: T.muted }}>Pcs</small>
               </p>
-              <p style={{ fontSize: 13, fontWeight: 800, color: product.stock_kg <= product.min_stock_kg ? (product.stock_kg <= 0 ? T.red : T.accent) : T.sub, fontFamily: 'JetBrains Mono, monospace', lineHeight: 1 }}>
-                {Number(product.stock_kg || 0).toFixed(2)}<small style={{ fontSize: 8, marginLeft: 2 }}>Kg</small>
+              <p style={{ fontSize: 13, fontWeight: 800, color: product.stock_kg <= product.min_stock_kg ? (product.stock_kg <= 0 ? T.red : T.accent) : T.sub, fontFamily: 'JetBrains Mono, monospace', lineHeight: 1, margin: 0 }}>
+                {Number(product.stock_kg || 0).toFixed(2)}<small style={{ fontSize: 9, marginLeft: 2, color: T.muted }}>Kg</small>
               </p>
             </div>
           ) : (
-            <p style={{ fontSize: 16, fontWeight: 800, color: stockColor, fontFamily: 'JetBrains Mono, monospace', lineHeight: 1, marginBottom: 2 }}>
+            <p style={{ fontSize: 16, fontWeight: 800, color: stockColor, fontFamily: 'JetBrains Mono, monospace', lineHeight: 1, margin: 0 }}>
               {isKg ? Number(currentStock || 0).toFixed(2) : currentStock}
+              <small style={{ fontSize: 10, marginLeft: 3, fontWeight: 700, color: T.muted }}>{isKg ? 'Kg' : 'Stok'}</small>
             </p>
           )}
-          <p style={{ fontSize: 10, fontWeight: 800, color: stockColor, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            {stockLabel}
-          </p>
         </div>
       </div>
 
@@ -634,7 +622,7 @@ function ProductList() {
               <table className="prod-table">
                 <thead>
                   <tr>
-                    {['Nama Produk', 'Kategori', 'Jual Per', 'Harga Pcs', 'Harga Pack', 'Harga Dus', 'Harga Kg', 'Stok', 'Min', 'Aksi'].map(h => (
+                    {['Nama Produk', 'Jual Per', 'Harga Pcs', 'Harga Pack', 'Harga Dus', 'Harga Kg', 'Stok', 'Min', 'Aksi'].map(h => (
                       <th key={h}>{h}</th>
                     ))}
                   </tr>
@@ -664,11 +652,6 @@ function ProductList() {
                     return (
                       <tr key={p.id}>
                         <td><span style={{ fontWeight: 700, color: T.text, fontSize: 13 }}>{p.name}</span></td>
-                        <td>
-                          <span style={{ padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: T.border, border: `1px solid ${T.border2}`, color: T.sub }}>
-                            {p.category_name || '—'}
-                          </span>
-                        </td>
                         <td>
                           <span style={{ padding: '2px 8px', borderRadius: 100, fontSize: 10, fontWeight: 700, background: T.border2, color: T.sub }}>
                             {p.sell_per_unit || 'all'}
@@ -706,18 +689,10 @@ function ProductList() {
                 </tbody>
               </table>
             </div>
-            <div style={{ padding: '10px 16px', borderTop: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '12px 16px', borderTop: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 11, color: T.muted, fontFamily: 'JetBrains Mono, monospace' }}>
                 <span style={{ color: T.accent, fontWeight: 700 }}>{filteredProducts.length}</span> dari {products.length} produk
               </span>
-              <div style={{ display: 'flex', gap: 12 }}>
-                {[[T.green, 'Aman'], [T.accent, 'Menipis'], [T.red, 'Habis']].map(([c, l]) => (
-                  <span key={l} style={{ fontSize: 10, color: T.muted, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: c, display: 'inline-block' }}/>
-                    {l}
-                  </span>
-                ))}
-              </div>
             </div>
           </div>
         )}

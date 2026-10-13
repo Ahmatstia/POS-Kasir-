@@ -310,7 +310,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
           {!hideCost && (
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <Field label="Harga Modal Kulakan" required={!hideCost} hint="Harga kulakan dari supplier / nota belanja" error={errors.purchasePrice} />
+                <Field label="Harga Modal / Beli" required={!hideCost} hint="Harga beli barang dari supplier / nota belanja" error={errors.purchasePrice} />
                 {costUnitOptions.length > 1 && (
                   <div style={{ display: 'flex', gap: 4, background: T.surface, padding: 3, borderRadius: 8, border: `1px solid ${T.border}` }}>
                     {costUnitOptions.map(opt => {

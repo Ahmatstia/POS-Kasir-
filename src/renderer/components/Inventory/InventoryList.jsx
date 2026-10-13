@@ -219,7 +219,7 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
             <div style={{ background: T.bg2, padding: '14px 16px', borderRadius: 14, border: `1px solid ${T.border2}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                 <label style={{ fontSize: 10, fontWeight: 800, color: T.green, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                  Harga Modal Kulakan
+                  Harga Modal / Beli
                 </label>
                 {/* Unit Switcher */}
                 {costUnitOptions.length > 1 && (

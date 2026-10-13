@@ -63,11 +63,13 @@ export async function calculateShiftSummary(shiftId) {
     // 3. Pelunasan Kasbon Tunai (Uang pembayaran utang yang masuk ke kasir selama shift)
     const [debtColl] = await window.electronAPI.query(
       `SELECT 
-         COALESCE(SUM(payment_amount), 0) AS total_debt_collected,
-         COUNT(id) AS count_payments
-       FROM debt_payments
-       WHERE payment_method = 'cash'
-         AND (shift_id = ? OR (shift_id IS NULL AND created_at >= ? AND (created_at <= ? OR ? IS NULL)))`,
+         COALESCE(SUM(dp.payment_amount), 0) AS total_debt_collected,
+         COUNT(dp.id) AS count_payments
+       FROM debt_payments dp
+       LEFT JOIN customer_debts cd ON dp.debt_id = cd.id
+       WHERE dp.payment_method = 'cash'
+         AND (cd.status IS NULL OR cd.status != 'CANCELLED')
+         AND (dp.shift_id = ? OR (dp.shift_id IS NULL AND dp.created_at >= ? AND (dp.created_at <= ? OR ? IS NULL)))`,
       [shiftId, shift.opened_at, shift.closed_at, shift.closed_at]
     );
 

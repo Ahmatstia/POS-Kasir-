@@ -901,7 +901,7 @@ function Cashier({ setCurrentPage }) {
     if (existing) {
       setCart(cart.map(item =>
         item.product_id === product.id && item.unit === unit
-          ? { ...item, quantity: item.quantity + 1, subtotal: (item.quantity + 1) * price }
+          ? { ...item, quantity: item.quantity + 1, subtotal: Math.round((item.quantity + 1) * price) }
           : item
       ));
     } else {
@@ -911,7 +911,7 @@ function Cashier({ setCurrentPage }) {
         name: product.name,
         unit, price,
         quantity: 1,
-        subtotal: price * 1,
+        subtotal: Math.round(price * 1),
       }]);
     }
   };
@@ -925,13 +925,14 @@ function Cashier({ setCurrentPage }) {
       }
     }
     
+    const cleanKg = Math.round(kgQty * 1000) / 1000;
     setCart([...cart, {
        id: Date.now() + Math.random(),
        product_id: product.id,
        name: product.name,
        unit: 'kg', price: product.price_kg,
-       quantity: kgQty,
-       subtotal: product.price_kg * kgQty,
+       quantity: cleanKg,
+       subtotal: Math.round(product.price_kg * cleanKg),
     }]);
     setWeighingProduct(null);
   };
@@ -972,7 +973,7 @@ function Cashier({ setCurrentPage }) {
       product_id: product.id,
       name: `${product.name} ✎`,
       unit, price, quantity,
-      subtotal: price * quantity,
+      subtotal: Math.round(price * quantity),
     }]);
     return true;
   };
@@ -1017,11 +1018,11 @@ function Cashier({ setCurrentPage }) {
       }
     }
 
-    setCart(cart.map(i => i.id === itemId ? { ...i, quantity: newQty, subtotal: newQty * i.price } : i));
+    setCart(cart.map(i => i.id === itemId ? { ...i, quantity: newQty, subtotal: Math.round(newQty * i.price) } : i));
   };
 
   const removeFromCart = (itemId) => setCart(cart.filter(item => item.id !== itemId));
-  const total = cart.reduce((sum, item) => sum + item.subtotal, 0);
+  const total = Math.round(cart.reduce((sum, item) => sum + (item.subtotal || 0), 0));
 
   const handleHoldCart = (customerName, note) => {
     if (cart.length === 0) {
@@ -1697,14 +1698,15 @@ function Cashier({ setCurrentPage }) {
               setReweighItem(null);
               return;
             }
+            const cleanKg = Math.round(kgVal * 1000) / 1000;
             if (!ignoreStock) {
               const otherKg = calcCartKg(reweighItem.product.id, reweighItem.itemId);
-              if (kgVal + otherKg > (reweighItem.product.stock_kg || 0)) {
+              if (cleanKg + otherKg > (reweighItem.product.stock_kg || 0)) {
                  showToast('error', `Stok Kg tidak mencukupi! Tersisa: ${reweighItem.product.stock_kg || 0} Kg`);
                  return;
               }
             }
-            setCart(cart.map(i => i.id === reweighItem.itemId ? { ...i, quantity: kgVal, subtotal: kgVal * i.price } : i));
+            setCart(cart.map(i => i.id === reweighItem.itemId ? { ...i, quantity: cleanKg, subtotal: Math.round(cleanKg * i.price) } : i));
             setReweighItem(null);
           }}
         />

@@ -121,28 +121,34 @@ export async function getDashboardData() {
       SELECT COUNT(*) as count FROM categories
     `);
 
-    // Profit calculation today
-    const profitToday = await window.electronAPI.query(`
-      SELECT COALESCE(SUM(ti.subtotal - ti.cost_price), 0) as profit
+    // Profit calculation today: Net Sales (Omzet) - COGS (HPP), accounting for discounts
+    const costToday = await window.electronAPI.query(`
+      SELECT COALESCE(SUM(ti.cost_price), 0) as total_cost
       FROM transaction_items ti
       JOIN transactions t ON ti.transaction_id = t.id
       WHERE substr(t.created_at, 1, 10) = ? AND t.status = 'COMPLETED'
     `, [todayStr]);
+    const todayOmzet = Number(todaySales[0]?.omzet || 0);
+    const todayCostVal = Number(costToday[0]?.total_cost || 0);
+    const todayProfitVal = todayOmzet - todayCostVal;
 
-    // Profit calculation month
-    const profitMonth = await window.electronAPI.query(`
-      SELECT COALESCE(SUM(ti.subtotal - ti.cost_price), 0) as profit
+    // Profit calculation month: Net Sales (Omzet) - COGS (HPP), accounting for discounts
+    const costMonth = await window.electronAPI.query(`
+      SELECT COALESCE(SUM(ti.cost_price), 0) as total_cost
       FROM transaction_items ti
       JOIN transactions t ON ti.transaction_id = t.id
       WHERE substr(t.created_at, 1, 7) = ? AND t.status = 'COMPLETED'
     `, [yearMonStr]);
+    const monthOmzet = Number(monthSales[0]?.omzet || 0);
+    const monthCostVal = Number(costMonth[0]?.total_cost || 0);
+    const monthProfitVal = monthOmzet - monthCostVal;
 
     return {
-      todaySales: todaySales[0].omzet,
-      todayProfit: profitToday[0].profit,
+      todaySales: todayOmzet,
+      todayProfit: todayProfitVal,
       todayTransactions: todayTransactions[0].count,
-      monthSales: monthSales[0].omzet,
-      monthProfit: profitMonth[0].profit,
+      monthSales: monthOmzet,
+      monthProfit: monthProfitVal,
       lowStock: lowStock,
       topProducts: topProducts,
       dailySales: dailySales,

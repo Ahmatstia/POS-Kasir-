@@ -299,7 +299,7 @@ export async function deductStockFIFO(productId, quantityPcs, invoiceNo, created
         [newQty, (newQty !== 0 || batch.qty_kg > 0) ? 1 : 0, nowStr, batch.id]
       );
 
-      const actualDeductedFromBatch = Math.min(batch.quantity, deduct);
+      const actualDeductedFromBatch = Math.max(0, Math.min(batch.quantity, deduct));
       const negativePortion = Math.max(0, deduct - actualDeductedFromBatch);
       totalCost += (actualDeductedFromBatch * (batch.purchase_price || 0)) + (negativePortion * defaultPurchasePrice);
 
@@ -428,7 +428,7 @@ export async function deductStockFIFOKg(productId, quantityKg, invoiceNo, create
         [newQtyKg, (newQtyKg !== 0 || batch.quantity > 0) ? 1 : 0, nowStr, batch.id]
       );
 
-      const actualDeductedFromBatch = Math.min(batch.qty_kg, deduct);
+      const actualDeductedFromBatch = Math.max(0, Math.min(batch.qty_kg, deduct));
       const negativePortion = Math.max(0, deduct - actualDeductedFromBatch);
       totalCost += (actualDeductedFromBatch * (batch.purchase_price || 0)) + (negativePortion * defaultPurchasePrice);
 

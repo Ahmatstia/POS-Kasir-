@@ -128,20 +128,20 @@ export async function getStockReport() {
         COALESCE(SUM(s.quantity), 0) as total_stock,
         COALESCE(SUM(s.qty_kg), 0) as total_stock_kg,
         COALESCE(SUM(s.quantity * s.purchase_price) + SUM(s.qty_kg * s.purchase_price), 0) as total_inventory_value,
-        COALESCE(AVG(stock_agg.stock), 0) as average_stock,
-        COUNT(CASE 
+        COALESCE(ROUND(SUM(s.quantity) * 1.0 / NULLIF(COUNT(DISTINCT p.id), 0), 1), 0) as average_stock,
+        COUNT(DISTINCT CASE 
           WHEN (
             ((p.price_pcs > 0 OR p.price_pack > 0 OR p.price_dus > 0) AND COALESCE(stock_agg.stock, 0) <= p.min_stock AND p.min_stock > 0)
             OR ((p.price_kg > 0 OR p.price_karung > 0) AND COALESCE(stock_agg.stock_kg, 0) <= p.min_stock_kg AND p.min_stock_kg > 0)
           )
-          THEN 1 END) as low_stock_count,
-        COUNT(CASE 
+          THEN p.id END) as low_stock_count,
+        COUNT(DISTINCT CASE 
           WHEN (
             ((p.price_pcs > 0 OR p.price_pack > 0 OR p.price_dus > 0) OR (p.price_kg > 0 OR p.price_karung > 0))
             AND (CASE WHEN (p.price_pcs > 0 OR p.price_pack > 0 OR p.price_dus > 0) THEN COALESCE(stock_agg.stock, 0) <= 0 ELSE 1 END)
             AND (CASE WHEN (p.price_kg > 0 OR p.price_karung > 0) THEN COALESCE(stock_agg.stock_kg, 0) <= 0 ELSE 1 END)
           )
-          THEN 1 END) as out_of_stock_count
+          THEN p.id END) as out_of_stock_count
       FROM products p
       LEFT JOIN (
         SELECT product_id, SUM(quantity) as stock, SUM(qty_kg) as stock_kg

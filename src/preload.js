@@ -8,10 +8,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Generic invoke — used by special IPC channels
   invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
 
-  // Convenience: Backup
+  // Convenience: Backup & Reset
   backup: () => ipcRenderer.invoke("db:backup"),
   openBackupFolder: () => ipcRenderer.invoke("db:open-backup-folder"),
   restoreDatabase: () => ipcRenderer.invoke("db:restore"),
+  resetData: (mode) => ipcRenderer.invoke("db:reset-data", mode),
 
   // Convenience: Activity Logs
   getActivityLogs: (limit) => ipcRenderer.invoke("db:get-activity-logs", limit),

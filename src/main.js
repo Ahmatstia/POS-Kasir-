@@ -129,6 +129,72 @@ ipcMain.handle("db:restore", async () => {
   }
 });
 
+ipcMain.handle("db:reset-data", async (event, mode = "all") => {
+  try {
+    // 1. Auto backup first so data is never permanently lost
+    const d = new Date();
+    const pad = (n) => n.toString().padStart(2, "0");
+    const autoTs = `SEBELUM-RESET-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`;
+    const backupRes = await backupDatabase(autoTs);
+
+    // 2. Select tables based on mode
+    let tablesToClean = [];
+    if (mode === "transactions_only") {
+      tablesToClean = [
+        'debt_payments', 'customer_debts',
+        'transaction_items', 'transactions',
+        'cash_movements', 'cash_shifts',
+        'inventory_log'
+      ];
+    } else {
+      // mode === 'all' (reset total)
+      tablesToClean = [
+        'debt_payments', 'customer_debts', 'customers',
+        'transaction_items', 'transactions',
+        'cash_movements', 'cash_shifts',
+        'inventory_log', 'stocks', 'products', 'categories'
+      ];
+    }
+
+    // 3. Execute truncation with FK temporarily disabled
+    await dbManager.run("PRAGMA foreign_keys = OFF");
+    for (const t of tablesToClean) {
+      await dbManager.run(`DELETE FROM ${t}`);
+      await dbManager.run(`DELETE FROM sqlite_sequence WHERE name = '${t}'`).catch(() => {});
+    }
+
+    if (mode === "transactions_only") {
+      // Also reset stock counts to 0 in stocks table
+      await dbManager.run("UPDATE stocks SET quantity = 0, qty_kg = 0");
+    }
+
+    await dbManager.run("PRAGMA foreign_keys = ON");
+
+    // 4. Log to activity_logs
+    await dbManager.run(
+      "INSERT INTO activity_logs (action, module, details, user) VALUES (?, 'Security', ?, 'Admin')",
+      [
+        "DATABASE_RESET",
+        mode === 'all'
+          ? "Reset total: Seluruh produk, kategori, dan transaksi telah dihapus bersih"
+          : "Reset operasional: Transaksi, shift kasir, dan hutang dihapus (produk & kategori dipertahankan)"
+      ]
+    ).catch(() => {});
+
+    // 5. Checkpoint to flush to disk
+    await dbManager.checkpoint();
+
+    return { 
+      success: true, 
+      backupFilename: backupRes?.filename || null,
+      mode 
+    };
+  } catch (error) {
+    console.error("❌ Reset database failed:", error);
+    return { success: false, error: error.message };
+  }
+});
+
 ipcMain.handle("db:get-activity-logs", async (event, limit = 100) => {
   try {
     return await dbManager.query("SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT ?", [limit]);

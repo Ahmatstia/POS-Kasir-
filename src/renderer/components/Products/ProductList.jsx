@@ -256,7 +256,7 @@ function ProductList() {
   const [filterStatus, setFilterStatus]     = useState('');
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [isDeletingAll, setIsDeletingAll]     = useState(false);
-  const [viewMode, setViewMode]             = useState('grid'); // 'grid' | 'table'
+  const [viewMode, setViewMode]             = useState('table'); // default to 'table' (list view)
 
   useEffect(() => { loadData(); }, []);
 
@@ -426,27 +426,32 @@ function ProductList() {
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {/* View toggle */}
             <div style={{ display: 'flex', background: T.border, borderRadius: 10, padding: 3, gap: 2 }}>
-              {[['grid', (
+              {[['table', (
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                  <path d="M1 3.5h11M1 6.5h11M1 9.5h11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                </svg>
+              )], ['grid', (
                 <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
                   <rect x="1" y="1" width="4.5" height="4.5" rx="1" fill="currentColor" opacity="0.8"/>
                   <rect x="7.5" y="1" width="4.5" height="4.5" rx="1" fill="currentColor" opacity="0.5"/>
                   <rect x="1" y="7.5" width="4.5" height="4.5" rx="1" fill="currentColor" opacity="0.5"/>
                   <rect x="7.5" y="7.5" width="4.5" height="4.5" rx="1" fill="currentColor" opacity="0.8"/>
                 </svg>
-              )], ['table', (
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                  <path d="M1 3.5h11M1 6.5h11M1 9.5h11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-                </svg>
               )]].map(([mode, icon]) => (
-                <button key={mode} onClick={() => setViewMode(mode)} style={{
-                  width: 30, height: 28, borderRadius: 8,
-                  border: 'none',
-                  background: viewMode === mode ? T.surface : 'transparent',
-                  color: viewMode === mode ? T.accent : T.muted,
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'all 0.15s',
-                  boxShadow: viewMode === mode ? '0 1px 4px rgba(0,0,0,0.3)' : 'none',
-                }}>{icon}</button>
+                <button
+                  key={mode}
+                  title={mode === 'table' ? 'Tampilan Tabel / List' : 'Tampilan Grid / Kartu'}
+                  onClick={() => setViewMode(mode)}
+                  style={{
+                    width: 30, height: 28, borderRadius: 8,
+                    border: 'none',
+                    background: viewMode === mode ? T.surface : 'transparent',
+                    color: viewMode === mode ? T.accent : T.muted,
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.15s',
+                    boxShadow: viewMode === mode ? '0 1px 4px rgba(0,0,0,0.3)' : 'none',
+                  }}
+                >{icon}</button>
               ))}
             </div>
 
@@ -608,7 +613,7 @@ function ProductList() {
               <table className="prod-table">
                 <thead>
                   <tr>
-                    {['Nama Produk', 'Jual Per', 'Harga Pcs', 'Harga Pack', 'Harga Dus', 'Harga Kg', 'Stok', 'Min', 'Aksi'].map(h => (
+                    {['Nama Produk', 'Kategori', 'Jual Per', 'Harga Pcs', 'Harga Pack', 'Harga Dus', 'Harga Kg', 'Stok', 'Min', 'Aksi'].map(h => (
                       <th key={h}>{h}</th>
                     ))}
                   </tr>
@@ -638,6 +643,11 @@ function ProductList() {
                     return (
                       <tr key={p.id}>
                         <td><span style={{ fontWeight: 700, color: T.text, fontSize: 13 }}>{p.name}</span></td>
+                        <td>
+                          <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: T.border, color: T.sub }}>
+                            {p.category_name || '—'}
+                          </span>
+                        </td>
                         <td>
                           <span style={{ padding: '2px 8px', borderRadius: 100, fontSize: 10, fontWeight: 700, background: T.border2, color: T.sub }}>
                             {p.sell_per_unit || 'all'}

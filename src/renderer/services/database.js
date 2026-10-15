@@ -195,28 +195,91 @@ export async function updateProduct(id, product) {
   }
 }
 
-// Soft-delete a product
+// Soft-delete a product (Arsipkan - menjaga keutuhan riwayat transaksi)
 export async function deleteProduct(id) {
   try {
     await window.electronAPI.run(
-      "UPDATE products SET is_active = 0 WHERE id = ?",
+      "UPDATE products SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
       [id]
     );
+    return { success: true };
+  } catch (error) {
+    console.error("Error archiving product:", error);
+    return { success: false, error: error.message };
+  }
+}
 
-    // Try to update updated_at separately
-    try {
-      await window.electronAPI.run(
-        "UPDATE products SET updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-        [id]
-      );
-    } catch (e) {
-      console.warn("⚠️ updated_at column missing in products table, skipping...");
+// Restore an archived product (Aktifkan kembali ke kasir)
+export async function restoreProduct(id) {
+  try {
+    await window.electronAPI.run(
+      "UPDATE products SET is_active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+      [id]
+    );
+    return { success: true };
+  } catch (error) {
+    console.error("Error restoring product:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Hard-delete a product (Hapus fisik permanen - DILINDUNGI jika ada riwayat transaksi)
+export async function hardDeleteProduct(id) {
+  try {
+    // 1. Cek apakah produk sudah pernah ada transaksi penjualan
+    const txRows = await window.electronAPI.query(
+      "SELECT COUNT(*) as count FROM transaction_items WHERE product_id = ?",
+      [id]
+    );
+    const hasTransactions = (txRows[0]?.count || 0) > 0;
+
+    if (hasTransactions) {
+      return {
+        success: false,
+        error: "Produk ini sudah pernah terjual dalam transaksi. Tidak boleh dihapus permanen demi menjaga keutuhan laporan keuangan dan riwayat nota belanja. Produk tetap tersimpan aman di Arsip.",
+        hasTransactions: true
+      };
     }
+
+    // 2. Jika belum pernah ada transaksi, aman untuk dihapus fisik sampai bersih
+    await window.electronAPI.run("BEGIN TRANSACTION");
+    await window.electronAPI.run("DELETE FROM inventory_log WHERE product_id = ?", [id]);
+    await window.electronAPI.run("DELETE FROM stocks WHERE product_id = ?", [id]);
+    await window.electronAPI.run("DELETE FROM products WHERE id = ?", [id]);
+    await window.electronAPI.run("COMMIT");
 
     return { success: true };
   } catch (error) {
-    console.error("Error deleting product:", error);
+    await window.electronAPI.run("ROLLBACK");
+    console.error("Error hard deleting product:", error);
     return { success: false, error: error.message };
+  }
+}
+
+// Get archived products (is_active = 0) with sales count indicator
+export async function getArchivedProducts() {
+  try {
+    const sql = `
+      SELECT 
+        p.*,
+        c.name  as category_name,
+        c.color as category_color,
+        COALESCE(SUM(s.quantity), 0) as stock,
+        COALESCE(SUM(s.qty_kg), 0) as stock_kg,
+        (CASE WHEN (p.price_pcs > 0 OR p.price_pack > 0 OR p.price_dus > 0) THEN 1 ELSE 0 END) as has_unit_price,
+        (CASE WHEN (p.price_kg > 0 OR p.price_karung > 0) THEN 1 ELSE 0 END) as has_weight_price,
+        (SELECT COUNT(*) FROM transaction_items ti WHERE ti.product_id = p.id) as sales_count
+      FROM products p
+      LEFT JOIN categories c ON c.id = p.category_id
+      LEFT JOIN stocks s ON s.product_id = p.id AND s.is_active = 1
+      WHERE p.is_active = 0
+      GROUP BY p.id
+      ORDER BY p.updated_at DESC, p.name ASC
+    `;
+    return await window.electronAPI.query(sql);
+  } catch (error) {
+    console.error("Error getting archived products:", error);
+    return [];
   }
 }
 
@@ -224,21 +287,12 @@ export async function deleteProduct(id) {
 export async function deleteAllProducts() {
   try {
     const result = await window.electronAPI.run(
-      "UPDATE products SET is_active = 0 WHERE is_active = 1"
+      "UPDATE products SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE is_active = 1"
     );
-
-    // Try to update updated_at separately
-    try {
-      await window.electronAPI.run(
-        "UPDATE products SET updated_at = CURRENT_TIMESTAMP WHERE is_active = 0"
-      );
-    } catch (e) {
-      // ignore
-    }
-
     return { success: true, changes: result.changes };
   } catch (error) {
     console.error("Error deleting all products:", error);
     return { success: false, error: error.message };
   }
 }
+

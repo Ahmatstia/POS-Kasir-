@@ -176,6 +176,7 @@ class DatabaseManager {
               product_id     INTEGER NOT NULL,
               batch_code     TEXT,
               quantity       INTEGER DEFAULT 0,
+              qty_kg         REAL DEFAULT 0,
               purchase_price INTEGER DEFAULT 0,
               expiry_date    DATE,
               is_active      BOOLEAN DEFAULT 1,
@@ -187,7 +188,7 @@ class DatabaseManager {
           
           await this._runSQL("ALTER TABLE stocks ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD stocks.created_at");
           await this._runSQL("ALTER TABLE stocks ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD stocks.updated_at");
-          await this._runSQL("ALTER TABLE stocks ADD COLUMN qty_kg REAL DEFAULT 0 CHECK(qty_kg >= 0)", "ADD stocks.qty_kg");
+          await this._runSQL("ALTER TABLE stocks ADD COLUMN qty_kg REAL DEFAULT 0", "ADD stocks.qty_kg");
 
           // ── INVENTORY LOG ────────────────────────────────────────────────────
           await this._runSQL(`
@@ -401,8 +402,41 @@ class DatabaseManager {
           // ── MIGRATE OLD STOCK → stocks table ─────────────────────────────────
           await this.migrateStockData();
 
-          // ── SEED CATEGORIES ──────────────────────────────────────────────────
-          await this.seedCategories();
+          // ── MIGRATE stocks table if it has CHECK(qty_kg >= 0) ──
+          try {
+            const [stocksSchema] = await this.query("SELECT sql FROM sqlite_master WHERE type='table' AND name='stocks'");
+            if (stocksSchema && stocksSchema.sql && stocksSchema.sql.includes("CHECK(qty_kg >= 0)")) {
+              console.log("🔄 Removing obsolete CHECK(qty_kg >= 0) from stocks table...");
+              await this._runSQL("PRAGMA foreign_keys = OFF", "FK OFF");
+              await this._runSQL(`
+                CREATE TABLE IF NOT EXISTS stocks_new (
+                  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                  product_id     INTEGER NOT NULL,
+                  batch_code     TEXT,
+                  quantity       INTEGER DEFAULT 0,
+                  qty_kg         REAL DEFAULT 0,
+                  purchase_price INTEGER DEFAULT 0,
+                  expiry_date    DATE,
+                  is_active      BOOLEAN DEFAULT 1,
+                  notes          TEXT,
+                  created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+                  updated_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+                  FOREIGN KEY (product_id) REFERENCES products(id)
+                )
+              `, "CREATE stocks_new");
+              await this._runSQL(`
+                INSERT INTO stocks_new (id, product_id, batch_code, quantity, qty_kg, purchase_price, expiry_date, is_active, notes, created_at, updated_at)
+                SELECT id, product_id, batch_code, quantity, COALESCE(qty_kg, 0), purchase_price, expiry_date, is_active, notes, created_at, updated_at
+                FROM stocks
+              `, "COPY stocks");
+              await this._runSQL("DROP TABLE stocks", "DROP stocks");
+              await this._runSQL("ALTER TABLE stocks_new RENAME TO stocks", "RENAME stocks_new");
+              await this._runSQL("PRAGMA foreign_keys = ON", "FK ON");
+              console.log("✅ stocks table successfully migrated without CHECK(qty_kg >= 0)");
+            }
+          } catch (migErr) {
+            console.error("Migration check for stocks table warning:", migErr);
+          }
 
           resolve();
         } catch (e) {

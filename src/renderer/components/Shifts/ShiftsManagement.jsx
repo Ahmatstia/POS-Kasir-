@@ -610,10 +610,10 @@ export default function ShiftsManagement() {
                         {fmt(s.starting_cash)}
                       </td>
                       <td style={{ padding: "12px", fontFamily: "JetBrains Mono, monospace", color: T.green, fontWeight: 800 }}>
-                        {fmt(s.cash_sales)}
+                        {fmt((!isClosed && activeShift?.id === s.id) ? (activeShift?.summary?.cashSales || 0) : s.cash_sales)}
                       </td>
-                      <td style={{ padding: "12px", fontFamily: "JetBrains Mono, monospace", color: isClosed ? T.text : T.muted, fontWeight: 700 }}>
-                        {isClosed ? fmt(s.expected_cash) : "-"}
+                      <td style={{ padding: "12px", fontFamily: "JetBrains Mono, monospace", color: isClosed ? T.text : (!isClosed && activeShift?.id === s.id ? T.blue : T.muted), fontWeight: 700 }}>
+                        {isClosed ? fmt(s.expected_cash) : (!isClosed && activeShift?.id === s.id ? fmt(activeShift?.summary?.expectedCash || 0) : "-")}
                       </td>
                       <td style={{ padding: "12px", fontFamily: "JetBrains Mono, monospace", color: isClosed ? T.text : T.muted, fontWeight: 800 }}>
                         {isClosed ? fmt(s.actual_cash) : "-"}
@@ -743,7 +743,7 @@ export default function ShiftsManagement() {
         <ShiftDetailModal
           shift={selectedShiftDetail}
           onClose={() => setSelectedShiftDetail(null)}
-          onPrint={() => handlePrint(selectedShiftDetail, null, selectedShiftDetail.movements)}
+          onPrint={() => handlePrint(selectedShiftDetail, selectedShiftDetail.summary, selectedShiftDetail.movements)}
         />
       )}
     </div>
@@ -1856,10 +1856,14 @@ export function CloseShiftModal({ shift, movements, onClose, onSuccess }) {
 
 // ─── MODAL DETAIL SHIFT ───────────────────────────────────────────────────────
 function ShiftDetailModal({ shift, onClose, onPrint }) {
+  const isOpen = shift.status === "OPEN";
   const diff = Number(shift.difference) || 0;
   let diffBadgeColor = T.green;
   let diffBadgeText = "Pas (Rp 0)";
-  if (diff < 0) {
+  if (isOpen) {
+    diffBadgeColor = T.accent;
+    diffBadgeText = "Sedang Berjalan (Belum Tutup)";
+  } else if (diff < 0) {
     diffBadgeColor = T.red;
     diffBadgeText = `Kurang (${fmt(Math.abs(diff))})`;
   } else if (diff > 0) {
@@ -1897,9 +1901,22 @@ function ShiftDetailModal({ shift, onClose, onPrint }) {
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
           <div>
-            <h3 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0 }}>
-              Detail Shift #{shift.id}
-            </h3>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0 }}>
+                Detail Shift #{shift.id}
+              </h3>
+              <span style={{
+                fontSize: 10,
+                fontWeight: 800,
+                padding: "2px 8px",
+                borderRadius: 6,
+                background: isOpen ? T.green + "15" : T.border,
+                color: isOpen ? T.green : T.sub,
+                border: `1px solid ${isOpen ? T.green + "30" : T.border2}`,
+              }}>
+                {isOpen ? "AKTIF / BERJALAN" : "SUDAH DITUTUP"}
+              </span>
+            </div>
             <p style={{ fontSize: 12, color: T.sub, margin: "4px 0 0" }}>
               Kasir: <b>{shift.cashier_name}</b> • {shift.opened_at}
             </p>
@@ -1923,7 +1940,7 @@ function ShiftDetailModal({ shift, onClose, onPrint }) {
         <div style={{ background: T.bg, borderRadius: 12, padding: 14, border: `1px solid ${T.border}`, marginBottom: 16, fontSize: 12 }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
             <span style={{ color: T.sub }}>Modal Awal Kembalian:</span>
-            <b style={{ fontFamily: "JetBrains Mono, monospace" }}>{fmt(shift.starting_cash)}</b>
+            <b style={{ color: T.text, fontFamily: "JetBrains Mono, monospace" }}>{fmt(shift.starting_cash)}</b>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
             <span style={{ color: T.sub }}>Penjualan Tunai (+):</span>
@@ -1946,11 +1963,15 @@ function ShiftDetailModal({ shift, onClose, onPrint }) {
 
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
             <span style={{ color: T.sub }}>Uang Seharusnya:</span>
-            <b style={{ fontFamily: "JetBrains Mono, monospace" }}>{fmt(shift.expected_cash)}</b>
+            <b style={{ color: T.text, fontFamily: "JetBrains Mono, monospace" }}>{fmt(shift.expected_cash)}</b>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, alignItems: "center" }}>
             <span style={{ color: T.sub }}>Uang Fisik Dihitung:</span>
-            <b style={{ fontFamily: "JetBrains Mono, monospace", color: T.accent }}>{fmt(shift.actual_cash)}</b>
+            {isOpen ? (
+              <span style={{ color: T.muted, fontStyle: "italic", fontSize: 11 }}>Belum Tutup Shift</span>
+            ) : (
+              <b style={{ fontFamily: "JetBrains Mono, monospace", color: T.accent }}>{fmt(shift.actual_cash)}</b>
+            )}
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontWeight: 700, color: T.text }}>Selisih Kas:</span>

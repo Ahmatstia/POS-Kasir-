@@ -295,6 +295,27 @@ export async function getShiftById(id) {
     if (!shift) return null;
 
     const movements = await getCashMovements(id);
+
+    // Jika shift masih berstatus OPEN (sedang berjalan), hitung ringkasan live secara real-time
+    if (shift.status === 'OPEN') {
+      const summary = await calculateShiftSummary(id);
+      if (summary) {
+        return {
+          ...shift,
+          movements,
+          summary,
+          cash_sales: summary.cashSales,
+          non_cash_sales: summary.nonCashSales,
+          debt_collected: summary.debtCollected,
+          cash_in: summary.totalCashIn,
+          cash_out: summary.totalCashOut,
+          expected_cash: summary.expectedCash,
+          actual_cash: null, // belum ditutup
+          difference: null, // belum ada selisih sebelum tutup kasir
+        };
+      }
+    }
+
     return { ...shift, movements };
   } catch (error) {
     console.error("Error getting shift by id:", error);

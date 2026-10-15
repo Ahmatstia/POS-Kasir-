@@ -44,11 +44,15 @@ function App() {
 
           <main style={{
             flex: 1,
-            overflowY: 'auto',
-            padding: '24px',
+            overflowY: currentPage === 'cashier' ? 'hidden' : 'auto',
+            padding: currentPage === 'cashier' ? '14px 18px' : '24px',
             background: T.bg,
           }}>
-            <div key={currentPage} className="page-content" style={{ maxWidth: 1400, margin: '0 auto' }}>
+            <div key={currentPage} className="page-content" style={{
+              maxWidth: currentPage === 'cashier' ? '100%' : 1400,
+              height: currentPage === 'cashier' ? '100%' : 'auto',
+              margin: '0 auto',
+            }}>
               {currentPage === 'dashboard'    && <Dashboard setCurrentPage={setCurrentPage} />}
               {currentPage === 'cashier'      && <Cashier setCurrentPage={setCurrentPage} />}
               {currentPage === 'shifts'       && <ShiftsManagement />}

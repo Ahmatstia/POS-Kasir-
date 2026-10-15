@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { getProducts } from "../../services/database";
+import { getProducts, getCategories } from "../../services/database";
 import { createTransaction, getLocalDatetimeStr } from "../../services/transactions";
 import { getStoreProfile } from "../../services/settings";
 import { printReceipt, printThermalReceipt, printShiftReceipt } from "../../utils/PrintUtility";
@@ -713,6 +713,8 @@ function Cashier({ setCurrentPage }) {
   const [showCancelShiftModal, setShowCancelShiftModal] = useState(false);
   const [shiftMovements, setShiftMovements]         = useState([]);
   const [allProducts, setAllProducts]               = useState([]);
+  const [categories, setCategories]                 = useState([]);
+  const [selectedCategory, setSelectedCategory]     = useState(null);
   const [displayedProducts, setDisplayedProducts]   = useState([]);
   const [searchTerm, setSearchTerm]                 = useState('');
   const [cart, setCart]                             = useState([]);
@@ -801,26 +803,37 @@ function Cashier({ setCurrentPage }) {
     })();
   }, []);
 
+  // Filter products by selected category and search term
   useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setDisplayedProducts(allProducts.slice(0, ITEMS_PER_PAGE));
-      setHasMore(allProducts.length > ITEMS_PER_PAGE);
-      setPage(1);
-    } else {
-      const filtered = allProducts.filter(p =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setDisplayedProducts(filtered);
-      setHasMore(false);
+    let list = allProducts;
+    if (selectedCategory !== null) {
+      list = list.filter(p => p.category_id === selectedCategory);
     }
-  }, [searchTerm, allProducts]);
+    if (searchTerm.trim() !== '') {
+      const term = searchTerm.toLowerCase();
+      list = list.filter(p =>
+        (p.name || '').toLowerCase().includes(term) ||
+        (p.barcode && p.barcode.toLowerCase().includes(term))
+      );
+      setDisplayedProducts(list);
+      setHasMore(false);
+    } else {
+      setDisplayedProducts(list.slice(0, ITEMS_PER_PAGE));
+      setHasMore(list.length > ITEMS_PER_PAGE);
+      setPage(1);
+    }
+  }, [searchTerm, selectedCategory, allProducts]);
 
   const loadProducts = async () => {
     setLoading(true);
-    const data = await getProducts();
-    setAllProducts(data);
-    setDisplayedProducts(data.slice(0, ITEMS_PER_PAGE));
-    setHasMore(data.length > ITEMS_PER_PAGE);
+    const [prodData, catData] = await Promise.all([
+      getProducts(),
+      getCategories(),
+    ]);
+    setAllProducts(prodData || []);
+    setCategories(catData || []);
+    setDisplayedProducts((prodData || []).slice(0, ITEMS_PER_PAGE));
+    setHasMore((prodData || []).length > ITEMS_PER_PAGE);
     setLoading(false);
   };
 
@@ -830,11 +843,14 @@ function Cashier({ setCurrentPage }) {
     setTimeout(() => {
       const nextPage = page + 1;
       const end = nextPage * ITEMS_PER_PAGE;
-      setDisplayedProducts(allProducts.slice(0, end));
+      const list = selectedCategory !== null 
+        ? allProducts.filter(p => p.category_id === selectedCategory) 
+        : allProducts;
+      setDisplayedProducts(list.slice(0, end));
       setPage(nextPage);
-      setHasMore(allProducts.length > end);
+      setHasMore(list.length > end);
       setLoadingMore(false);
-    }, 300);
+    }, 200);
   };
 
   // Helper: calculate total pcs already in cart for a product (excluding one specific item id)
@@ -1182,113 +1198,6 @@ function Cashier({ setCurrentPage }) {
         .cart-scroll::-webkit-scrollbar-thumb { background: ${T.border2}; border-radius: 3px; }
       `}</style>
 
-      {/* ─── SHIFT STATUS STRIP DI KASIR ─── */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '10px 16px', borderRadius: 12, marginBottom: 12,
-        background: activeShift ? T.surface : T.orange + '10',
-        border: `1px solid ${activeShift ? T.border : T.orange + '35'}`,
-        fontFamily: 'Syne, sans-serif',
-        flexWrap: 'wrap', gap: 10,
-      }}>
-        {activeShift ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              fontSize: 11, fontWeight: 800, color: T.green,
-              background: T.green + '15', border: `1px solid ${T.green}30`,
-              padding: '3px 10px', borderRadius: 100, textTransform: 'uppercase'
-            }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: T.green, display: 'inline-block' }} />
-              Shift #{activeShift.id}
-            </span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: T.text }}>
-              Kasir: <b style={{ color: T.accent }}>{activeShift.cashier_name}</b>
-            </span>
-            <span style={{ fontSize: 11, fontWeight: 600, color: T.sub }}>
-              Uang di Laci: <b style={{ color: T.green, fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 800 }}>{fmt(activeShift.summary?.expectedCash || activeShift.starting_cash)}</b>
-            </span>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: T.orange }}>
-              Laci kasir belum dibuka. Masukkan modal awal kembalian untuk membuka akses penjualan.
-            </span>
-          </div>
-        )}
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          {activeShift ? (
-            <>
-              <button
-                onClick={() => handleOpenMovement('IN')}
-                title="Catat uang masuk atau keluar dari laci di luar belanja nota"
-                style={{
-                  padding: '7px 13px', borderRadius: 8,
-                  border: `1px solid ${T.accent}35`,
-                  background: T.accentBg,
-                  color: T.accent,
-                  fontSize: 11, fontWeight: 800, cursor: 'pointer',
-                  display: 'inline-flex', alignItems: 'center', gap: 5,
-                  transition: 'all 0.15s',
-                }}
-              >
-                Catat Kas Laci
-              </button>
-              {((activeShift.summary?.transactionCount || 0) === 0 && (activeShift.summary?.debtCollected || 0) === 0) && (
-                <button
-                  onClick={() => setShowCancelShiftModal(true)}
-                  title="Batalkan pembukaan shift ini jika salah input (hanya bisa jika belum ada transaksi belanja)"
-                  style={{
-                    padding: '6px 11px', borderRadius: 8,
-                    border: `1px solid ${T.muted}35`,
-                    background: 'transparent',
-                    color: T.muted,
-                    fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                    display: 'inline-flex', alignItems: 'center', gap: 5,
-                    transition: 'all 0.15s',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.color = T.red; e.currentTarget.style.borderColor = T.red + '50'; e.currentTarget.style.background = T.red + '10'; }}
-                  onMouseLeave={e => { e.currentTarget.style.color = T.muted; e.currentTarget.style.borderColor = T.muted + '35'; e.currentTarget.style.background = 'transparent'; }}
-                >
-                  Batal Buka Shift
-                </button>
-              )}
-              <button
-                onClick={handleOpenCloseShift}
-                title="Tutup shift kasir & hitung fisik uang di laci"
-                style={{
-                  padding: '7px 14px', borderRadius: 8,
-                  border: `1px solid ${T.red}40`,
-                  background: T.red + '15',
-                  color: T.red,
-                  fontSize: 11, fontWeight: 800, cursor: 'pointer',
-                  display: 'inline-flex', alignItems: 'center', gap: 5,
-                  transition: 'all 0.15s',
-                }}
-              >
-                Tutup Shift
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => setShowOpenShiftModal(true)}
-              style={{
-                padding: '7px 16px', borderRadius: 8,
-                border: 'none',
-                background: T.green,
-                color: '#fff',
-                fontSize: 12, fontWeight: 800, cursor: 'pointer',
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                boxShadow: `0 2px 10px ${T.green}40`,
-                transition: 'all 0.15s',
-              }}
-            >
-            Buka Shift Kasir Sekarang
-            </button>
-          )}
-        </div>
-      </div>
 
       {!activeShift ? (
         <div style={{
@@ -1399,56 +1308,100 @@ function Cashier({ setCurrentPage }) {
         </div>
       ) : (
         <div style={{
-          display: 'grid', gridTemplateColumns: '1fr 420px',
-          gap: 16, height: 'calc(100vh - 195px)',
+          display: 'grid', gridTemplateColumns: '1fr 420px', gap: 16,
+          height: 'calc(100vh - 86px)',
           fontFamily: 'Syne, sans-serif',
-          animation: 'fadeUp 0.4s ease both',
+          animation: 'fadeUp 0.35s ease both',
         }}>
 
-        {/* ── LEFT: PRODUCT LIST ── */}
-        <div style={{
-          background: T.surface, border: `1px solid ${T.border}`,
-          borderRadius: 16, display: 'flex', flexDirection: 'column', overflow: 'hidden',
-        }}>
-          {/* Header */}
-          <div style={{ padding: '16px 20px 14px', borderBottom: `1px solid ${T.border}` }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <p style={{ fontSize: 13, fontWeight: 800, color: T.text, margin: 0 }}>
-                Daftar Produk
-                <span style={{ fontSize: 11, fontWeight: 600, color: T.sub, marginLeft: 8, fontFamily: 'JetBrains Mono, monospace' }}>
-                  ({displayedProducts.length})
-                </span>
-              </p>
-            </div>
+          {/* ── LEFT: PRODUCT LIST ── */}
+          <div style={{
+            background: T.surface, border: `1px solid ${T.border}`,
+            borderRadius: 16, display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          }}>
+            {/* Header */}
+            <div style={{ padding: '16px 20px 14px', borderBottom: `1px solid ${T.border}` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <p style={{ fontSize: 13, fontWeight: 800, color: T.text, margin: 0 }}>
+                  Daftar Produk
+                  <span style={{ fontSize: 11, fontWeight: 600, color: T.sub, marginLeft: 8, fontFamily: 'JetBrains Mono, monospace' }}>
+                    ({(selectedCategory !== null || searchTerm.trim() !== '') ? displayedProducts.length : allProducts.length})
+                  </span>
+                </p>
+                {selectedCategory !== null && (
+                  <button
+                    onClick={() => setSelectedCategory(null)}
+                    style={{
+                      background: 'none', border: 'none', color: T.accent,
+                      fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                      fontFamily: 'Syne, sans-serif', padding: 0,
+                    }}
+                  >
+                    Reset Filter
+                  </button>
+                )}
+              </div>
 
-            {/* Search */}
-            <div style={{ position: 'relative' }}>
-              <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.sub} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                placeholder="Cari nama produk…"
-                style={{
-                  width: '100%', padding: '9px 36px',
-                  borderRadius: 10, border: `1px solid ${T.border2}`,
-                  background: T.bg, color: T.text,
-                  fontFamily: 'Syne, sans-serif', fontSize: 13,
-                  outline: 'none', transition: 'border-color 0.15s',
-                }}
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm('')}
-                  style={{
-                    position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    color: T.muted, fontSize: 16, lineHeight: 1, padding: 2,
-                  }}
-                >×</button>
-              )}
+              {/* Search & Category Filter Dropdown */}
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                {/* Search */}
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.sub} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    placeholder="Cari nama produk…"
+                    style={{
+                      width: '100%', padding: '9px 36px',
+                      borderRadius: 10, border: `1px solid ${T.border2}`,
+                      background: T.bg, color: T.text,
+                      fontFamily: 'Syne, sans-serif', fontSize: 12,
+                      outline: 'none', transition: 'border-color 0.15s',
+                    }}
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      style={{
+                        position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        color: T.muted, fontSize: 16, lineHeight: 1, padding: 2,
+                      }}
+                    >×</button>
+                  )}
+                </div>
+
+                {/* Category Dropdown */}
+                <div style={{ width: 180, flexShrink: 0 }}>
+                  <select
+                    value={selectedCategory === null ? '' : selectedCategory}
+                    onChange={e => setSelectedCategory(e.target.value === '' ? null : Number(e.target.value))}
+                    style={{
+                      width: '100%', padding: '9px 12px',
+                      borderRadius: 10,
+                      border: `1px solid ${selectedCategory !== null ? T.accent : T.border2}`,
+                      background: T.bg,
+                      color: selectedCategory !== null ? T.accent : T.text,
+                      fontFamily: 'Syne, sans-serif', fontSize: 12,
+                      fontWeight: selectedCategory !== null ? 700 : 500,
+                      outline: 'none', cursor: 'pointer',
+                      transition: 'border-color 0.15s',
+                    }}
+                  >
+                    <option value="">Semua Kategori</option>
+                    {categories.map(cat => {
+                      const count = allProducts.filter(p => p.category_id === cat.id).length;
+                      return (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name} ({count})
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              </div>
             </div>
-          </div>
 
           {/* Product list */}
           <div className="prod-scroll" style={{ flex: 1, overflowY: 'auto' }}>
@@ -1668,7 +1621,7 @@ function Cashier({ setCurrentPage }) {
           )}
         </div>
       </div>
-      )}
+    )}
 
       {showPayment && (
         <PaymentModal

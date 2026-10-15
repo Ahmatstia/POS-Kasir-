@@ -1,7 +1,8 @@
 import React from 'react';
 import { T } from '../../theme';
 import { NAV } from '../../constants/navigation';
-import { LogoIcon, ChevronLeftIcon } from '../Icons/AppIcons';
+import { ChevronLeftIcon } from '../Icons/AppIcons';
+import { APP_LOGO } from '../../constants/logo';
 
 function Sidebar({ currentPage, setCurrentPage, sidebarOpen, setSidebarOpen }) {
   const sidebarW = sidebarOpen ? 240 : 68;
@@ -28,12 +29,15 @@ function Sidebar({ currentPage, setCurrentPage, sidebarOpen, setSidebarOpen }) {
         minHeight: 68,
       }}>
         <div style={{
-          width: 36, height: 36, borderRadius: 10,
-          background: T.accent,
+          width: 38, height: 38, borderRadius: 11,
+          background: '#FFFFFF',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           flexShrink: 0,
+          overflow: 'hidden',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
+          padding: 2,
         }}>
-          <LogoIcon />
+          <img src={APP_LOGO} alt="POS Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
         </div>
         {sidebarOpen && (
           <div style={{ overflow: 'hidden' }}>

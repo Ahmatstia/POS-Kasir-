@@ -161,6 +161,23 @@ function PaymentModal({
     });
   };
 
+  const handleConfirmRef = useRef();
+  handleConfirmRef.current = handleConfirm;
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleConfirmRef.current?.();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   const handleBackdrop = (e) => {
     if (e.target === e.currentTarget) onClose();
   };

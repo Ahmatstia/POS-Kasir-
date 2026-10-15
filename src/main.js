@@ -219,9 +219,15 @@ const createWindow = async () => {
     return;
   }
 
+  let appIcon = path.join(__dirname, "../../assets/icon.ico");
+  if (!fs.existsSync(appIcon)) {
+    appIcon = path.join(__dirname, "assets/icon.ico");
+  }
+
   const mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    icon: fs.existsSync(appIcon) ? appIcon : undefined,
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
       contextIsolation: true,

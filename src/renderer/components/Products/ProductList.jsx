@@ -201,7 +201,7 @@ function ProductCard({ product, onEdit, onDelete, isDeleting, isConfirmingDelete
           </div>
         </div>
       ) : (
-        <div style={{ display: 'flex', gap: 8, marginTop: 'auto' }}>
+        <div style={{ display: 'flex', gap: 6, marginTop: 'auto' }}>
           <button
             onClick={onEdit}
             style={{
@@ -744,7 +744,6 @@ function ProductList() {
           onSuccess={() => { loadData(); setEditingProduct(null); }}
         />
       )}
-
       {/* Bulk Delete Confirmation Modal */}
       {showBulkConfirm && (
         <div style={{

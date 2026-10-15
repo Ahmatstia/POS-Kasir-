@@ -10,6 +10,10 @@ import PaymentModal from "./PaymentModal";
 import { useToast } from "../Toast";
 import { T } from "../../theme";
 import { formatNominal, parseNominal } from "../../utils/format";
+import CustomerSelectModal from "./CustomerSelectModal";
+import PromoSelectModal from "./PromoSelectModal";
+import { calculatePromoDiscount } from "../../services/promotions";
+import { getCustomerInitials } from "../Customers/CustomerManagement";
 
 const fmt = (n) => `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
 
@@ -68,8 +72,25 @@ function WeighingModal({ product, onClose, onConfirm, initialKg = null, initialS
   
   const btnStyle = (active) => ({ flex: 1, padding: '10px 0', borderRadius: 10, fontSize: 11, fontWeight: 700, fontFamily: 'Syne, sans-serif', cursor: 'pointer', border: `1.5px solid ${active ? T.purple : T.border2}`, background: active ? T.purple + '10' : T.bg, color: active ? T.purple : T.sub, transition: 'all 0.2s', textAlign: 'center' });
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (!isInvalid) {
+        onConfirm(finalKg, exactSubtotal);
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      onClose();
+    }
+  };
+
   return (
-    <div onClick={(e) => e.target === e.currentTarget && onClose()} style={{ position: 'fixed', inset: 0, zIndex: 999, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Syne, sans-serif' }}>
+    <div
+      tabIndex={-1}
+      onKeyDown={handleKeyDown}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+      style={{ position: 'fixed', inset: 0, zIndex: 999, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Syne, sans-serif' }}
+    >
        <style>{`@keyframes modalPop { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }`}</style>
        <div style={{ width: 440, background: T.surface, borderRadius: 24, padding: 24, boxShadow: '0 20px 40px rgba(0,0,0,0.4)', animation: 'modalPop 0.25s cubic-bezier(0.16,1,0.3,1) both' }}>
           
@@ -780,6 +801,13 @@ function Cashier({ setCurrentPage }) {
   const [showHoldModal, setShowHoldModal] = useState(false);
   const [showHeldListModal, setShowHeldListModal] = useState(false);
 
+  // ─── PELANGGAN & PROMO (DISCOUNT) ───
+  const [selectedCustomer, setSelectedCustomer] = useState(null); // null = Walk-in Guest (Umum)
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [appliedPromo, setAppliedPromo]         = useState(null);
+  const [promoDiscount, setPromoDiscount]       = useState(0);
+  const [showPromoModal, setShowPromoModal]     = useState(false);
+
   useEffect(() => {
     try {
       localStorage.setItem('pos_held_carts', JSON.stringify(heldCarts));
@@ -841,7 +869,22 @@ function Cashier({ setCurrentPage }) {
     })();
   }, []);
 
-  // Filter products by selected category and search term
+  // ─── PROMO AUTO-RECALCULATION ───
+  useEffect(() => {
+    const currentSubtotal = Math.round(cart.reduce((sum, item) => sum + (item.subtotal || 0), 0));
+    if (appliedPromo) {
+      const calc = calculatePromoDiscount(appliedPromo, currentSubtotal);
+      if (calc.valid) {
+        setPromoDiscount(calc.discount);
+      } else {
+        setPromoDiscount(0);
+      }
+    } else {
+      setPromoDiscount(0);
+    }
+  }, [cart, appliedPromo]);
+
+  // Filter products by selected category and search term (supporting unit barcodes)
   useEffect(() => {
     let list = allProducts;
     if (selectedCategory !== null) {
@@ -929,16 +972,19 @@ function Cashier({ setCurrentPage }) {
     if (!activeShift) {
       showToast('error', 'Buka shift kasir terlebih dahulu sebelum melayani penjualan!');
       setShowOpenShiftModal(true);
-      return;
+      return false;
     }
     const u = UNITS.find(x => x.key === unit);
     const price = product[u.priceKey];
-    if (!price || price <= 0) return;
+    if (!price || price <= 0) {
+      showToast('error', `Harga untuk satuan ${u?.label || unit} belum diatur pada produk ini.`);
+      return false;
+    }
 
     // Use Weighing Scale Modal for KG products
     if (unit === 'kg') {
       setWeighingProduct(product);
-      return;
+      return true;
     }
 
     if (unit === 'karung' && !ignoreStock) {
@@ -946,7 +992,7 @@ function Cashier({ setCurrentPage }) {
        const currentKgInCart = calcCartKg(product.id);
        if (currentKgInCart + kgPerKarung > (product.stock_kg || 0)) {
           showToast('error', `Stok Kg tidak mencukupi! Tersisa: ${product.stock_kg || 0} Kg (di keranjang: ${currentKgInCart.toFixed(2)} Kg)`);
-          return;
+          return false;
        }
     } else if (unit !== 'kg' && unit !== 'karung' && !ignoreStock) {
       const pp = product.pcs_per_pack || 1;
@@ -958,7 +1004,7 @@ function Cashier({ setCurrentPage }) {
       const currentPcsInCart = calcCartPcs(product.id);
       if (currentPcsInCart + pcsNeeded > (product.stock || 0)) {
          showToast('error', `Stok tidak mencukupi! Tersisa: ${product.stock || 0} Pcs (di keranjang: ${currentPcsInCart} Pcs)`);
-         return;
+         return false;
       }
     }
 
@@ -982,6 +1028,7 @@ function Cashier({ setCurrentPage }) {
         subtotal: Math.round(price * 1),
       }]);
     }
+    return true;
   };
 
   const addKgToCartConfirm = (product, kgQty, exactSubtotal = null) => {
@@ -1105,18 +1152,21 @@ function Cashier({ setCurrentPage }) {
   };
 
   const removeFromCart = (itemId) => setCart(cart.filter(item => item.id !== itemId));
-  const total = Math.round(cart.reduce((sum, item) => sum + (item.subtotal || 0), 0));
+  const subtotal = Math.round(cart.reduce((sum, item) => sum + (item.subtotal || 0), 0));
+  const finalTotal = Math.max(0, subtotal - promoDiscount);
 
   const handleHoldCart = (customerName, note) => {
     if (cart.length === 0) {
       showToast('error', 'Keranjang masih kosong, tidak ada yang ditahan.');
       return;
     }
-    const currentTotal = cart.reduce((sum, item) => sum + (item.subtotal || 0), 0);
+    const currentTotal = finalTotal;
     const newHold = {
       id: 'HOLD-' + Date.now(),
       heldAt: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-      customerName: customerName.trim() || `Pelanggan #${heldCarts.length + 1}`,
+      customerName: customerName.trim() || (selectedCustomer ? selectedCustomer.name : `Pelanggan #${heldCarts.length + 1}`),
+      selectedCustomer: selectedCustomer || null,
+      appliedPromo: appliedPromo || null,
       note: note ? note.trim() : '',
       items: [...cart],
       total: currentTotal,
@@ -1124,6 +1174,9 @@ function Cashier({ setCurrentPage }) {
     };
     setHeldCarts(prev => [newHold, ...prev]);
     setCart([]);
+    setSelectedCustomer(null);
+    setAppliedPromo(null);
+    setPromoDiscount(0);
     setShowHoldModal(false);
     showToast('info', `Nota disimpan sementara (${newHold.customerName})`);
   };
@@ -1154,6 +1207,8 @@ function Cashier({ setCurrentPage }) {
     }
 
     setCart(target.items);
+    if (target.selectedCustomer) setSelectedCustomer(target.selectedCustomer);
+    if (target.appliedPromo) setAppliedPromo(target.appliedPromo);
     setShowHeldListModal(false);
     showToast('success', `Nota ${target.customerName} berhasil dimuat kembali!`);
   };
@@ -1167,20 +1222,22 @@ function Cashier({ setCurrentPage }) {
     if (loading) return;
     setLoading(true);
     const cartSnapshot = [...cart];
-    const subtotalSnapshot = total;
-    const discountSnapshot = Number(paymentData.discount) || 0;
-    const finalTotal = Math.max(0, subtotalSnapshot - discountSnapshot);
+    const subtotalSnapshot = subtotal;
+    const discountSnapshot = Number(paymentData.discount) || promoDiscount || 0;
+    const finalAmount = Math.max(0, subtotalSnapshot - discountSnapshot);
 
     const result = await createTransaction({
       items: cartSnapshot,
       subtotal: subtotalSnapshot,
       discount: discountSnapshot,
-      total: finalTotal,
+      total: finalAmount,
       payment: paymentData.payment,
       change: paymentData.change,
       paymentMethod: paymentData.method,
-      customerName: paymentData.customerName || '',
-      customerId: paymentData.customerId || null,
+      customerName: paymentData.customerName || (selectedCustomer ? selectedCustomer.name : 'Walk-in Guest'),
+      customerId: paymentData.customerId || (selectedCustomer ? selectedCustomer.id : null),
+      promoId: paymentData.promoId || (appliedPromo ? appliedPromo.id : null),
+      promoCode: paymentData.promoCode || (appliedPromo ? appliedPromo.code : null),
       notes: paymentData.notes || '',
     });
     if (result.success) {
@@ -1190,10 +1247,10 @@ function Cashier({ setCurrentPage }) {
           const txData = {
             invoice_no: result.invoiceNo,
             created_at: getLocalDatetimeStr(),
-            customer_name: paymentData.customerName || '',
+            customer_name: paymentData.customerName || (selectedCustomer ? selectedCustomer.name : 'Walk-in Guest'),
             subtotal: subtotalSnapshot,
             discount: discountSnapshot,
-            total_amount: finalTotal,
+            total_amount: finalAmount,
             payment_amount: paymentData.payment,
             change_amount: paymentData.change,
             payment_method: paymentData.method,
@@ -1215,6 +1272,9 @@ function Cashier({ setCurrentPage }) {
         }
       }
       setCart([]);
+      setSelectedCustomer(null);
+      setAppliedPromo(null);
+      setPromoDiscount(0);
       setShowPayment(false);
       // Refresh product list to show updated stock
       loadProducts();
@@ -1417,6 +1477,7 @@ function Cashier({ setCurrentPage }) {
                   <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.sub} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                   <input
                     type="text"
+                    data-role="cashier-search"
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
                     placeholder="Cari nama produk…"
@@ -1610,6 +1671,60 @@ function Cashier({ setCurrentPage }) {
                 </div>
               </div>
             )}
+
+            {/* Customer Selector Bar (Screenshot 4) */}
+            <div
+              onClick={() => setShowCustomerModal(true)}
+              style={{
+                marginTop: 10,
+                padding: '9px 12px',
+                borderRadius: 12,
+                border: `1.5px solid ${selectedCustomer ? '#EA580C' : T.border2}`,
+                background: selectedCustomer ? '#EA580C0D' : T.bg,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                cursor: 'pointer', transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = '#EA580C'}
+              onMouseLeave={e => { if (!selectedCustomer) e.currentTarget.style.borderColor = T.border2; }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: '50%',
+                  background: '#EA580C', color: '#FFFFFF',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 800, fontSize: 11, letterSpacing: '0.05em',
+                  flexShrink: 0,
+                }}>
+                  {selectedCustomer ? getCustomerInitials(selectedCustomer.name) : 'WG'}
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: T.text, lineHeight: 1.2 }}>
+                    {selectedCustomer ? selectedCustomer.name : 'Walk-in Guest (Umum)'}
+                  </div>
+                  <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>
+                    {selectedCustomer ? (selectedCustomer.phone || selectedCustomer.notes || 'Pelanggan Terdaftar') : 'Pelanggan langsung tanpa data kontak'}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {selectedCustomer && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setSelectedCustomer(null); }}
+                    title="Ganti ke Walk-in Guest"
+                    style={{
+                      padding: '2px 6px', borderRadius: 6, border: `1px solid ${T.border2}`,
+                      background: T.surface, color: T.muted, cursor: 'pointer', fontSize: 11,
+                    }}
+                  >
+                    ×
+                  </button>
+                )}
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.sub} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </div>
+            </div>
           </div>
 
           {/* Cart items */}
@@ -1634,14 +1749,79 @@ function Cashier({ setCurrentPage }) {
 
           {/* Summary & checkout */}
           {cart.length > 0 && (
-            <div style={{ borderTop: `1px solid ${T.border}`, padding: '16px 20px', background: T.surface }}>
+            <div style={{ borderTop: `1px solid ${T.border}`, padding: '14px 18px', background: T.surface }}>
+              {/* PROMO SELECTOR BAR (Screenshot 4) */}
+              <div
+                onClick={() => setShowPromoModal(true)}
+                style={{
+                  marginBottom: 12, padding: '10px 14px', borderRadius: 12,
+                  border: `1.5px solid ${appliedPromo ? T.green + '50' : T.border2}`,
+                  background: appliedPromo ? T.green + '0F' : T.bg,
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  cursor: 'pointer', transition: 'all 0.15s',
+                }}
+                onMouseEnter={e => { if (!appliedPromo) e.currentTarget.style.borderColor = T.accent; }}
+                onMouseLeave={e => { if (!appliedPromo) e.currentTarget.style.borderColor = T.border2; }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={appliedPromo ? T.green : T.sub} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+                    <line x1="7" y1="7" x2="7.01" y2="7" />
+                  </svg>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: appliedPromo ? T.green : T.sub, letterSpacing: '0.06em' }}>
+                    PROMO
+                  </span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: appliedPromo ? T.green : T.muted }}>
+                    {appliedPromo ? `${appliedPromo.name} (${appliedPromo.code})` : 'Tidak Ada'}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {appliedPromo ? (
+                    <>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: T.green, fontFamily: 'JetBrains Mono, monospace' }}>
+                        -{fmt(promoDiscount)}
+                      </span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setAppliedPromo(null); setPromoDiscount(0); }}
+                        title="Hapus promo"
+                        style={{
+                          background: 'none', border: 'none', color: T.muted, cursor: 'pointer', fontSize: 16, fontWeight: 700, padding: '0 4px',
+                        }}
+                      >
+                        ×
+                      </button>
+                    </>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.sub} strokeWidth="2.5">
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  )}
+                </div>
+              </div>
+
+              {/* Subtotal & Diskon rows */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: T.sub }}>
+                  <span>Subtotal ({cart.reduce((sum, i) => sum + (parseFloat(i.quantity) || 1), 0)} item)</span>
+                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>{fmt(subtotal)}</span>
+                </div>
+
+                {promoDiscount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: T.green }}>
+                    <span>Diskon Promo ({appliedPromo?.code})</span>
+                    <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>-{fmt(promoDiscount)}</span>
+                  </div>
+                )}
+              </div>
+
               {/* Total */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
-                <span style={{ fontSize: 12, fontWeight: 800, color: T.sub, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                  Total ({cart.reduce((sum, i) => sum + (parseFloat(i.quantity) || 1), 0)} item)
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14, paddingTop: 6, borderTop: `1px dashed ${T.border}` }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: T.text, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                  TOTAL
                 </span>
-                <span style={{ fontSize: 24, fontWeight: 900, color: T.text, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '-0.02em' }}>
-                  {fmt(total)}
+                <span style={{ fontSize: 24, fontWeight: 900, color: T.green, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '-0.02em' }}>
+                  {fmt(finalTotal)}
                 </span>
               </div>
 
@@ -1682,7 +1862,7 @@ function Cashier({ setCurrentPage }) {
                     <path d="M5 4V3a3 3 0 016 0v1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
                     <circle cx="8" cy="8.5" r="1.5" fill="currentColor"/>
                   </svg>
-                  Bayar Sekarang
+                  Bayar • {fmt(finalTotal)}
                 </button>
               </div>
             </div>
@@ -1693,10 +1873,40 @@ function Cashier({ setCurrentPage }) {
 
       {showPayment && (
         <PaymentModal
-          total={total}
+          total={finalTotal}
+          subtotal={subtotal}
+          promoDiscount={promoDiscount}
+          appliedPromo={appliedPromo}
+          selectedCustomer={selectedCustomer}
           onClose={() => setShowPayment(false)}
           onConfirm={handlePayment}
           loading={loading}
+        />
+      )}
+
+      {/* ─── CUSTOMER SELECT MODAL (Screenshot 5) ─── */}
+      {showCustomerModal && (
+        <CustomerSelectModal
+          selectedCustomer={selectedCustomer}
+          onSelectCustomer={setSelectedCustomer}
+          onClose={() => setShowCustomerModal(false)}
+        />
+      )}
+
+      {/* ─── PROMO SELECT MODAL (Screenshot 4) ─── */}
+      {showPromoModal && (
+        <PromoSelectModal
+          subtotal={subtotal}
+          appliedPromo={appliedPromo}
+          onApplyPromo={(promo, discount) => {
+            setAppliedPromo(promo);
+            setPromoDiscount(discount);
+          }}
+          onRemovePromo={() => {
+            setAppliedPromo(null);
+            setPromoDiscount(0);
+          }}
+          onClose={() => setShowPromoModal(false)}
         />
       )}
 

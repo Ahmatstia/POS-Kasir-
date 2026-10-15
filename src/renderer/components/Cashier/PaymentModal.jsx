@@ -53,9 +53,18 @@ const METHODS = [
   },
 ];
 
-function PaymentModal({ total, onClose, onConfirm, loading = false }) {
-  const [customerName, setCustomerName] = useState("");
-  const [discount, setDiscount] = useState("");
+function PaymentModal({
+  total,
+  subtotal = total,
+  promoDiscount = 0,
+  appliedPromo = null,
+  selectedCustomer = null,
+  onClose,
+  onConfirm,
+  loading = false,
+}) {
+  const [customerName, setCustomerName] = useState(selectedCustomer?.name || "");
+  const [discount, setDiscount] = useState(promoDiscount > 0 ? formatNominal(promoDiscount) : "");
   const [payment, setPayment] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [autoPrint, setAutoPrint] = useState(false);
@@ -64,13 +73,13 @@ function PaymentModal({ total, onClose, onConfirm, loading = false }) {
 
   // Customer debt state
   const [customers, setCustomers] = useState([]);
-  const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [selectedCustomerId, setSelectedCustomerId] = useState(selectedCustomer?.id ? String(selectedCustomer.id) : "");
   const [isManualCustomer, setIsManualCustomer] = useState(false);
 
   const inputRef = useRef(null);
 
   const discountNum = Math.max(0, parseNominal(discount));
-  const finalTotal = Math.max(0, total - discountNum);
+  const finalTotal = Math.max(0, subtotal - discountNum);
   const paymentNum = parseNominal(payment);
   const change = paymentNum - finalTotal;
 
@@ -144,8 +153,10 @@ function PaymentModal({ total, onClose, onConfirm, loading = false }) {
       autoPrint,
       printType,
       discount: discountNum,
-      customerName: customerName.trim(),
-      customerId: selectedCustomerId ? Number(selectedCustomerId) : null,
+      customerName: customerName.trim() || selectedCustomer?.name || "Walk-in Guest",
+      customerId: selectedCustomerId ? Number(selectedCustomerId) : (selectedCustomer?.id || null),
+      promoId: appliedPromo?.id || null,
+      promoCode: appliedPromo?.code || null,
       notes: notes.trim(),
     });
   };
@@ -325,10 +336,24 @@ function PaymentModal({ total, onClose, onConfirm, loading = false }) {
                         fontFamily: "JetBrains Mono, monospace",
                       }}
                     >
-                      {fmt(total)}
+                      {fmt(subtotal)}
                     </span>
                   )}
                 </div>
+                {(selectedCustomer || appliedPromo) && (
+                  <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+                    {selectedCustomer && (
+                      <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 6, background: "#EA580C14", border: "1px solid #EA580C30", color: "#EA580C", fontWeight: 700 }}>
+                        👤 {selectedCustomer.name}
+                      </span>
+                    )}
+                    {appliedPromo && (
+                      <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 6, background: T.green + "14", border: `1px solid ${T.green}30`, color: T.green, fontWeight: 700 }}>
+                        🏷️ {appliedPromo.code} (-{fmt(discountNum)})
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
               <div
                 style={{

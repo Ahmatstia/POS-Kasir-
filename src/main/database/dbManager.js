@@ -35,6 +35,23 @@ class DatabaseManager {
             await this._runSQL("ALTER TABLE stocks ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "FIX stocks.updated_at");
             await this._runSQL("ALTER TABLE transactions ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "FIX transactions.updated_at");
             await this._runSQL("ALTER TABLE transactions ADD COLUMN customer_id INTEGER", "FIX transactions.customer_id");
+            await this._runSQL("ALTER TABLE transactions ADD COLUMN promo_id INTEGER", "FIX transactions.promo_id");
+            await this._runSQL("ALTER TABLE transactions ADD COLUMN promo_code TEXT", "FIX transactions.promo_code");
+            await this._runSQL("ALTER TABLE customers ADD COLUMN notes TEXT", "FIX customers.notes");
+            await this._runSQL(`
+              CREATE TABLE IF NOT EXISTS promotions (
+                id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                name           TEXT NOT NULL,
+                code           TEXT NOT NULL UNIQUE,
+                discount_type  TEXT NOT NULL CHECK(discount_type IN ('nominal', 'percent')),
+                discount_value REAL NOT NULL,
+                min_spend      INTEGER DEFAULT 0,
+                start_date     TEXT,
+                end_date       TEXT,
+                is_active      INTEGER DEFAULT 1,
+                created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at     DATETIME DEFAULT CURRENT_TIMESTAMP
+              )`, "FIX promotions");
             await this._runSQL("ALTER TABLE inventory_log ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "FIX inventory_log.updated_at");
             await this._runSQL("ALTER TABLE transaction_items ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "FIX transaction_items.updated_at");
             await this._runSQL("ALTER TABLE transaction_items ADD COLUMN cost_price INTEGER DEFAULT 0", "FIX transaction_items.cost_price");
@@ -107,6 +124,9 @@ class DatabaseManager {
             CREATE TABLE IF NOT EXISTS products (
               id            INTEGER PRIMARY KEY AUTOINCREMENT,
               barcode       TEXT,
+              barcode_pack  TEXT,
+              barcode_dus   TEXT,
+              barcode_karung TEXT,
               sku           TEXT,
               name          TEXT NOT NULL,
               category_id   INTEGER,
@@ -136,6 +156,9 @@ class DatabaseManager {
           await this._runSQL("ALTER TABLE products ADD COLUMN sell_per_unit TEXT    DEFAULT 'all'", "ADD products.sell_per_unit");
           await this._runSQL("ALTER TABLE products ADD COLUMN is_active    BOOLEAN DEFAULT 1",    "ADD products.is_active");
           await this._runSQL("ALTER TABLE products ADD COLUMN barcode      TEXT",                 "ADD products.barcode");
+          await this._runSQL("ALTER TABLE products ADD COLUMN barcode_pack TEXT",                 "ADD products.barcode_pack");
+          await this._runSQL("ALTER TABLE products ADD COLUMN barcode_dus  TEXT",                 "ADD products.barcode_dus");
+          await this._runSQL("ALTER TABLE products ADD COLUMN barcode_karung TEXT",               "ADD products.barcode_karung");
           await this._runSQL("ALTER TABLE products ADD COLUMN sku          TEXT",                 "ADD products.sku");
           await this._runSQL("ALTER TABLE products ADD COLUMN min_stock    INTEGER DEFAULT 0",    "ADD products.min_stock");
           await this._runSQL("ALTER TABLE products ADD COLUMN created_at   DATETIME DEFAULT CURRENT_TIMESTAMP", "ADD products.created_at");
@@ -346,9 +369,14 @@ class DatabaseManager {
           await this._runSQL("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)", "EXTRA CREATE settings");
           await this._runSQL("INSERT OR IGNORE INTO settings (key, value) VALUES ('ignore_stock', '0')", "EXTRA SEED ignore_stock");
           await this._runSQL("INSERT OR IGNORE INTO settings (key, value) VALUES ('hide_cost', '0')", "EXTRA SEED hide_cost");
+          await this._runSQL("INSERT OR IGNORE INTO settings (key, value) VALUES ('last_barcode_seq', '100')", "SEED last_barcode_seq");
 
           // ── INDEXES ──────────────────────────────────────────────────────────
           await this._runSQL("CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at)", "INDEX transactions.created_at");
+          await this._runSQL("CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode)", "INDEX products.barcode");
+          await this._runSQL("CREATE INDEX IF NOT EXISTS idx_products_barcode_pack ON products(barcode_pack)", "INDEX products.barcode_pack");
+          await this._runSQL("CREATE INDEX IF NOT EXISTS idx_products_barcode_dus ON products(barcode_dus)", "INDEX products.barcode_dus");
+          await this._runSQL("CREATE INDEX IF NOT EXISTS idx_products_barcode_karung ON products(barcode_karung)", "INDEX products.barcode_karung");
           await this._runSQL("CREATE INDEX IF NOT EXISTS idx_inventory_log_ref_id ON inventory_log(reference_id)", "INDEX inventory_log.reference_id");
           await this._runSQL("CREATE INDEX IF NOT EXISTS idx_stocks_product_active ON stocks(product_id, is_active)", "INDEX stocks.product_active");
           await this._runSQL("CREATE INDEX IF NOT EXISTS idx_transaction_items_transaction_id ON transaction_items(transaction_id)", "INDEX transaction_items.transaction_id");
@@ -357,8 +385,12 @@ class DatabaseManager {
           await this._runSQL("CREATE INDEX IF NOT EXISTS idx_cash_shifts_status ON cash_shifts(status)", "INDEX cash_shifts.status");
           await this._runSQL("CREATE INDEX IF NOT EXISTS idx_cash_movements_shift ON cash_movements(shift_id)", "INDEX cash_movements.shift_id");
           await this._runSQL("ALTER TABLE transactions ADD COLUMN shift_id INTEGER", "ADD transactions.shift_id");
+          await this._runSQL("ALTER TABLE transactions ADD COLUMN promo_id INTEGER", "ADD transactions.promo_id");
+          await this._runSQL("ALTER TABLE transactions ADD COLUMN promo_code TEXT", "ADD transactions.promo_code");
           await this._runSQL("ALTER TABLE debt_payments ADD COLUMN shift_id INTEGER", "ADD debt_payments.shift_id");
           await this._runSQL("CREATE INDEX IF NOT EXISTS idx_debt_payments_shift ON debt_payments(shift_id)", "INDEX debt_payments.shift_id");
+          await this._runSQL("CREATE INDEX IF NOT EXISTS idx_promotions_code ON promotions(code)", "INDEX promotions.code");
+          await this._runSQL("CREATE INDEX IF NOT EXISTS idx_promotions_active ON promotions(is_active)", "INDEX promotions.is_active");
 
           // ── ENSURE DATA CONSISTENCY ──────────────────────────────────────────
           await this._runSQL("UPDATE transactions SET status = 'COMPLETED' WHERE status IS NULL", "FIX transactions.status");

@@ -15,6 +15,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
   const [errors, setErrors]         = useState({});
 
   const [name, setName]               = useState('');
+  const [barcode, setBarcode]         = useState('');
   const [categoryId, setCategoryId]   = useState('');
   const [notes, setNotes]             = useState('');
   const [minStock, setMinStock]       = useState(0);
@@ -87,6 +88,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
       setHideCost(isPrivacy);
       if (product) {
         setName(product.name || '');
+        setBarcode(product.barcode || '');
         setCategoryId(product.category_id || '');
         setNotes(product.notes || '');
         setMinStock(product.min_stock || 0);
@@ -141,6 +143,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
     setSaving(true);
     const result = await updateProduct(productId, {
       name: name.trim(),
+      barcode: barcode.trim() || null,
       category_id:  categoryId,
       sell_per_unit: sellPerUnit,
       price_pcs:    sellPerUnit !== 'kg' ? parseNominal(pricePcs) : 0,
@@ -199,6 +202,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
             </select>
           </Field>
         </div>
+
 
         {/* Sell per unit */}
         <div style={{ padding: '2px 0 0 0' }}>

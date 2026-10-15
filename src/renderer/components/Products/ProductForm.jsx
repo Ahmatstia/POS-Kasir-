@@ -98,6 +98,7 @@ function ProductForm({ onClose, onSuccess }) {
   const [errors, setErrors]         = useState({});
 
   const [name, setName]               = useState('');
+  const [barcode, setBarcode]         = useState('');
   const [categoryId, setCategoryId]   = useState('');
   const [notes, setNotes]             = useState('');
   const [minStock, setMinStock]       = useState(0);
@@ -188,6 +189,7 @@ function ProductForm({ onClose, onSuccess }) {
     setLoading(true);
     const result = await addProduct({
       name: name.trim(),
+      barcode: barcode.trim() || null,
       category_id:  categoryId,
       sell_per_unit: sellPerUnit,
       price_pcs:    sellPerUnit !== 'kg' ? parseNominal(pricePcs) : 0,
@@ -234,6 +236,7 @@ function ProductForm({ onClose, onSuccess }) {
             </select>
           </Field>
         </div>
+
 
         {/* Sell per unit */}
         <div style={{ padding: '2px 0 0 0' }}>

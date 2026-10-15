@@ -75,15 +75,23 @@ export async function addProduct(product) {
     const pack_per_dus = Math.max(1, Number(product.pack_per_dus) || 1);
     const kg_per_karung = Math.max(0.1, Number(product.kg_per_karung) || 25);
     const dus_label = (product.dus_label || "Dus").trim() || "Dus";
+    const barcode = (product.barcode || "").trim() || null;
+    const barcode_pack = (product.barcode_pack || "").trim() || null;
+    const barcode_dus = (product.barcode_dus || "").trim() || null;
+    const barcode_karung = (product.barcode_karung || "").trim() || null;
 
     const sql = `
       INSERT INTO products 
-        (name, category_id, sell_per_unit, price_pcs, price_pack, price_dus, price_kg,
+        (name, barcode, barcode_pack, barcode_dus, barcode_karung, category_id, sell_per_unit, price_pcs, price_pack, price_dus, price_kg,
          pcs_per_pack, pack_per_dus, min_stock, min_stock_kg, purchase_price, notes, price_karung, kg_per_karung, dus_label)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const params = [
       name,
+      barcode,
+      barcode_pack,
+      barcode_dus,
+      barcode_karung,
       product.category_id,
       product.sell_per_unit || "all",
       Math.max(0, Number(product.price_pcs) || 0),
@@ -124,10 +132,15 @@ export async function updateProduct(id, product) {
     const pack_per_dus = Math.max(1, Number(product.pack_per_dus) || 1);
     const kg_per_karung = Math.max(0.1, Number(product.kg_per_karung) || 25);
     const dus_label = (product.dus_label || "Dus").trim() || "Dus";
+    const barcode = (product.barcode || "").trim() || null;
+    const barcode_pack = (product.barcode_pack || "").trim() || null;
+    const barcode_dus = (product.barcode_dus || "").trim() || null;
+    const barcode_karung = (product.barcode_karung || "").trim() || null;
 
     const sql = `
       UPDATE products
-      SET name = ?, category_id = ?, sell_per_unit = ?,
+      SET name = ?, barcode = ?, barcode_pack = ?, barcode_dus = ?, barcode_karung = ?,
+          category_id = ?, sell_per_unit = ?,
           price_pcs = ?, price_pack = ?, price_dus = ?, price_kg = ?,
           pcs_per_pack = ?, pack_per_dus = ?,
           min_stock = ?, min_stock_kg = ?, purchase_price = ?, notes = ?,
@@ -136,6 +149,10 @@ export async function updateProduct(id, product) {
     `;
     const params = [
       name,
+      barcode,
+      barcode_pack,
+      barcode_dus,
+      barcode_karung,
       product.category_id,
       product.sell_per_unit || "all",
       Math.max(0, Number(product.price_pcs) || 0),

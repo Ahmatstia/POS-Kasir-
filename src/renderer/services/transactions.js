@@ -27,6 +27,8 @@ export async function createTransaction(transactionData) {
     paymentMethod,
     customerName,
     customerId,
+    promoId,
+    promoCode,
     notes,
   } = transactionData;
 
@@ -84,12 +86,12 @@ export async function createTransaction(transactionData) {
       }
     }
 
-    // Insert transaction header (dengan created_at waktu lokal WIB, customer_id, dan shift_id)
+    // Insert transaction header (dengan created_at waktu lokal WIB, customer_id, promo_id, promo_code, dan shift_id)
     const txResult = await window.electronAPI.run(
       `INSERT INTO transactions
-         (invoice_no, subtotal, discount, total_amount, payment_amount, change_amount, payment_method, customer_name, customer_id, notes, status, created_at, shift_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'COMPLETED', ?, ?)`,
-      [invoiceNo, subtotal, discount || 0, total, payment, change, paymentMethod, finalCustomerName, finalCustomerId, notes || "", createdAt, currentShiftId]
+         (invoice_no, subtotal, discount, total_amount, payment_amount, change_amount, payment_method, customer_name, customer_id, promo_id, promo_code, notes, status, created_at, shift_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'COMPLETED', ?, ?)`,
+      [invoiceNo, subtotal, discount || 0, total, payment, change, paymentMethod, finalCustomerName, finalCustomerId, promoId || null, promoCode || null, notes || "", createdAt, currentShiftId]
     );
     const transactionId = txResult.lastID;
 

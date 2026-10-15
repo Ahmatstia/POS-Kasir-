@@ -11,6 +11,8 @@ import GoodsHub from './components/Products/GoodsHub';
 import Cashier from './components/Cashier/Cashier';
 import Transactions from './components/Transactions/Transactions';
 import CustomerDebts from './components/Debts/CustomerDebts';
+import CustomerManagement from './components/Customers/CustomerManagement';
+import PromotionManagement from './components/Promotions/PromotionManagement';
 import ShiftsManagement from './components/Shifts/ShiftsManagement';
 import Dashboard from './components/Dashboard/Dashboard';
 import Reports from './components/Reports/Reports';
@@ -55,6 +57,8 @@ function App() {
             }}>
               {currentPage === 'dashboard'    && <Dashboard setCurrentPage={setCurrentPage} />}
               {currentPage === 'cashier'      && <Cashier setCurrentPage={setCurrentPage} />}
+              {currentPage === 'customers'    && <CustomerManagement />}
+              {currentPage === 'promos'       && <PromotionManagement />}
               {currentPage === 'shifts'       && <ShiftsManagement />}
               {currentPage === 'products'     && <GoodsHub defaultTab="products" />}
               {currentPage === 'inventory'    && <GoodsHub defaultTab="inventory" />}

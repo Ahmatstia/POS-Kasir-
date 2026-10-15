@@ -622,7 +622,7 @@ function ProductList() {
               <table className="prod-table">
                 <thead>
                   <tr>
-                    {['Nama Produk', 'Kategori', 'Jual Per', 'Harga Pcs', 'Harga Pack', 'Harga Dus/Grosir', 'Harga Kg', 'Stok', 'Min', 'Aksi'].map(h => (
+                    {['Nama Produk', 'Kategori', 'Harga Jual', 'Stok', 'Min', 'Aksi'].map(h => (
                       <th key={h}>{h}</th>
                     ))}
                   </tr>
@@ -649,6 +649,14 @@ function ProductList() {
                       mCol = `${m}${isKg ? ' kg' : ''}`;
                     }
 
+                    const prices = [
+                      { key: 'pcs',    label: 'Pcs',                     price: p.price_pcs,    color: T.blue   },
+                      { key: 'pack',   label: 'Pack',                    price: p.price_pack,   color: T.green  },
+                      { key: 'dus',    label: p.dus_label || 'Dus',      price: p.price_dus,    color: T.accent },
+                      { key: 'karung', label: 'Karung',                  price: p.price_karung, color: T.orange },
+                      { key: 'kg',     label: 'Kg',                      price: p.price_kg,     color: T.purple },
+                    ].filter(u => Number(u.price) > 0);
+
                     return (
                       <tr key={p.id}>
                         <td><span style={{ fontWeight: 700, color: T.text, fontSize: 13 }}>{p.name}</span></td>
@@ -658,19 +666,37 @@ function ProductList() {
                           </span>
                         </td>
                         <td>
-                          <span style={{ padding: '2px 8px', borderRadius: 100, fontSize: 10, fontWeight: 700, background: T.border2, color: T.sub }}>
-                            {p.sell_per_unit || 'all'}
-                          </span>
-                        </td>
-                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: p.price_pcs ? T.text : T.muted }}>{fmt(p.price_pcs) || '—'}</td>
-                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: p.price_pack ? T.text : T.muted }}>{fmt(p.price_pack) || '—'}</td>
-                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: p.price_dus ? T.text : T.muted }}>
-                          {fmt(p.price_dus) || '—'}
-                          {p.price_dus > 0 && p.dus_label && p.dus_label !== 'Dus' && (
-                            <span style={{ fontSize: 9, color: T.accent, marginLeft: 4, fontWeight: 700 }}>({p.dus_label})</span>
+                          {prices.length > 0 ? (
+                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                              {prices.map(u => (
+                                <span
+                                  key={u.key}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 5,
+                                    padding: '3px 8px',
+                                    borderRadius: 6,
+                                    background: u.color + '12',
+                                    border: `1px solid ${u.color}35`,
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    fontFamily: 'JetBrains Mono, monospace',
+                                    color: T.text,
+                                    whiteSpace: 'nowrap'
+                                  }}
+                                >
+                                  <span style={{ fontSize: 9, fontWeight: 800, color: u.color, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                    {u.label}:
+                                  </span>
+                                  <span>{fmt(u.price)}</span>
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span style={{ color: T.muted, fontSize: 11, fontStyle: 'italic' }}>—</span>
                           )}
                         </td>
-                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: p.price_kg ? T.text : T.muted }}>{fmt(p.price_kg) || '—'}</td>
                         <td>
                           <span style={{ padding: '2px 9px', borderRadius: 100, fontSize: 11, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace', background: sColor + '14', border: `1px solid ${sColor}30`, color: sColor }}>
                             {sCol}

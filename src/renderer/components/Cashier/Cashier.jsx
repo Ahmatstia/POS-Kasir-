@@ -35,16 +35,17 @@ function calcPcs(item, product) {
 }
 
 // ─── WEIGHING MODAL (Kalkulator Timbangan Sembako) ──────────────────────────
-function WeighingModal({ product, onClose, onConfirm }) {
-  const [tab, setTab] = useState('quick'); // 'quick', 'custom', 'nominal'
-  const [customVal, setCustomVal] = useState('');
+function WeighingModal({ product, onClose, onConfirm, initialKg = null, initialSubtotal = null }) {
+  const [tab, setTab] = useState(initialKg ? 'custom' : 'quick'); // 'quick', 'custom', 'nominal'
+  const [customVal, setCustomVal] = useState(initialKg ? String(initialKg) : '');
   const [customUnit, setCustomUnit] = useState('kg'); // 'kg', 'ons', 'gram'
-  const [nominalVal, setNominalVal] = useState('');
+  const [nominalVal, setNominalVal] = useState(initialSubtotal ? String(initialSubtotal) : '');
 
   const priceKg = product.price_kg || 0;
 
   // Calculate final Kg and Subtotal
   let finalKg = 0;
+  let exactSubtotal = null;
   if (tab === 'quick' || tab === 'custom') {
     let v = parseFloat(customVal) || 0;
     if (customUnit === 'ons') v = v / 10;
@@ -53,6 +54,7 @@ function WeighingModal({ product, onClose, onConfirm }) {
   } else if (tab === 'nominal') {
     let v = parseNominal(nominalVal) || 0;
     finalKg = priceKg > 0 ? (v / priceKg) : 0;
+    if (v > 0) exactSubtotal = v;
   }
 
   const handleQuick = (v, u) => {
@@ -134,12 +136,14 @@ function WeighingModal({ product, onClose, onConfirm }) {
              </div>
              <div style={{ textAlign: 'right' }}>
                 <p style={{ fontSize: 10, color: T.sub, fontWeight: 700, textTransform: 'uppercase', letterSpacing:'0.05em' }}>Harga Akhir</p>
-                <p style={{ fontSize: 16, fontWeight: 900, color: finalKg > 0 ? T.text : T.muted, fontFamily: 'JetBrains Mono, monospace' }}>{fmt(finalKg * priceKg)}</p>
+                <p style={{ fontSize: 16, fontWeight: 900, color: finalKg > 0 ? T.text : T.muted, fontFamily: 'JetBrains Mono, monospace' }}>
+                  {fmt(exactSubtotal !== null ? exactSubtotal : Math.round(finalKg * priceKg))}
+                </p>
              </div>
           </div>
 
           <button 
-             onClick={() => onConfirm(finalKg)}
+             onClick={() => onConfirm(finalKg, exactSubtotal)}
              disabled={isInvalid}
              style={{ width: '100%', padding: '16px', borderRadius: 14, border: 'none', background: isInvalid ? T.border2 : T.purple, color: isInvalid ? T.muted : '#fff', fontWeight: 800, fontSize: 14, fontFamily:'Syne, sans-serif', cursor: isInvalid ? 'not-allowed' : 'pointer', transition: 'all 0.2s', boxShadow: isInvalid ? 'none' : `0 8px 24px ${T.purple}40` }}
           >
@@ -676,12 +680,21 @@ function CartRow({ item, onUpdate, onRemove }) {
         >
           {(item.quantity <= 1) ? '×' : '−'}
         </button>
-        <span style={{ minWidth: 22, textAlign: 'center', fontSize: 13, fontWeight: 800, color: T.text, fontFamily: 'JetBrains Mono, monospace' }}>
+        <span 
+          onClick={() => item.unit === 'kg' && onUpdate(item.id, item.quantity)}
+          style={{ 
+            minWidth: 22, textAlign: 'center', fontSize: 13, fontWeight: 800, color: T.text, fontFamily: 'JetBrains Mono, monospace',
+            cursor: item.unit === 'kg' ? 'pointer' : 'default',
+            textDecoration: item.unit === 'kg' ? 'underline dotted' : 'none',
+          }}
+          title={item.unit === 'kg' ? 'Klik untuk timbang ulang' : undefined}
+        >
           {item.quantity}
         </span>
         <button
           onClick={() => onUpdate(item.id, item.quantity + 1)}
           style={qtyBtnStyle(T.green + '40', T.green)}
+          title={item.unit === 'kg' ? 'Timbang ulang' : 'Tambah'}
         >
           +
         </button>
@@ -941,7 +954,7 @@ function Cashier({ setCurrentPage }) {
     }
   };
 
-  const addKgToCartConfirm = (product, kgQty) => {
+  const addKgToCartConfirm = (product, kgQty, exactSubtotal = null) => {
     if (!ignoreStock) {
       const currentKgInCart = calcCartKg(product.id);
       if (currentKgInCart + kgQty > (product.stock_kg || 0)) {
@@ -951,13 +964,14 @@ function Cashier({ setCurrentPage }) {
     }
     
     const cleanKg = Math.round(kgQty * 1000) / 1000;
+    const finalSubtotal = exactSubtotal ? exactSubtotal : Math.round(product.price_kg * cleanKg);
     setCart([...cart, {
        id: Date.now() + Math.random(),
        product_id: product.id,
        name: product.name,
        unit: 'kg', price: product.price_kg,
        quantity: cleanKg,
-       subtotal: Math.round(product.price_kg * cleanKg),
+       subtotal: finalSubtotal,
     }]);
     setWeighingProduct(null);
   };
@@ -1010,7 +1024,7 @@ function Cashier({ setCurrentPage }) {
     if (item.unit === 'kg') {
        const product = allProducts.find(p => p.id === item.product_id);
        if (product) {
-         setReweighItem({ itemId, product });
+         setReweighItem({ itemId, product, quantity: item.quantity, subtotal: item.subtotal });
        } else {
          showToast('error', 'Produk tidak ditemukan di database.');
        }
@@ -1647,7 +1661,7 @@ function Cashier({ setCurrentPage }) {
         <WeighingModal 
           product={weighingProduct}
           onClose={() => setWeighingProduct(null)}
-          onConfirm={(kgQty) => addKgToCartConfirm(weighingProduct, kgQty)}
+          onConfirm={(kgQty, exactSubtotal) => addKgToCartConfirm(weighingProduct, kgQty, exactSubtotal)}
         />
       )}
 
@@ -1655,8 +1669,10 @@ function Cashier({ setCurrentPage }) {
       {reweighItem && (
         <WeighingModal 
           product={reweighItem.product}
+          initialKg={reweighItem.quantity}
+          initialSubtotal={reweighItem.subtotal}
           onClose={() => setReweighItem(null)}
-          onConfirm={(kgQty) => {
+          onConfirm={(kgQty, exactSubtotal = null) => {
             const kgVal = parseFloat(kgQty);
             if (isNaN(kgVal) || kgVal <= 0) {
               if (kgVal === 0) removeFromCart(reweighItem.itemId);
@@ -1672,7 +1688,8 @@ function Cashier({ setCurrentPage }) {
                  return;
               }
             }
-            setCart(cart.map(i => i.id === reweighItem.itemId ? { ...i, quantity: cleanKg, subtotal: Math.round(cleanKg * i.price) } : i));
+            const finalSubtotal = exactSubtotal ? exactSubtotal : Math.round(cleanKg * (reweighItem.product.price_kg || 0));
+            setCart(cart.map(i => i.id === reweighItem.itemId ? { ...i, quantity: cleanKg, subtotal: finalSubtotal } : i));
             setReweighItem(null);
           }}
         />

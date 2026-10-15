@@ -846,7 +846,7 @@ function InventoryList() {
                   <table className="inv-table">
                     <thead>
                       <tr>
-                        {['Nama Produk', 'Kategori', 'Jual Per', 'Stok Saat Ini', 'Batas Min', 'Grosir / Kemasan', 'Status', 'Aksi'].map(h => (
+                        {['Nama Produk', 'Kategori', 'Stok Saat Ini', 'Batas Min', 'Grosir / Kemasan', 'Status', 'Aksi'].map(h => (
                           <th key={h}>{h}</th>
                         ))}
                       </tr>
@@ -901,11 +901,6 @@ function InventoryList() {
                             <td>
                               <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: T.border, color: T.sub }}>
                                 {product.category_name || '—'}
-                              </span>
-                            </td>
-                            <td>
-                              <span style={{ padding: '2px 8px', borderRadius: 100, fontSize: 10, fontWeight: 700, background: T.border2, color: T.sub }}>
-                                {isHybrid ? 'hybrid' : (product.sell_per_unit || 'all')}
                               </span>
                             </td>
                             <td>

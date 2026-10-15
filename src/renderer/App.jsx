@@ -44,13 +44,13 @@ function App() {
 
           <main style={{
             flex: 1,
-            overflowY: currentPage === 'cashier' ? 'hidden' : 'auto',
-            padding: currentPage === 'cashier' ? '14px 18px' : '24px',
+            overflowY: 'auto',
+            padding: '14px 18px',
             background: T.bg,
           }}>
             <div key={currentPage} className="page-content" style={{
-              maxWidth: currentPage === 'cashier' ? '100%' : 1400,
-              height: currentPage === 'cashier' ? '100%' : 'auto',
+              maxWidth: 1600,
+              width: '100%',
               margin: '0 auto',
             }}>
               {currentPage === 'dashboard'    && <Dashboard setCurrentPage={setCurrentPage} />}

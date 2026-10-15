@@ -289,7 +289,7 @@ export default function Dashboard({ setCurrentPage }) {
         }
       `}</style>
 
-      <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+      <div style={{ width: '100%', margin: '0 auto' }}>
         {/* ── PAGE HEADER ── */}
         <PageHeader
           title="Beranda"

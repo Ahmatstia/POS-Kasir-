@@ -277,7 +277,7 @@ function Transactions() {
           display: "grid",
           gridTemplateColumns: showDetail ? "1fr 420px" : "1fr",
           gap: 16,
-          height: "calc(100vh - 140px)",
+          height: "calc(100vh - 86px)",
           fontFamily: "Syne, sans-serif",
           animation: "fadeUp 0.4s ease both",
           transition: "grid-template-columns 0.4s cubic-bezier(0.4, 0, 0.2, 1)",

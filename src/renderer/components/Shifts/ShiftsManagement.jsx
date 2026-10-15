@@ -71,7 +71,7 @@ export default function ShiftsManagement() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24, paddingBottom: 40 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* ─── HEADER ─── */}
       <PageHeader
         title="Shift Kasir"
@@ -461,6 +461,8 @@ export default function ShiftsManagement() {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
+            justifyContent: "center",
+            minHeight: 240,
             gap: 12,
           }}
         >
@@ -512,6 +514,9 @@ export default function ShiftsManagement() {
           border: `1px solid ${T.border}`,
           borderRadius: 18,
           padding: 24,
+          minHeight: !activeShift ? 'calc(100vh - 280px)' : 'auto',
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -541,7 +546,7 @@ export default function ShiftsManagement() {
         </div>
 
         {shiftHistory.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "40px 20px", color: T.muted }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "40px 20px", color: T.muted }}>
             <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>Belum ada riwayat shift yang tercatat.</p>
           </div>
         ) : (

@@ -401,7 +401,12 @@ function CategoryList() {
 
         {/* ── TABLE ── */}
         {filtered.length === 0 ? (
-          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, padding: '48px 24px', textAlign: 'center' }}>
+          <div style={{
+            background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14,
+            padding: '48px 24px', textAlign: 'center',
+            minHeight: 'calc(100vh - 280px)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          }}>
             <svg width="48" height="48" viewBox="0 0 48 48" fill="none" style={{ margin: '0 auto 16px', opacity: 0.25 }}>
               <rect x="6" y="6" width="36" height="36" rx="6" stroke={T.sub} strokeWidth="2"/>
               <path d="M16 24h16M16 32h10M16 16h6" stroke={T.sub} strokeWidth="2" strokeLinecap="round"/>
@@ -419,7 +424,10 @@ function CategoryList() {
             )}
           </div>
         ) : (
-          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, overflow: 'hidden' }}>
+          <div style={{
+            background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, overflow: 'hidden',
+            minHeight: 'calc(100vh - 280px)',
+          }}>
             <div style={{ overflowX: 'auto' }}>
               <table className="cat-table">
                 <thead>

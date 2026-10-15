@@ -684,6 +684,11 @@ function CustomerDebts() {
                   borderRadius: 18,
                   padding: "50px 20px",
                   textAlign: "center",
+                  minHeight: "calc(100vh - 280px)",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
                 <div
@@ -964,6 +969,9 @@ function CustomerDebts() {
               border: `1px solid ${T.border}`,
               borderRadius: 16,
               overflow: "hidden",
+              minHeight: "calc(100vh - 280px)",
+              display: "flex",
+              flexDirection: "column",
             }}
           >
             <div style={{ padding: "16px 20px", borderBottom: `1px solid ${T.border}` }}>
@@ -972,7 +980,7 @@ function CustomerDebts() {
               </h3>
             </div>
             {paymentHistory.length === 0 ? (
-              <div style={{ padding: 40, textAlign: "center", color: T.muted }}>
+              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 40, color: T.muted }}>
                 Belum ada riwayat pembayaran kasbon yang tercatat.
               </div>
             ) : (

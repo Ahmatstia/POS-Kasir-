@@ -64,7 +64,6 @@ function PaymentModal({
   loading = false,
 }) {
   const [customerName, setCustomerName] = useState(selectedCustomer?.name || "");
-  const [discount, setDiscount] = useState(promoDiscount > 0 ? formatNominal(promoDiscount) : "");
   const [payment, setPayment] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [autoPrint, setAutoPrint] = useState(false);
@@ -78,8 +77,8 @@ function PaymentModal({
 
   const inputRef = useRef(null);
 
-  const discountNum = Math.max(0, parseNominal(discount));
-  const finalTotal = Math.max(0, subtotal - discountNum);
+  const discountNum = Math.max(0, promoDiscount || 0);
+  const finalTotal = Math.max(0, total);
   const paymentNum = parseNominal(payment);
   const change = paymentNum - finalTotal;
 
@@ -454,8 +453,8 @@ function PaymentModal({
               </div>
             </div>
 
-            {/* ── KASBON CUSTOMER SELECTOR / REGULAR CUSTOMER ── */}
-            {isKasbon ? (
+            {/* ── KASBON CUSTOMER SELECTOR (KHUSUS METODE KASBON) ── */}
+            {isKasbon && (
               <div
                 style={{
                   background: T.orange + "0A",
@@ -580,92 +579,6 @@ function PaymentModal({
                     Peringatan: Tambahan kasbon ini melebihi batas utang pelanggan ({fmt(debtLimit)})!
                   </div>
                 )}
-              </div>
-            ) : (
-              /* Regular Customer & Discount */
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div>
-                  <label
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      letterSpacing: "0.08em",
-                      textTransform: "uppercase",
-                      color: T.muted,
-                      display: "block",
-                      marginBottom: 6,
-                    }}
-                  >
-                    Pelanggan (Opsional)
-                  </label>
-                  <input
-                    type="text"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Nama pembeli / umum"
-                    style={{
-                      width: "100%",
-                      padding: "9px 12px",
-                      borderRadius: 9,
-                      border: `1px solid ${T.border2}`,
-                      background: T.bg,
-                      color: T.text,
-                      fontSize: 12,
-                      outline: "none",
-                      fontFamily: "Syne, sans-serif",
-                    }}
-                  />
-                </div>
-                <div>
-                  <label
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      letterSpacing: "0.08em",
-                      textTransform: "uppercase",
-                      color: T.muted,
-                      display: "block",
-                      marginBottom: 6,
-                    }}
-                  >
-                    Potongan Diskon (Rp)
-                  </label>
-                  <div style={{ position: "relative" }}>
-                    <span
-                      style={{
-                        position: "absolute",
-                        left: 10,
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: T.muted,
-                        pointerEvents: "none",
-                      }}
-                    >
-                      Rp
-                    </span>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={formatNominal(discount)}
-                      onChange={(e) => setDiscount(e.target.value.replace(/\D/g, ''))}
-                      placeholder="0"
-                      style={{
-                        width: "100%",
-                        padding: "9px 10px 9px 32px",
-                        borderRadius: 9,
-                        border: `1px solid ${T.border2}`,
-                        background: T.bg,
-                        color: T.text,
-                        fontSize: 13,
-                        fontWeight: 700,
-                        outline: "none",
-                        fontFamily: "JetBrains Mono, monospace",
-                      }}
-                    />
-                  </div>
-                </div>
               </div>
             )}
 

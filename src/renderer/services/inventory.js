@@ -22,7 +22,7 @@ export async function getInventorySummary() {
       LEFT JOIN stocks s ON s.product_id = p.id AND s.is_active = 1
       WHERE p.is_active = 1
       GROUP BY p.id
-      ORDER BY p.name ASC
+      ORDER BY p.name COLLATE NOCASE ASC
     `;
     const hideCost = await isPrivacyModeEnabled();
     const result = await window.electronAPI.query(sql);

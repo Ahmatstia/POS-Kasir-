@@ -44,6 +44,10 @@ class DatabaseManager {
             await this._runSQL("INSERT OR IGNORE INTO settings (key, value) VALUES ('ignore_stock', '0')", "EXTRA SEED settings");
             await this._runSQL("INSERT OR IGNORE INTO settings (key, value) VALUES ('hide_cost', '0')", "EXTRA SEED hide_cost");
 
+            // SANITIZE conflicting prices for legacy/imported products
+            await this._runSQL("UPDATE products SET price_kg = 0, price_karung = 0 WHERE sell_per_unit != 'kg'", "CLEANUP kemasan prices");
+            await this._runSQL("UPDATE products SET price_pcs = 0, price_pack = 0, price_dus = 0 WHERE sell_per_unit = 'kg'", "CLEANUP timbangan prices");
+
             this.ready = true;
             console.log("✅ Database fully ready");
             resolve();

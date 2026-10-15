@@ -7,7 +7,7 @@ export async function getCategories() {
       FROM categories c
       LEFT JOIN products p ON p.category_id = c.id AND p.is_active = 1
       GROUP BY c.id
-      ORDER BY c.name ASC
+      ORDER BY c.name COLLATE NOCASE ASC
     `;
     return await window.electronAPI.query(sql);
   } catch (error) {

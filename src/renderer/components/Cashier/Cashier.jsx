@@ -422,14 +422,14 @@ function HeldCartsListModal({ heldCarts, onClose, onRestore, onDelete }) {
 
 // ─── PRODUCT ITEM ─────────────────────────────────────────────────────────────
 function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef, ignoreStock }) {
+  const isHybrid = product.has_unit_price && product.has_weight_price;
+  const isKgProduct = product.sell_per_unit === 'kg';
+  const defaultUnit = isKgProduct ? 'kg' : 'pcs';
+
   const [showManual, setShowManual] = useState(false);
   const [manualPrice, setManualPrice] = useState('');
   const [manualQty, setManualQty]   = useState(1);
-  const [manualUnit, setManualUnit] = useState('pcs');
-
-  // Tentukan status stok berdasarkan unit jual (Hybrid aware)
-  const isHybrid = product.has_unit_price && product.has_weight_price;
-  const isKgProduct = product.sell_per_unit === 'kg';
+  const [manualUnit, setManualUnit] = useState(defaultUnit);
   
   let isOut, isLow, stockDisplay;
   if (isHybrid) {
@@ -462,12 +462,17 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef, ign
       setShowManual(false);
       setManualPrice('');
       setManualQty(1);
+      setManualUnit(defaultUnit);
     }
   };
 
   const availableUnits = UNITS.filter(u => {
-    // Show all units that have a price registered (> 0)
-    // This allows "Hybrid" products (e.g. sold by Pack AND Kg)
+    // Filter units strictly based on product type to avoid packaging vs weighing mix-ups
+    if (isKgProduct) {
+      if (u.key !== 'kg' && u.key !== 'karung') return false;
+    } else {
+      if (u.key !== 'pcs' && u.key !== 'pack' && u.key !== 'dus') return false;
+    }
     return product[u.priceKey] !== undefined && product[u.priceKey] !== null && Number(product[u.priceKey]) > 0;
   }).map(u => {
     if (u.key === 'dus') {
@@ -596,11 +601,18 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef, ign
                 onChange={e => setManualUnit(e.target.value)}
                 style={{ ...inputStyle, cursor: 'pointer' }}
               >
-                <option value="pcs">Pcs</option>
-                <option value="pack">Pack</option>
-                <option value="dus">Dus</option>
-                <option value="kg">Kg</option>
-                <option value="karung">Karung</option>
+                {isKgProduct ? (
+                  <>
+                    <option value="kg">Kg</option>
+                    <option value="karung">Karung ({product.kg_per_karung || 25} Kg)</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="pcs">Pcs</option>
+                    <option value="pack">Pack ({product.pcs_per_pack || 1} Pcs)</option>
+                    <option value="dus">{product.dus_label || 'Dus'} ({(product.pack_per_dus || 1) * (product.pcs_per_pack || 1)} Pcs)</option>
+                  </>
+                )}
               </select>
             </div>
           </div>
@@ -664,9 +676,16 @@ function CartRow({ item, onUpdate, onRemove }) {
 
       {/* Name & price */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: 12, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 2 }}>
-          {item.name}
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 2 }}>
+            {item.name}
+          </p>
+          {item.is_manual && (
+            <span style={{ fontSize: 8, fontWeight: 800, padding: '1px 5px', borderRadius: 4, background: T.accent + '20', color: T.accent, letterSpacing: '0.04em' }}>
+              KUSTOM
+            </span>
+          )}
+        </div>
         <p style={{ fontSize: 10, color: T.sub, fontFamily: 'JetBrains Mono, monospace' }}>
           {fmt(item.price)} / {displayUnit}
         </p>
@@ -849,10 +868,13 @@ function Cashier({ setCurrentPage }) {
       getProducts(),
       getCategories(),
     ]);
-    setAllProducts(prodData || []);
+    const sorted = (prodData || []).slice().sort((a, b) =>
+      (a.name || '').localeCompare(b.name || '', 'id', { sensitivity: 'base' })
+    );
+    setAllProducts(sorted);
     setCategories(catData || []);
-    setDisplayedProducts((prodData || []).slice(0, ITEMS_PER_PAGE));
-    setHasMore((prodData || []).length > ITEMS_PER_PAGE);
+    setDisplayedProducts(sorted.slice(0, ITEMS_PER_PAGE));
+    setHasMore(sorted.length > ITEMS_PER_PAGE);
     setLoading(false);
   };
 
@@ -885,7 +907,15 @@ function Cashier({ setCurrentPage }) {
   // Helper: calculate total kg already in cart for a product
   const calcCartKg = (productId, excludeItemId = null) => {
     return cart
-      .filter(item => item.product_id === productId && item.id !== excludeItemId && (item.unit === 'kg' || item.unit === 'karung'))
+      .filter(item => {
+        if (item.product_id !== productId || item.id === excludeItemId) return false;
+        if (item.unit === 'kg') return true;
+        if (item.unit === 'karung') {
+          const p = allProducts.find(x => x.id === item.product_id);
+          return p?.sell_per_unit === 'kg';
+        }
+        return false;
+      })
       .reduce((sum, item) => {
         if (item.unit === 'kg') return sum + parseFloat(item.quantity || 0);
         // If karung, convert to kg
@@ -982,10 +1012,13 @@ function Cashier({ setCurrentPage }) {
       setShowOpenShiftModal(true);
       return false;
     }
+    const isKgProduct = product.sell_per_unit === 'kg';
+    const uLower = (unit || '').toLowerCase();
+
     // Check Kg vs Pcs
     if (!ignoreStock) {
-      if (unit === 'kg' || unit === 'karung') {
-        const kgPerUnit = unit === 'karung' ? (product.kg_per_karung || 25) : 1;
+      if (uLower === 'kg' || (uLower === 'karung' && isKgProduct)) {
+        const kgPerUnit = uLower === 'karung' ? (product.kg_per_karung || 25) : 1;
         const qtyKg = parseFloat(quantity) * kgPerUnit;
         const currentKgInCart = calcCartKg(product.id);
         if (currentKgInCart + qtyKg > (product.stock_kg || 0)) {
@@ -995,9 +1028,11 @@ function Cashier({ setCurrentPage }) {
       } else {
         const pp = product.pcs_per_pack || 1;
         const pd = product.pack_per_dus || 1;
-        let pcsNeeded = quantity;
-        if (unit === 'pack') pcsNeeded = quantity * pp;
-        else if (unit === 'dus')  pcsNeeded = quantity * pd * pp;
+        let pcsNeeded = parseFloat(quantity) || 1;
+        if (uLower === 'pack') pcsNeeded = pcsNeeded * pp;
+        else if (uLower === 'dus' || uLower === 'bal' || (uLower === 'karung' && !isKgProduct)) {
+          pcsNeeded = pcsNeeded * pd * pp;
+        }
 
         const currentPcsInCart = calcCartPcs(product.id);
         if (currentPcsInCart + pcsNeeded > (product.stock || 0)) {
@@ -1007,12 +1042,20 @@ function Cashier({ setCurrentPage }) {
       }
     }
 
+    const unitObj = UNITS.find(x => x.key === unit);
+    const unitLabel = unit === 'dus' ? (product.dus_label || 'Dus') : (unitObj?.label || unit);
+
     setCart([...cart, {
       id: 'manual-' + Date.now() + Math.random(),
       product_id: product.id,
-      name: `${product.name} (Manual)`,
-      unit, price, quantity,
-      subtotal: Math.round(price * quantity),
+      name: product.name,
+      is_manual: true,
+      unit,
+      unit_label: unitLabel,
+      dus_label: product.dus_label,
+      price,
+      quantity: parseFloat(quantity),
+      subtotal: Math.round(price * parseFloat(quantity)),
     }]);
     return true;
   };
@@ -1024,7 +1067,7 @@ function Cashier({ setCurrentPage }) {
     if (item.unit === 'kg') {
        const product = allProducts.find(p => p.id === item.product_id);
        if (product) {
-         setReweighItem({ itemId, product, quantity: item.quantity, subtotal: item.subtotal });
+         setReweighItem({ itemId, product, quantity: item.quantity, subtotal: item.subtotal, customPrice: item.is_manual ? item.price : null });
        } else {
          showToast('error', 'Produk tidak ditemukan di database.');
        }
@@ -1039,7 +1082,8 @@ function Cashier({ setCurrentPage }) {
 
     const product = allProducts.find(p => p.id === item.product_id);
     if (product && !ignoreStock) {
-      if (item.unit === 'karung') {
+      const isKgProduct = product.sell_per_unit === 'kg';
+      if (item.unit === 'karung' && isKgProduct) {
         const kgPerKarung = product.kg_per_karung || 25;
         const otherKg = calcCartKg(product.id, itemId);
         if ((newQty * kgPerKarung) + otherKg > (product.stock_kg || 0)) {
@@ -1668,7 +1712,7 @@ function Cashier({ setCurrentPage }) {
       {/* REWEIGH MODAL (Update Qty Kg di Keranjang) */}
       {reweighItem && (
         <WeighingModal 
-          product={reweighItem.product}
+          product={reweighItem.customPrice ? { ...reweighItem.product, price_kg: reweighItem.customPrice } : reweighItem.product}
           initialKg={reweighItem.quantity}
           initialSubtotal={reweighItem.subtotal}
           onClose={() => setReweighItem(null)}
@@ -1688,8 +1732,9 @@ function Cashier({ setCurrentPage }) {
                  return;
               }
             }
-            const finalSubtotal = exactSubtotal ? exactSubtotal : Math.round(cleanKg * (reweighItem.product.price_kg || 0));
-            setCart(cart.map(i => i.id === reweighItem.itemId ? { ...i, quantity: cleanKg, subtotal: finalSubtotal } : i));
+            const effectivePrice = reweighItem.customPrice || reweighItem.product.price_kg || 0;
+            const finalSubtotal = exactSubtotal ? exactSubtotal : Math.round(cleanKg * effectivePrice);
+            setCart(cart.map(i => i.id === reweighItem.itemId ? { ...i, quantity: cleanKg, price: effectivePrice, subtotal: finalSubtotal } : i));
             setReweighItem(null);
           }}
         />

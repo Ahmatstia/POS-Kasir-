@@ -307,7 +307,7 @@ function ProductList() {
     const merged = productsData.map(p => ({
       ...p,
       category_name: catMap[p.category_id]?.name || '—',
-    }));
+    })).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'id', { sensitivity: 'base' }));
     setProducts(merged);
     setFilteredProducts(merged);
     setCategories(categoriesData);

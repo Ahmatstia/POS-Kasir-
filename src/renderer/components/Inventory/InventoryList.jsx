@@ -557,7 +557,10 @@ function InventoryList() {
       getCategories(),
       isPrivacyModeEnabled()
     ]);
-    setProducts(inv);
+    const sorted = (inv || []).slice().sort((a, b) =>
+      (a.name || '').localeCompare(b.name || '', 'id', { sensitivity: 'base' })
+    );
+    setProducts(sorted);
     setCategories(cats);
     setHideCost(isPrivacy);
     setLoading(false);

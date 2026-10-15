@@ -17,7 +17,7 @@ export async function getProducts() {
       LEFT JOIN stocks s ON s.product_id = p.id AND s.is_active = 1
       WHERE p.is_active = 1
       GROUP BY p.id
-      ORDER BY p.name ASC
+      ORDER BY p.name COLLATE NOCASE ASC
     `;
     return await window.electronAPI.query(sql);
   } catch (error) {
@@ -30,7 +30,7 @@ export async function getProducts() {
 export async function getCategories() {
   try {
     return await window.electronAPI.query(
-      "SELECT * FROM categories ORDER BY name ASC"
+      "SELECT * FROM categories ORDER BY name COLLATE NOCASE ASC"
     );
   } catch (error) {
     console.error("Error getting categories:", error);

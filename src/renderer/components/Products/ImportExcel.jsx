@@ -332,14 +332,14 @@ function ImportExcel({ onClose, onSuccess }) {
           pcs_per_pack = Math.max(1, Math.round(pricePack / pricePcs));
         }
 
-        // Tentukan purchase_price dasar
+        // Tentukan purchase_price dasar (selalu dalam satuan dasar eceran: Pcs atau Kg)
         let purchase_price = 0;
         if (isKg) {
           purchase_price = modalPackKg || (modalDus > 0 && kg_per_karung > 0 ? Math.round(modalDus / kg_per_karung) : 0);
         } else {
           if (modalPcs > 0) purchase_price = modalPcs;
-          else if (modalPackKg > 0) purchase_price = modalPackKg;
-          else if (modalDus > 0 && pack_per_dus > 1) purchase_price = Math.round(modalDus / pack_per_dus);
+          else if (modalPackKg > 0) purchase_price = Math.round(modalPackKg / (pcs_per_pack || 1));
+          else if (modalDus > 0 && pack_per_dus > 0 && pcs_per_pack > 0) purchase_price = Math.round(modalDus / (pack_per_dus * pcs_per_pack));
         }
 
         // Harga jual

@@ -87,6 +87,27 @@ ipcMain.handle("db:backup", async (event, customTimestamp) => {
   return await backupDatabase(customTimestamp);
 });
 
+ipcMain.handle("file:saveExcel", async (event, { filename, base64Data }) => {
+  try {
+    const { canceled, filePath } = await dialog.showSaveDialog({
+      title: "Simpan File Backup Produk ke Excel",
+      defaultPath: filename,
+      filters: [
+        { name: "Excel Spreadsheet (*.xlsx)", extensions: ["xlsx"] }
+      ]
+    });
+
+    if (canceled || !filePath) return { canceled: true };
+
+    const buffer = Buffer.from(base64Data, "base64");
+    fs.writeFileSync(filePath, buffer);
+    return { success: true, filePath };
+  } catch (error) {
+    console.error("Save Excel error:", error);
+    return { success: false, error: error.message };
+  }
+});
+
 ipcMain.handle("db:open-backup-folder", async () => {
   try {
     const backupDir = path.join(app.getPath("userData"), "backups");

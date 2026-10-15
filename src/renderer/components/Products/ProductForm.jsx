@@ -435,6 +435,86 @@ function ProductForm({ onClose, onSuccess }) {
                   </span>
                 )}
               </div>
+
+              {/* Warning jika modal lebih besar dari harga jual */}
+              {computedBasePrice > 0 && !isKg && (
+                (() => {
+                  const pPcs = parseNominal(pricePcs);
+                  const pPack = parseNominal(pricePack);
+                  const pDus = parseNominal(priceDus);
+
+                  if (costUnit === 'dus' && pDus > 0 && enteredVal > pDus) {
+                    return (
+                      <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 8, background: T.red + "15", border: `1px solid ${T.red}40`, color: T.red, fontSize: 11, display: "flex", alignItems: "flex-start", gap: 6 }}>
+                        <span style={{ fontSize: 13, lineHeight: 1 }}>⚠️</span>
+                        <span>
+                          <strong>Modal Rugi:</strong> Modal 1 {dusLabel || 'Dus'} (Rp {formatNominal(enteredVal)}) lebih mahal dari harga jualnya (Rp {formatNominal(pDus)}). Toko akan rugi Rp {formatNominal(enteredVal - pDus)} per {dusLabel || 'dus'}. Periksa apakah nominal kulakan kelebihan angka nol.
+                        </span>
+                      </div>
+                    );
+                  }
+                  if (costUnit === 'pack' && pPack > 0 && enteredVal > pPack) {
+                    return (
+                      <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 8, background: T.orange + "15", border: `1px solid ${T.orange}40`, color: T.orange, fontSize: 11, display: "flex", alignItems: "flex-start", gap: 6 }}>
+                        <span style={{ fontSize: 13, lineHeight: 1 }}>⚠️</span>
+                        <span>
+                          <strong>Modal Lebih Tinggi:</strong> Modal 1 Pack (Rp {formatNominal(enteredVal)}) lebih mahal dari harga jual 1 pack (Rp {formatNominal(pPack)}). Jika nominal ini adalah modal 1 {dusLabel || 'Dus'}, klik tombol <strong>Per {dusLabel || 'Dus'}</strong> di atas.
+                        </span>
+                      </div>
+                    );
+                  }
+                  if (costUnit === 'pcs' && pPcs > 0 && enteredVal > pPcs) {
+                    return (
+                      <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 8, background: T.orange + "15", border: `1px solid ${T.orange}40`, color: T.orange, fontSize: 11, display: "flex", alignItems: "flex-start", gap: 6 }}>
+                        <span style={{ fontSize: 13, lineHeight: 1 }}>⚠️</span>
+                        <span>
+                          <strong>Modal Lebih Tinggi:</strong> Modal 1 Pcs (Rp {formatNominal(enteredVal)}) lebih mahal dari harga jual eceran (Rp {formatNominal(pPcs)}). Jika nominal ini adalah modal 1 {dusLabel || 'Dus'} atau 1 Pack, klik tombol satuan di atas.
+                        </span>
+                      </div>
+                    );
+                  }
+                  if (pPcs > 0 && computedBasePrice > pPcs) {
+                    return (
+                      <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 8, background: T.orange + "15", border: `1px solid ${T.orange}40`, color: T.orange, fontSize: 11, display: "flex", alignItems: "flex-start", gap: 6 }}>
+                        <span style={{ fontSize: 13, lineHeight: 1 }}>⚠️</span>
+                        <span>
+                          <strong>Modal Lebih Tinggi:</strong> Modal eceran (Rp {formatNominal(computedBasePrice)}/pcs) lebih mahal dari harga jual eceran (Rp {formatNominal(pPcs)}/pcs).
+                        </span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()
+              )}
+
+              {computedBasePrice > 0 && isKg && (
+                (() => {
+                  const pKg = parseNominal(priceKg);
+                  const pKarung = parseNominal(priceKarung);
+
+                  if (costUnit === 'karung' && pKarung > 0 && enteredVal > pKarung) {
+                    return (
+                      <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 8, background: T.red + "15", border: `1px solid ${T.red}40`, color: T.red, fontSize: 11, display: "flex", alignItems: "flex-start", gap: 6 }}>
+                        <span style={{ fontSize: 13, lineHeight: 1 }}>⚠️</span>
+                        <span>
+                          <strong>Modal Rugi:</strong> Modal 1 Karung (Rp {formatNominal(enteredVal)}) lebih mahal dari harga jual 1 Karung (Rp {formatNominal(pKarung)}). Periksa kembali nominal kulakan Anda.
+                        </span>
+                      </div>
+                    );
+                  }
+                  if (costUnit === 'kg' && pKg > 0 && enteredVal > pKg) {
+                    return (
+                      <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 8, background: T.orange + "15", border: `1px solid ${T.orange}40`, color: T.orange, fontSize: 11, display: "flex", alignItems: "flex-start", gap: 6 }}>
+                        <span style={{ fontSize: 13, lineHeight: 1 }}>⚠️</span>
+                        <span>
+                          <strong>Modal Lebih Tinggi:</strong> Modal 1 Kg (Rp {formatNominal(enteredVal)}) lebih mahal dari harga jual 1 Kg (Rp {formatNominal(pKg)}). Jika nominal ini adalah modal 1 Karung, klik tombol <strong>Per Karung</strong> di atas.
+                        </span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()
+              )}
             </div>
           )}
 

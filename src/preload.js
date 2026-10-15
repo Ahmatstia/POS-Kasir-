@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   openBackupFolder: () => ipcRenderer.invoke("db:open-backup-folder"),
   restoreDatabase: () => ipcRenderer.invoke("db:restore"),
   resetData: (mode) => ipcRenderer.invoke("db:reset-data", mode),
+  saveExcel: (filename, base64Data) => ipcRenderer.invoke("file:saveExcel", { filename, base64Data }),
 
   // Convenience: Activity Logs
   getActivityLogs: (limit) => ipcRenderer.invoke("db:get-activity-logs", limit),

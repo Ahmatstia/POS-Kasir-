@@ -11,6 +11,7 @@ import {
 import ProductForm from "./ProductForm";
 import EditProductForm from "./EditProductForm";
 import ImportExcel from "./ImportExcel";
+import * as XLSX from "xlsx";
 import { useToast } from "../Toast";
 import { T } from "../../theme";
 import { ProductsIcon } from "../Icons/AppIcons";
@@ -264,6 +265,7 @@ function ProductList() {
   const [filterStatus, setFilterStatus]     = useState('');
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [isDeletingAll, setIsDeletingAll]     = useState(false);
+  const [isExporting, setIsExporting]         = useState(false);
   const [viewMode, setViewMode]             = useState('table'); // default to 'table' (list view)
 
   const displayedArchived = archivedProducts.filter(p =>
@@ -374,6 +376,156 @@ function ProductList() {
       loadData();
     } else {
       showToast('error', 'Gagal mengarsipkan: ' + result.error);
+    }
+  };
+
+  // ─── BACKUP MASTER PRODUK TO EXCEL ──────────────────────────────────────────
+  const handleBackupExcel = async () => {
+    if (products.length === 0 && archivedProducts.length === 0) {
+      showToast('warning', 'Tidak ada data produk untuk di-backup');
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+
+      // Format row untuk produk aktif
+      const activeRows = products.map((p, idx) => ({
+        "No": idx + 1,
+        "Barcode": p.barcode || "",
+        "Barcode Pack": p.barcode_pack || "",
+        "Barcode Dus": p.barcode_dus || "",
+        "Barcode Karung": p.barcode_karung || "",
+        "Nama Produk": p.name || "",
+        "Kategori": p.category_name || "Umum",
+        "Satuan Jual": p.sell_per_unit || "all",
+        "Satuan Grosir": p.dus_label || "Dus",
+        "Isi Pcs/Pack": p.pcs_per_pack || 1,
+        "Isi Pack/Dus": p.pack_per_dus || 1,
+        "Isi Kg/Karung": p.kg_per_karung || 25,
+        "Harga Beli (Modal Pcs)": p.purchase_price || 0,
+        "Harga Jual /Pcs": p.price_pcs || 0,
+        "Harga Jual /Pack": p.price_pack || 0,
+        "Harga Jual /Dus": p.price_dus || 0,
+        "Harga Jual /Karung": p.price_karung || 0,
+        "Harga Jual /Kg": p.price_kg || 0,
+        "Stok Fisik (Pcs)": p.stock || 0,
+        "Stok Timbangan (Kg)": p.stock_kg || 0,
+        "Min Stok (Pcs)": p.min_stock || 0,
+        "Min Stok (Kg)": p.min_stock_kg || 0,
+        "Status Stok": (p.stock <= 0 && p.stock_kg <= 0) ? "Habis" : ((p.stock <= p.min_stock || p.stock_kg <= p.min_stock_kg) ? "Menipis" : "Aman"),
+        "Keterangan": p.notes || ""
+      }));
+
+      // Format row untuk produk arsip
+      const archiveRows = archivedProducts.map((p, idx) => ({
+        "No": idx + 1,
+        "Barcode": p.barcode || "",
+        "Barcode Pack": p.barcode_pack || "",
+        "Barcode Dus": p.barcode_dus || "",
+        "Barcode Karung": p.barcode_karung || "",
+        "Nama Produk": p.name || "",
+        "Kategori": p.category_name || "Umum",
+        "Satuan Jual": p.sell_per_unit || "all",
+        "Satuan Grosir": p.dus_label || "Dus",
+        "Isi Pcs/Pack": p.pcs_per_pack || 1,
+        "Isi Pack/Dus": p.pack_per_dus || 1,
+        "Isi Kg/Karung": p.kg_per_karung || 25,
+        "Harga Beli (Modal Pcs)": p.purchase_price || 0,
+        "Harga Jual /Pcs": p.price_pcs || 0,
+        "Harga Jual /Pack": p.price_pack || 0,
+        "Harga Jual /Dus": p.price_dus || 0,
+        "Harga Jual /Karung": p.price_karung || 0,
+        "Harga Jual /Kg": p.price_kg || 0,
+        "Stok Fisik (Pcs)": p.stock || 0,
+        "Stok Timbangan (Kg)": p.stock_kg || 0,
+        "Min Stok (Pcs)": p.min_stock || 0,
+        "Min Stok (Kg)": p.min_stock_kg || 0,
+        "Keterangan": p.notes || ""
+      }));
+
+      const wb = XLSX.utils.book_new();
+
+      const colWidths = [
+        { wch: 5 },  // No
+        { wch: 16 }, // Barcode
+        { wch: 16 }, // Barcode Pack
+        { wch: 16 }, // Barcode Dus
+        { wch: 16 }, // Barcode Karung
+        { wch: 34 }, // Nama Produk
+        { wch: 16 }, // Kategori
+        { wch: 12 }, // Satuan Jual
+        { wch: 14 }, // Satuan Grosir
+        { wch: 12 }, // Isi Pcs/Pack
+        { wch: 12 }, // Isi Pack/Dus
+        { wch: 12 }, // Isi Kg/Karung
+        { wch: 22 }, // Harga Beli Modal
+        { wch: 15 }, // Jual Pcs
+        { wch: 15 }, // Jual Pack
+        { wch: 15 }, // Jual Dus
+        { wch: 16 }, // Jual Karung
+        { wch: 15 }, // Jual Kg
+        { wch: 16 }, // Stok Pcs
+        { wch: 18 }, // Stok Kg
+        { wch: 14 }, // Min Pcs
+        { wch: 14 }, // Min Kg
+        { wch: 12 }, // Status
+        { wch: 25 }, // Keterangan
+      ];
+
+      // Sheet 1: Master Produk Aktif
+      const wsActive = XLSX.utils.json_to_sheet(activeRows);
+      wsActive['!cols'] = colWidths;
+      XLSX.utils.book_append_sheet(wb, wsActive, "Data Produk Aktif");
+
+      // Sheet 2: Produk Diarsipkan (jika ada)
+      if (archiveRows.length > 0) {
+        const wsArchive = XLSX.utils.json_to_sheet(archiveRows);
+        wsArchive['!cols'] = colWidths;
+        XLSX.utils.book_append_sheet(wb, wsArchive, "Produk Diarsipkan");
+      }
+
+      // Sheet 3: Info & Petunjuk Backup
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+      const filename = `Backup_Master_Produk_${dateStr}_${pad(now.getHours())}${pad(now.getMinutes())}.xlsx`;
+
+      const metaRows = [
+        { "Informasi Backup": "Aplikasi", "Keterangan": "Sistem POS Toko Bumbu" },
+        { "Informasi Backup": "Waktu Backup", "Keterangan": `${dateStr} ${timeStr}` },
+        { "Informasi Backup": "Total Produk Aktif", "Keterangan": products.length },
+        { "Informasi Backup": "Total Produk Diarsipkan", "Keterangan": archivedProducts.length },
+        { "Informasi Backup": "Format File", "Keterangan": "Microsoft Excel (.xlsx)" },
+        { "Informasi Backup": "Petunjuk", "Keterangan": "Data ini dapat langsung diimport kembali kapan saja lewat tombol Import CSV/Excel." }
+      ];
+      const wsMeta = XLSX.utils.json_to_sheet(metaRows);
+      wsMeta['!cols'] = [{ wch: 24 }, { wch: 65 }];
+      XLSX.utils.book_append_sheet(wb, wsMeta, "Info Backup");
+
+      // Simpan file: prioritaskan native save dialog jika di Electron
+      if (window.electronAPI?.saveExcel) {
+        const base64 = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+        const res = await window.electronAPI.saveExcel(filename, base64);
+        if (res.canceled) {
+          showToast('info', 'Penyimpanan backup Excel dibatalkan');
+        } else if (res.success) {
+          showToast('success', `✅ Berhasil mencadangkan ${products.length} produk ke Excel!`);
+        } else {
+          // Fallback to direct download
+          XLSX.writeFile(wb, filename);
+          showToast('success', `File backup berhasil diunduh: ${filename}`);
+        }
+      } else {
+        XLSX.writeFile(wb, filename);
+        showToast('success', `File backup berhasil diunduh: ${filename}`);
+      }
+    } catch (err) {
+      console.error("Backup Excel Error:", err);
+      showToast('error', 'Gagal membackup ke Excel: ' + err.message);
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -501,6 +653,40 @@ function ProductList() {
             >
               <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="11" height="11" rx="2" stroke="currentColor" strokeWidth="1.3"/><path d="M4 5h5M4 7h3M4 9h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
               Import CSV/Excel
+            </button>
+            <button
+              onClick={handleBackupExcel}
+              disabled={isExporting || (products.length === 0 && archivedProducts.length === 0)}
+              title="Cadangkan seluruh data master produk ke format Excel (.xlsx)"
+              style={{
+                padding: '8px 14px', borderRadius: 10,
+                cursor: (products.length === 0 && archivedProducts.length === 0) || isExporting ? 'not-allowed' : 'pointer',
+                fontFamily: 'Syne, sans-serif', fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
+                transition: 'all 0.15s',
+                border: `1px solid ${T.blue}40`,
+                background: T.blue + '12',
+                color: T.blue,
+                display: 'flex', alignItems: 'center', gap: 6,
+                opacity: (products.length === 0 && archivedProducts.length === 0) || isExporting ? 0.5 : 1
+              }}
+              onMouseEnter={e => { if (!isExporting && (products.length > 0 || archivedProducts.length > 0)) e.currentTarget.style.background = T.blue + '22'; }}
+              onMouseLeave={e => { if (!isExporting && (products.length > 0 || archivedProducts.length > 0)) e.currentTarget.style.background = T.blue + '12'; }}
+            >
+              {isExporting ? (
+                <>
+                  <div style={{ width: 12, height: 12, border: `2px solid ${T.blue}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+                  <span>Mengekspor...</span>
+                </>
+              ) : (
+                <>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  <span>Backup ke Excel</span>
+                </>
+              )}
             </button>
             <button
               onClick={() => setShowBulkConfirm(true)}

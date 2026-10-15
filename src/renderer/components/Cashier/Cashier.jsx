@@ -26,11 +26,11 @@ const UNITS = [
 function calcPcs(item, product) {
   if (!product) return item.quantity;
   if (item.unit === 'kg') return 0;
-  if (item.unit === 'karung') return 0; // Karung is also weight-based
+  if (item.unit === 'karung' && product.sell_per_unit === 'kg') return 0; // Karung is weight-based only for Kg products
   const pp = product.pcs_per_pack || 1;
   const pd = product.pack_per_dus || 1;
   if (item.unit === 'pack') return item.quantity * pp;
-  if (item.unit === 'dus')  return item.quantity * pd * pp;
+  if (item.unit === 'dus' || item.unit === 'bal' || (item.unit === 'karung' && product.sell_per_unit !== 'kg'))  return item.quantity * pd * pp;
   return item.quantity;
 }
 
@@ -465,6 +465,11 @@ function ProductItem({ product, addToCart, addManualToCart, isLast, lastRef, ign
     // Show all units that have a price registered (> 0)
     // This allows "Hybrid" products (e.g. sold by Pack AND Kg)
     return product[u.priceKey] !== undefined && product[u.priceKey] !== null && Number(product[u.priceKey]) > 0;
+  }).map(u => {
+    if (u.key === 'dus') {
+      return { ...u, label: product.dus_label || 'Dus' };
+    }
+    return u;
   });
 
 
@@ -633,6 +638,7 @@ const inputStyle = {
 // ─── CART ROW ─────────────────────────────────────────────────────────────────
 function CartRow({ item, onUpdate, onRemove }) {
   const unit = UNITS.find(u => u.key === item.unit) || UNITS[0];
+  const displayUnit = item.unit_label || (item.unit === 'dus' ? (item.dus_label || 'Dus') : unit.label);
 
   return (
     <div style={{
@@ -649,7 +655,7 @@ function CartRow({ item, onUpdate, onRemove }) {
         fontSize: 9, fontWeight: 800, color: unit.color,
         letterSpacing: '0.05em', textTransform: 'uppercase',
       }}>
-        {unit.label}
+        {displayUnit}
       </div>
 
       {/* Name & price */}
@@ -658,7 +664,7 @@ function CartRow({ item, onUpdate, onRemove }) {
           {item.name}
         </p>
         <p style={{ fontSize: 10, color: T.sub, fontFamily: 'JetBrains Mono, monospace' }}>
-          {fmt(item.price)} / {item.unit}
+          {fmt(item.price)} / {displayUnit}
         </p>
       </div>
 
@@ -913,6 +919,7 @@ function Cashier({ setCurrentPage }) {
       }
     }
 
+    const unitLabel = unit === 'dus' ? (product.dus_label || 'Dus') : (u?.label || unit);
     const existing = cart.find(item => item.product_id === product.id && item.unit === unit);
     if (existing) {
       setCart(cart.map(item =>
@@ -925,7 +932,9 @@ function Cashier({ setCurrentPage }) {
         id: Date.now() + Math.random(),
         product_id: product.id,
         name: product.name,
-        unit, price,
+        unit,
+        unit_label: unitLabel,
+        price,
         quantity: 1,
         subtotal: Math.round(price * 1),
       }]);

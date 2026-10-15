@@ -119,6 +119,7 @@ class DatabaseManager {
               purchase_price INTEGER DEFAULT 0,
               price_karung  INTEGER DEFAULT 0,
               kg_per_karung REAL DEFAULT 25,
+              dus_label     TEXT DEFAULT 'Dus',
               created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
               updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
               FOREIGN KEY (category_id) REFERENCES categories(id)
@@ -139,6 +140,7 @@ class DatabaseManager {
           await this._runSQL("ALTER TABLE products ADD COLUMN purchase_price INTEGER DEFAULT 0 CHECK(purchase_price >= 0)", "ADD products.purchase_price");
           await this._runSQL("ALTER TABLE products ADD COLUMN price_karung INTEGER DEFAULT 0 CHECK(price_karung >= 0)", "ADD products.price_karung");
           await this._runSQL("ALTER TABLE products ADD COLUMN kg_per_karung REAL DEFAULT 25 CHECK(kg_per_karung > 0)", "ADD products.kg_per_karung");
+          await this._runSQL("ALTER TABLE products ADD COLUMN dus_label TEXT DEFAULT 'Dus'", "ADD products.dus_label");
 
           // ── STOCKS ──────────────────────────────────────────────────────────
           await this._runSQL(`

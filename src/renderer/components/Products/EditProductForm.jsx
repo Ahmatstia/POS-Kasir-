@@ -20,6 +20,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
   const [minStock, setMinStock]       = useState(0);
   const [minStockKg, setMinStockKg]   = useState(0);
   const [sellPerUnit, setSellPerUnit] = useState('all');
+  const [dusLabel, setDusLabel]       = useState('Dus');
   const [pricePcs, setPricePcs]       = useState(0);
   const [pricePack, setPricePack]     = useState(0);
   const [priceDus, setPriceDus]       = useState(0);
@@ -43,11 +44,11 @@ function EditProductForm({ productId, onClose, onSuccess }) {
       return opts;
     }
     const opts = [];
-    if (pdNum > 1) opts.push({ key: 'dus', label: 'Per Dus', mult: pdNum * ppNum });
+    if (pdNum > 1) opts.push({ key: 'dus', label: `Per ${dusLabel}`, mult: pdNum * ppNum });
     if (ppNum > 1) opts.push({ key: 'pack', label: 'Per Pack', mult: ppNum });
     opts.push({ key: 'pcs', label: 'Per Pcs', mult: 1 });
     return opts;
-  }, [isKg, kgKarungNum, pdNum, ppNum]);
+  }, [isKg, kgKarungNum, pdNum, ppNum, dusLabel]);
 
   const [costUnit, setCostUnit] = useState(isKg ? 'kg' : 'pcs');
 
@@ -91,6 +92,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
         setMinStock(product.min_stock || 0);
         setMinStockKg(product.min_stock_kg || 0);
         setSellPerUnit(product.sell_per_unit || 'all');
+        setDusLabel(product.dus_label || 'Dus');
         setPricePcs(product.price_pcs   || 0);
         setPricePack(product.price_pack || 0);
         setPriceDus(product.price_dus   || 0);
@@ -152,6 +154,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
       min_stock:    Number(minStock)    || 0,
       min_stock_kg: Number(minStockKg)  || 0,
       purchase_price: computedBasePrice,
+      dus_label:    dusLabel,
       notes,
     });
     setSaving(false);
@@ -229,10 +232,43 @@ function EditProductForm({ productId, onClose, onSuccess }) {
         {/* Conversion */}
         {sellPerUnit !== 'kg' && (
         <div style={{ padding: 16, background: T.blue + '06', borderRadius: 14, border: `1px solid ${T.blue}20` }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <p style={{ fontSize: 10, fontWeight: 700, color: T.blue, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Konversi Satuan (Grosir)</p>
             <div style={{ padding: '2px 8px', borderRadius: 100, background: T.blue + '14', color: T.blue, fontSize: 9, fontWeight: 700 }}>
               Base: Pcs
+            </div>
+          </div>
+
+          {/* Kemasan Terbesar Selector */}
+          <div style={{ marginBottom: 14, padding: '10px 12px', borderRadius: 10, background: T.surface, border: `1px solid ${T.border2}` }}>
+            <label style={{ display: 'block', fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: T.muted, marginBottom: 7 }}>
+              Kemasan Terbesar / Grosir:
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {[
+                { id: 'Dus', label: 'Dus / Karton', desc: 'Contoh: Mie, Royco' },
+                { id: 'Karung', label: 'Karung', desc: 'Contoh: Plastik Kresek' },
+                { id: 'Bal', label: 'Bal', desc: 'Contoh: Plastik, Kertas' },
+              ].map(opt => {
+                const isSel = dusLabel === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setDusLabel(opt.id)}
+                    style={{
+                      padding: '8px 10px', borderRadius: 8, cursor: 'pointer', textAlign: 'center',
+                      border: `1.5px solid ${isSel ? T.accent : T.border2}`,
+                      background: isSel ? T.accent + '15' : T.bg,
+                      color: isSel ? T.accent : T.sub,
+                      fontFamily: 'Syne, sans-serif', transition: 'all 0.15s'
+                    }}
+                  >
+                    <div style={{ fontSize: 11, fontWeight: 800 }}>{opt.id}</div>
+                    <div style={{ fontSize: 8, color: isSel ? T.accent : T.muted, marginTop: 2 }}>{opt.label}</div>
+                  </button>
+                );
+              })}
             </div>
           </div>
           
@@ -243,7 +279,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
                 <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: T.muted, fontWeight: 700 }}>Pcs</span>
               </div>
             </Field>
-            <Field label="1 Dus = Isi Berapa Pack?">
+            <Field label={`1 ${dusLabel} = Isi Berapa Pack?`}>
               <div style={{ position: 'relative' }}>
                 <input type="number" value={packPerDus} onChange={e => setPackPerDus(e.target.value)} min="1" className="form-field" style={{ ...fieldStyle, fontFamily: 'JetBrains Mono, monospace', paddingRight: 45 }} />
                 <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: T.muted, fontWeight: 700 }}>Pack</span>
@@ -257,7 +293,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
             display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center'
           }}>
             <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: 8, color: T.muted, fontWeight: 700, marginBottom: 2 }}>1 DUS</p>
+              <p style={{ fontSize: 8, color: T.muted, fontWeight: 700, marginBottom: 2 }}>1 {dusLabel.toUpperCase()}</p>
               <p style={{ fontSize: 13, fontWeight: 800, color: T.text }}>= {Number(packPerDus)}</p>
               <p style={{ fontSize: 8, color: T.sub }}>Pack</p>
             </div>
@@ -273,7 +309,7 @@ function EditProductForm({ productId, onClose, onSuccess }) {
               <p style={{ fontSize: 16, fontWeight: 900, color: T.accent, fontFamily: 'JetBrains Mono, monospace' }}>
                 {Number(packPerDus) * Number(pcsPerPack)}
               </p>
-              <p style={{ fontSize: 8, color: T.accent, fontWeight: 700 }}>PCS / DUS</p>
+              <p style={{ fontSize: 8, color: T.accent, fontWeight: 700 }}>PCS / {dusLabel.toUpperCase()}</p>
             </div>
           </div>
         </div>
@@ -365,16 +401,16 @@ function EditProductForm({ productId, onClose, onSuccess }) {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: sellPerUnit === 'kg' ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: 8 }}>
             {[
-              { label: 'Pcs',    val: pricePcs,    set: setPricePcs,    col: T.blue   },
-              { label: 'Pack',   val: pricePack,   set: setPricePack,   col: T.green  },
-              { label: 'Dus',    val: priceDus,    set: setPriceDus,    col: T.accent },
-              { label: 'Karung', val: priceKarung, set: setPriceKarung, col: T.orange },
-              { label: 'Kg',     val: priceKg,     set: setPriceKg,     col: T.purple },
+              { key: 'pcs',    label: 'Pcs',    val: pricePcs,    set: setPricePcs,    col: T.blue   },
+              { key: 'pack',   label: 'Pack',   val: pricePack,   set: setPricePack,   col: T.green  },
+              { key: 'dus',    label: dusLabel, val: priceDus,    set: setPriceDus,    col: T.accent },
+              { key: 'karung', label: 'Karung', val: priceKarung, set: setPriceKarung, col: T.orange },
+              { key: 'kg',     label: 'Kg',     val: priceKg,     set: setPriceKg,     col: T.purple },
             ].filter(u => {
-               if (sellPerUnit === 'kg') return u.label === 'Kg' || u.label === 'Karung';
-               return u.label !== 'Kg' && u.label !== 'Karung';
+               if (sellPerUnit === 'kg') return u.key === 'kg' || u.key === 'karung';
+               return u.key === 'pcs' || u.key === 'pack' || u.key === 'dus';
             }).map(u => (
-              <div key={u.label}>
+              <div key={u.key}>
                 <label style={{ fontSize: 9, fontWeight: 700, color: u.col, display: 'block', marginBottom: 5 }}>{u.label}</label>
                 <div style={{ position: 'relative' }}>
                   <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', fontSize: 9, color: T.muted, pointerEvents: 'none', fontFamily: 'JetBrains Mono, monospace' }}>Rp</span>

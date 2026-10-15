@@ -9,7 +9,7 @@ export async function getInventorySummary() {
     const sql = `
       SELECT 
         p.id, p.name, p.category_id, p.min_stock, p.min_stock_kg, p.sell_per_unit,
-        p.pcs_per_pack, p.pack_per_dus,
+        p.pcs_per_pack, p.pack_per_dus, p.dus_label,
         p.price_pcs, p.price_pack, p.price_dus, p.price_kg, p.price_karung, p.kg_per_karung,
         p.purchase_price,
         c.name as category_name, c.color as category_color,

@@ -124,26 +124,30 @@ export async function createTransaction(transactionData) {
       // Deduct stock (FIFO) for all valid products (allowing negative stock if ignore_stock is active)
       if (item.product_id) {
         const allowNegative = !manageStock;
+        const [prod] = await window.electronAPI.query(
+          "SELECT pcs_per_pack, pack_per_dus, sell_per_unit, kg_per_karung, dus_label FROM products WHERE id = ?",
+          [item.product_id]
+        );
+        const isKg = prod?.sell_per_unit === 'kg';
+        const uLower = (item.unit || '').toLowerCase();
 
-        if (item.unit === 'kg' || item.unit === 'karung') {
+        if (isKg) {
           let kgToDeduct = item.quantity;
-          if (item.unit === 'karung') {
-            const [prod] = await window.electronAPI.query("SELECT kg_per_karung FROM products WHERE id = ?", [item.product_id]);
+          if (uLower === 'karung' || uLower === (prod?.dus_label || '').toLowerCase()) {
             kgToDeduct = item.quantity * (prod?.kg_per_karung || 25);
           }
           costPrice = await deductStockFIFOKg(item.product_id, kgToDeduct, invoiceNo, createdAt, allowNegative);
         } else {
-          // Calculate pcs to deduct based on unit
-          const [productInfo] = await window.electronAPI.query(
-            "SELECT pcs_per_pack, pack_per_dus FROM products WHERE id = ?",
-            [item.product_id]
-          );
-          const pcsPerPack = productInfo?.pcs_per_pack || 1;
-          const packPerDus = productInfo?.pack_per_dus || 1;
+          const pcsPerPack = prod?.pcs_per_pack || 1;
+          const packPerDus = prod?.pack_per_dus || 1;
+          const dusLabel = (prod?.dus_label || 'dus').toLowerCase();
 
           let pcsToDeduct = item.quantity;
-          if (item.unit === "pack") pcsToDeduct = item.quantity * pcsPerPack;
-          else if (item.unit === "dus") pcsToDeduct = item.quantity * packPerDus * pcsPerPack;
+          if (uLower === "pack") {
+            pcsToDeduct = item.quantity * pcsPerPack;
+          } else if (uLower === "dus" || uLower === "bal" || uLower === "karung" || uLower === dusLabel) {
+            pcsToDeduct = item.quantity * packPerDus * pcsPerPack;
+          }
 
           // FIFO deduction from stocks table (with negative support if ignore_stock is on)
           costPrice = await deductStockFIFO(item.product_id, pcsToDeduct, invoiceNo, createdAt, allowNegative);
@@ -155,7 +159,7 @@ export async function createTransaction(transactionData) {
         `INSERT INTO transaction_items
            (transaction_id, product_id, product_name, quantity, unit, price_per_unit, subtotal, cost_price)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [transactionId, item.product_id, item.name, item.quantity, item.unit, item.price, item.subtotal, costPrice]
+        [transactionId, item.product_id, item.name, item.quantity, item.unit_label || item.unit, item.price, item.subtotal, costPrice]
       );
     }
 
@@ -241,10 +245,16 @@ export async function cancelTransaction(transactionId) {
       for (const item of items) {
         if (!item.product_id) continue;
         
-        if (item.unit === 'kg' || item.unit === 'karung') {
+        const [prod] = await window.electronAPI.query(
+          "SELECT pcs_per_pack, pack_per_dus, sell_per_unit, kg_per_karung, dus_label FROM products WHERE id = ?",
+          [item.product_id]
+        );
+        const isKg = prod?.sell_per_unit === 'kg';
+        const uLower = (item.unit || '').toLowerCase();
+
+        if (isKg) {
           let qtyReturned = item.quantity;
-          if (item.unit === 'karung') {
-            const [prod] = await window.electronAPI.query("SELECT kg_per_karung FROM products WHERE id = ?", [item.product_id]);
+          if (uLower === 'karung' || uLower === (prod?.dus_label || '').toLowerCase()) {
             qtyReturned = item.quantity * (prod?.kg_per_karung || 25);
           }
 
@@ -269,15 +279,12 @@ export async function cancelTransaction(transactionId) {
             [item.product_id, qtyReturned, qtyReturned, stockBefore, stockAfter, unitHPP, tx.invoice_no, `Retur transaksi ${tx.invoice_no}`]
           );
         } else {
-          const [productInfo] = await window.electronAPI.query(
-            "SELECT pcs_per_pack, pack_per_dus FROM products WHERE id = ?",
-            [item.product_id]
-          );
-          const pcsPerPack = productInfo?.pcs_per_pack || 1;
-          const packPerDus = productInfo?.pack_per_dus || 1;
+          const pcsPerPack = prod?.pcs_per_pack || 1;
+          const packPerDus = prod?.pack_per_dus || 1;
+          const dusLabel = (prod?.dus_label || 'dus').toLowerCase();
           let pcsToReturn = item.quantity;
-          if (item.unit === "pack") pcsToReturn = item.quantity * pcsPerPack;
-          else if (item.unit === "dus") pcsToReturn = item.quantity * packPerDus * pcsPerPack;
+          if (uLower === "pack") pcsToReturn = item.quantity * pcsPerPack;
+          else if (uLower === "dus" || uLower === "bal" || uLower === "karung" || uLower === dusLabel) pcsToReturn = item.quantity * packPerDus * pcsPerPack;
 
           const originalHPP = item.cost_price || 0;
           const unitHPP = Math.round(originalHPP / (pcsToReturn || 1));
@@ -352,10 +359,16 @@ export async function deleteTransaction(transactionId) {
         for (const item of items) {
           if (!item.product_id) continue;
           
-          if (item.unit === 'kg' || item.unit === 'karung') {
+          const [prod] = await window.electronAPI.query(
+            "SELECT pcs_per_pack, pack_per_dus, sell_per_unit, kg_per_karung, dus_label FROM products WHERE id = ?",
+            [item.product_id]
+          );
+          const isKg = prod?.sell_per_unit === 'kg';
+          const uLower = (item.unit || '').toLowerCase();
+
+          if (isKg) {
             let qtyReturned = item.quantity;
-            if (item.unit === 'karung') {
-              const [prod] = await window.electronAPI.query("SELECT kg_per_karung FROM products WHERE id = ?", [item.product_id]);
+            if (uLower === 'karung' || uLower === (prod?.dus_label || '').toLowerCase()) {
               qtyReturned = item.quantity * (prod?.kg_per_karung || 25);
             }
             const originalHPP = item.cost_price || 0;
@@ -378,15 +391,12 @@ export async function deleteTransaction(transactionId) {
               [item.product_id, qtyReturned, qtyReturned, stockBefore, stockAfter, unitHPP, tx.invoice_no, `Retur hapus transaksi ${tx.invoice_no}`]
             );
           } else {
-            const [productInfo] = await window.electronAPI.query(
-              "SELECT pcs_per_pack, pack_per_dus FROM products WHERE id = ?",
-              [item.product_id]
-            );
-            const pcsPerPack = productInfo?.pcs_per_pack || 1;
-            const packPerDus = productInfo?.pack_per_dus || 1;
+            const pcsPerPack = prod?.pcs_per_pack || 1;
+            const packPerDus = prod?.pack_per_dus || 1;
+            const dusLabel = (prod?.dus_label || 'dus').toLowerCase();
             let pcsToReturn = item.quantity;
-            if (item.unit === "pack") pcsToReturn = item.quantity * pcsPerPack;
-            else if (item.unit === "dus") pcsToReturn = item.quantity * packPerDus * pcsPerPack;
+            if (uLower === "pack") pcsToReturn = item.quantity * pcsPerPack;
+            else if (uLower === "dus" || uLower === "bal" || uLower === "karung" || uLower === dusLabel) pcsToReturn = item.quantity * packPerDus * pcsPerPack;
 
             const originalHPP = item.cost_price || 0;
             const unitHPP = Math.round(originalHPP / (pcsToReturn || 1));
@@ -469,10 +479,16 @@ export async function deleteAllTransactions(restoreStock = true) {
         for (const item of items) {
           if (!item.product_id) continue;
 
-          if (item.unit === 'kg' || item.unit === 'karung') {
+          const [prod] = await window.electronAPI.query(
+            "SELECT pcs_per_pack, pack_per_dus, sell_per_unit, kg_per_karung, dus_label FROM products WHERE id = ?",
+            [item.product_id]
+          );
+          const isKg = prod?.sell_per_unit === 'kg';
+          const uLower = (item.unit || '').toLowerCase();
+
+          if (isKg) {
             let qtyReturned = item.quantity;
-            if (item.unit === 'karung') {
-              const [prod] = await window.electronAPI.query("SELECT kg_per_karung FROM products WHERE id = ?", [item.product_id]);
+            if (uLower === 'karung' || uLower === (prod?.dus_label || '').toLowerCase()) {
               qtyReturned = item.quantity * (prod?.kg_per_karung || 25);
             }
             const originalHPP = item.cost_price || 0;
@@ -495,15 +511,12 @@ export async function deleteAllTransactions(restoreStock = true) {
               [item.product_id, qtyReturned, qtyReturned, stockBefore, stockAfter, unitHPP, tx.invoice_no, `Retur hapus massal transaksi ${tx.invoice_no}`]
             );
           } else {
-            const [productInfo] = await window.electronAPI.query(
-              "SELECT pcs_per_pack, pack_per_dus FROM products WHERE id = ?",
-              [item.product_id]
-            );
-            const pcsPerPack = productInfo?.pcs_per_pack || 1;
-            const packPerDus = productInfo?.pack_per_dus || 1;
+            const pcsPerPack = prod?.pcs_per_pack || 1;
+            const packPerDus = prod?.pack_per_dus || 1;
+            const dusLabel = (prod?.dus_label || 'dus').toLowerCase();
             let pcsToReturn = item.quantity;
-            if (item.unit === "pack") pcsToReturn = item.quantity * pcsPerPack;
-            else if (item.unit === "dus") pcsToReturn = item.quantity * packPerDus * pcsPerPack;
+            if (uLower === "pack") pcsToReturn = item.quantity * pcsPerPack;
+            else if (uLower === "dus" || uLower === "bal" || uLower === "karung" || uLower === dusLabel) pcsToReturn = item.quantity * packPerDus * pcsPerPack;
 
             const originalHPP = item.cost_price || 0;
             const unitHPP = Math.round(originalHPP / (pcsToReturn || 1));

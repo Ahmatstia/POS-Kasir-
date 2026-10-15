@@ -66,10 +66,11 @@ function ProductCard({ product, onEdit, onDelete, isDeleting, isConfirmingDelete
 
   // Collect active price units
   const activePrices = [
-    { key: 'pcs',  label: 'Pcs',  price: product.price_pcs,  color: T.blue   },
-    { key: 'pack', label: 'Pack', price: product.price_pack, color: T.green  },
-    { key: 'dus',  label: 'Dus',  price: product.price_dus,  color: T.accent },
-    { key: 'kg',   label: 'Kg',   price: product.price_kg,   color: T.purple },
+    { key: 'pcs',    label: 'Pcs',                     price: product.price_pcs,    color: T.blue   },
+    { key: 'pack',   label: 'Pack',                    price: product.price_pack,   color: T.green  },
+    { key: 'dus',    label: product.dus_label || 'Dus', price: product.price_dus,   color: T.accent },
+    { key: 'karung', label: 'Karung',                  price: product.price_karung, color: T.orange },
+    { key: 'kg',     label: 'Kg',                      price: product.price_kg,     color: T.purple },
   ].filter(u => u.price > 0);
 
   return (
@@ -537,8 +538,8 @@ function ProductList() {
             {/* Unit */}
             <select value={filterUnit} onChange={e => setFilterUnit(e.target.value)} className="filter-input" style={{ cursor: 'pointer' }}>
               <option value="">Semua Satuan</option>
-              <option value="kemasan">Pcs/Pack/Dus</option>
-              <option value="timbangan">Kg/Karung</option>
+              <option value="kemasan">Produk Kemasan</option>
+              <option value="timbangan">Produk Timbangan</option>
             </select>
 
             {/* Status */}
@@ -621,7 +622,7 @@ function ProductList() {
               <table className="prod-table">
                 <thead>
                   <tr>
-                    {['Nama Produk', 'Kategori', 'Jual Per', 'Harga Pcs', 'Harga Pack', 'Harga Dus', 'Harga Kg', 'Stok', 'Min', 'Aksi'].map(h => (
+                    {['Nama Produk', 'Kategori', 'Jual Per', 'Harga Pcs', 'Harga Pack', 'Harga Dus/Grosir', 'Harga Kg', 'Stok', 'Min', 'Aksi'].map(h => (
                       <th key={h}>{h}</th>
                     ))}
                   </tr>
@@ -663,7 +664,12 @@ function ProductList() {
                         </td>
                         <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: p.price_pcs ? T.text : T.muted }}>{fmt(p.price_pcs) || '—'}</td>
                         <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: p.price_pack ? T.text : T.muted }}>{fmt(p.price_pack) || '—'}</td>
-                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: p.price_dus ? T.text : T.muted }}>{fmt(p.price_dus) || '—'}</td>
+                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: p.price_dus ? T.text : T.muted }}>
+                          {fmt(p.price_dus) || '—'}
+                          {p.price_dus > 0 && p.dus_label && p.dus_label !== 'Dus' && (
+                            <span style={{ fontSize: 9, color: T.accent, marginLeft: 4, fontWeight: 700 }}>({p.dus_label})</span>
+                          )}
+                        </td>
                         <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: p.price_kg ? T.text : T.muted }}>{fmt(p.price_kg) || '—'}</td>
                         <td>
                           <span style={{ padding: '2px 9px', borderRadius: 100, fontSize: 11, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace', background: sColor + '14', border: `1px solid ${sColor}30`, color: sColor }}>

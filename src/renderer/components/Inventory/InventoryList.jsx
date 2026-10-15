@@ -86,11 +86,11 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
       return opts;
     }
     const opts = [];
-    if (pd > 1) opts.push({ key: 'dus', label: 'Per Dus', mult: pd * pp });
+    if (pd > 1) opts.push({ key: 'dus', label: `Per ${product?.dus_label || 'Dus'}`, mult: pd * pp });
     if (pp > 1) opts.push({ key: 'pack', label: 'Per Pack', mult: pp });
     opts.push({ key: 'pcs', label: 'Per Pcs', mult: 1 });
     return opts;
-  }, [isKgOnly, kgPerKarung, pd, pp]);
+  }, [isKgOnly, kgPerKarung, pd, pp, product?.dus_label]);
 
   const defaultCostUnit = costUnitOptions[0]?.key || (isKgOnly ? 'kg' : 'pcs');
   const [costUnit, setCostUnit] = useState(defaultCostUnit);
@@ -186,7 +186,7 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
             <div style={{ padding: '10px 14px', borderRadius: 10, background: T.blue + '08', border: `1px solid ${T.blue}20`, display: 'flex', gap: 14 }}>
               <span style={{ fontSize: 11, color: T.blue, fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>Konversi:</span>
               <div style={{ display: 'flex', gap: 12 }}>
-                {pd > 1 && <span style={{ fontSize: 11, color: T.blue, fontFamily: 'JetBrains Mono, monospace' }}>1 Dus = {pd} Pk</span>}
+                {pd > 1 && <span style={{ fontSize: 11, color: T.blue, fontFamily: 'JetBrains Mono, monospace' }}>1 {product?.dus_label || 'Dus'} = {pd} Pk</span>}
                 {pp > 1 && <span style={{ fontSize: 11, color: T.blue, fontFamily: 'JetBrains Mono, monospace' }}>1 Pk = {pp} Pcs</span>}
               </div>
             </div>
@@ -223,11 +223,11 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
             {(!isKgOnly || isHybrid) && (
               <div style={{ padding: 14, background: T.blue + '06', border: `1.5px dashed ${T.blue}30`, borderRadius: 14 }}>
                 <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.blue, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
-                  Stok Kemasan (Pcs / Pack / Dus)
+                  Stok Kemasan (Pcs / Pack / {product?.dus_label || 'Dus'})
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
                   <div>
-                    <p style={{ fontSize: 9, fontWeight: 700, color: T.muted, marginBottom: 5, textAlign: 'center' }}>DUS</p>
+                    <p style={{ fontSize: 9, fontWeight: 700, color: T.muted, marginBottom: 5, textAlign: 'center' }}>{(product?.dus_label || 'DUS').toUpperCase()}</p>
                     <input type="number" min="0" value={qtyDus && !isKgOnly ? qtyDus : ''} onChange={e => { setQtyDus(e.target.value); setError(''); }}
                       placeholder="0" style={{ ...inp, opacity: pd > 1 ? 1 : 0.4 }} disabled={pd <= 1} />
                   </div>
@@ -310,7 +310,7 @@ function StockInModal({ product, onClose, onSuccess, showToast, hideCost }) {
                 </span>
                 {curMult > 1 && (
                   <span style={{ fontSize: 10, color: T.muted }}>
-                    (Otomatis dibagi {curMult} dari harga {costUnit})
+                    (Otomatis dibagi {curMult} dari harga {costUnit === 'dus' ? (product?.dus_label || 'Dus').toLowerCase() : costUnit})
                   </span>
                 )}
               </div>
@@ -789,8 +789,8 @@ function InventoryList() {
                 {/* Unit */}
                 <select value={filterUnit} onChange={e => setFilterUnit(e.target.value)} className="inv-input" style={{ cursor: 'pointer' }}>
                   <option value="">Semua Satuan</option>
-                  <option value="kemasan">Pcs/Pack/Dus</option>
-                  <option value="timbangan">Kg/Karung</option>
+                  <option value="kemasan">Produk Kemasan</option>
+                  <option value="timbangan">Produk Timbangan</option>
                 </select>
 
                 {/* Status */}
@@ -889,7 +889,7 @@ function InventoryList() {
                           packInfo = `± ${Math.floor((product.stock_kg || 0) / product.kg_per_karung)} Karung`;
                         } else if (!isKg && (pp > 1 || pd > 1)) {
                           const pk = pp > 1 ? `${Math.floor((product.stock || 0) / pp)} Pk` : '';
-                          const ds = pd > 1 && (product.stock || 0) >= pp * pd ? ` / ${Math.floor((product.stock || 0) / (pp * pd))} Dus` : '';
+                          const ds = pd > 1 && (product.stock || 0) >= pp * pd ? ` / ${Math.floor((product.stock || 0) / (pp * pd))} ${product?.dus_label || 'Dus'}` : '';
                           packInfo = (pk + ds) || '—';
                         }
 

@@ -74,12 +74,13 @@ export async function addProduct(product) {
     const pcs_per_pack = Math.max(1, Number(product.pcs_per_pack) || 1);
     const pack_per_dus = Math.max(1, Number(product.pack_per_dus) || 1);
     const kg_per_karung = Math.max(0.1, Number(product.kg_per_karung) || 25);
+    const dus_label = (product.dus_label || "Dus").trim() || "Dus";
 
     const sql = `
       INSERT INTO products 
         (name, category_id, sell_per_unit, price_pcs, price_pack, price_dus, price_kg,
-         pcs_per_pack, pack_per_dus, min_stock, min_stock_kg, purchase_price, notes, price_karung, kg_per_karung)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         pcs_per_pack, pack_per_dus, min_stock, min_stock_kg, purchase_price, notes, price_karung, kg_per_karung, dus_label)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const params = [
       name,
@@ -96,7 +97,8 @@ export async function addProduct(product) {
       Math.max(0, Number(product.purchase_price) || 0),
       (product.notes || "").trim(),
       Math.max(0, Number(product.price_karung) || 0),
-      kg_per_karung
+      kg_per_karung,
+      dus_label
     ];
     const result = await window.electronAPI.run(sql, params);
     if (result.lastID) {
@@ -121,6 +123,7 @@ export async function updateProduct(id, product) {
     const pcs_per_pack = Math.max(1, Number(product.pcs_per_pack) || 1);
     const pack_per_dus = Math.max(1, Number(product.pack_per_dus) || 1);
     const kg_per_karung = Math.max(0.1, Number(product.kg_per_karung) || 25);
+    const dus_label = (product.dus_label || "Dus").trim() || "Dus";
 
     const sql = `
       UPDATE products
@@ -128,7 +131,7 @@ export async function updateProduct(id, product) {
           price_pcs = ?, price_pack = ?, price_dus = ?, price_kg = ?,
           pcs_per_pack = ?, pack_per_dus = ?,
           min_stock = ?, min_stock_kg = ?, purchase_price = ?, notes = ?,
-          price_karung = ?, kg_per_karung = ?
+          price_karung = ?, kg_per_karung = ?, dus_label = ?
       WHERE id = ?
     `;
     const params = [
@@ -147,6 +150,7 @@ export async function updateProduct(id, product) {
       (product.notes || "").trim(),
       Math.max(0, Number(product.price_karung) || 0),
       kg_per_karung,
+      dus_label,
       id,
     ];
     const result = await window.electronAPI.run(sql, params);

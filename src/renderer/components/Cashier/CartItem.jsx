@@ -12,6 +12,7 @@ const fmt = (n) => `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
 
 function CartItem({ item, onUpdateQuantity, onRemove }) {
   const unitColor = UNIT_COLORS[item.unit] || T.sub;
+  const displayUnit = item.unit_label || (item.unit === 'dus' ? (item.dus_label || 'Dus') : item.unit);
   const isMinQty  = item.quantity <= 1;
 
   return (
@@ -90,7 +91,7 @@ function CartItem({ item, onUpdateQuantity, onRemove }) {
           fontSize: 9, fontWeight: 800, color: unitColor,
           letterSpacing: '0.06em', textTransform: 'uppercase',
         }}>
-          {item.unit}
+          {displayUnit}
         </div>
 
         {/* Name & price */}
@@ -103,7 +104,7 @@ function CartItem({ item, onUpdateQuantity, onRemove }) {
             {item.name}
           </p>
           <p style={{ fontSize: 10, color: T.sub, fontFamily: 'JetBrains Mono, monospace' }}>
-            {fmt(item.price)} <span style={{ color: T.muted }}>/ {item.unit}</span>
+            {fmt(item.price)} <span style={{ color: T.muted }}>/ {displayUnit}</span>
           </p>
         </div>
 

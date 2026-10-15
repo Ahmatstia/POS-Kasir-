@@ -351,6 +351,13 @@ function ImportExcel({ onClose, onSuccess }) {
 
         let finalPriceKarung = isKg && (priceDus > 0 ? priceDus : (finalPriceKg > 0 ? Math.round((finalPriceKg * kg_per_karung * 0.95) / 5000) * 5000 : 0));
 
+        let defaultDusLabel = 'Dus';
+        if (nameLower.includes('plastik') || nameLower.includes('kresek')) {
+          defaultDusLabel = 'Karung';
+        } else if (nameLower.includes('bal ') || nameLower.includes(' bal')) {
+          defaultDusLabel = 'Bal';
+        }
+
         // Tambahkan produk ke database
         const r = await addProduct({
           name,
@@ -365,6 +372,7 @@ function ImportExcel({ onClose, onSuccess }) {
           pcs_per_pack,
           pack_per_dus,
           kg_per_karung,
+          dus_label: defaultDusLabel,
           min_stock: !isKg && mapping.min_stock !== '' ? cleanPrice(row[mapping.min_stock]) : 5,
           min_stock_kg: isKg && mapping.min_stock !== '' ? cleanQty(row[mapping.min_stock]) : 5,
           notes: 'Import dari Excel / CSV',
